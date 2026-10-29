@@ -31,6 +31,7 @@ public sealed partial class MainWindow : Window
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
         AppWindow.Resize(new Windows.Graphics.SizeInt32(1200, 780));
+        AppWindow.SetIcon(Path.Combine(AppContext.BaseDirectory, "Assets", "AppIcon.ico")); // taskbar + Alt+Tab
         AppWindow.Closing += AppWindow_Closing;
 
         Root.Loaded += (_, _) => dialogs.XamlRoot = Root.XamlRoot;

@@ -17,12 +17,22 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <Grid x:Name="AppTitleBar" Padding="16,0,0,0">
+        <StackPanel
+            x:Name="AppTitleBar"
+            Padding="12,0,0,0"
+            Orientation="Horizontal"
+            Spacing="10">
+            <Image
+                Width="18"
+                Height="18"
+                VerticalAlignment="Center"
+                AutomationProperties.AccessibilityView="Raw"
+                Source="ms-appx:///Assets/AppIcon.svg" />
             <TextBlock
                 VerticalAlignment="Center"
                 Style="{StaticResource CaptionTextBlockStyle}"
                 Text="WinGet Frontend" />
-        </Grid>
+        </StackPanel>
 
         <!-- 002 R4.1: left navigation. Pages are cached for the session (R4.2). -->
         <NavigationView

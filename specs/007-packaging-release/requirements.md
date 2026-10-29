@@ -41,4 +41,7 @@ and trust what they're running.
 - **App name and publisher identity:** "WinGet Frontend" is a working title. A final name, publisher display name and
   icon are needed for the manifest and the winget-pkgs submission. Avoid "WinGet" in the product name to
   reduce trademark and confusion risk with Microsoft's tools.
+- **Icon: decided 2026-10-29.** Open cardboard box with an up arrow on a green rounded square. Source:
+  `src/WinGetFrontend.App/Assets/AppIcon.svg`; `AppIcon.ico` (16–256 px) is rendered from it and already used for the
+  unpackaged app (exe, window, taskbar, title bar). The MSIX logo set (T1) is generated from the same SVG.
 - **Repository hosting:** GitHub (assumed by R2 and R3)?

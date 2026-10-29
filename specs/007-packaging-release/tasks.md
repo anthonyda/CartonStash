@@ -4,6 +4,7 @@
 **Design:** [design.md](design.md)
 
 - [ ] **T1.** Decide name / publisher / icon; add `Package.appxmanifest` + `Assets/`. *(R1.2)*
+  - Icon decided and in place (`Assets/AppIcon.svg` / `.ico`). Name and publisher still open.
 - [ ] **T2.** `PackagedRelease` configuration; local MSIX build signed with a dev cert. *(R1.1)*
   - Verify: MSIX installs locally; app starts from Start.
 - [ ] **T3.** Packaged WinGet check: search / install / uninstall from the MSIX build. *(R1.3)*
