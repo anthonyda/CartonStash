@@ -13,9 +13,23 @@ namespace WinGetFrontend.App.Views;
 /// </summary>
 internal static class DetailsBehavior
 {
-    public static void Attach(Page page, ListView list, PackageDetailsViewModel details)
+    /// <summary>Below this page width the pane covers the list instead of sitting beside it (005 layout).</summary>
+    private const double SideBySideMinWidth = 860;
+
+    private const double PaneWidth = 380;
+
+    public static void Attach(Page page, ListView list, PackageDetailsViewModel details, FrameworkElement pane)
     {
         PackageRowViewModel? opener = null;
+
+        // Measured on the page, not the window, so the navigation pane's width is accounted for.
+        page.SizeChanged += (_, e) =>
+        {
+            var sideBySide = e.NewSize.Width >= SideBySideMinWidth;
+            Grid.SetColumn(pane, sideBySide ? 1 : 0);
+            Grid.SetColumnSpan(pane, sideBySide ? 1 : 2);
+            pane.Width = sideBySide ? PaneWidth : double.NaN;
+        };
 
         list.IsItemClickEnabled = true;
         list.ItemClick += (_, e) =>

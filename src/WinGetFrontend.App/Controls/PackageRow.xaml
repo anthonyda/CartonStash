@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- One package row, shared by Search, Installed and Updates (002 T5). -->
+<!-- One package row, shared by Search, Installed and Updates (002 T5). On narrow rows the versions move under the name. -->
 <UserControl
     x:Class="WinGetFrontend.App.Controls.PackageRow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -7,16 +7,28 @@
     xmlns:controls="using:WinGetFrontend.App.Controls"
     xmlns:ui="using:WinGetFrontend.App">
 
-    <Grid Padding="0,8" ColumnSpacing="16">
+    <Grid
+        x:Name="Layout"
+        Padding="0,8"
+        ColumnSpacing="16"
+        SizeChanged="Layout_SizeChanged">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="32" />
-            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="*" MinWidth="80" />
             <ColumnDefinition Width="Auto" />
-            <ColumnDefinition Width="200" />
+            <ColumnDefinition Width="Auto" MinWidth="96" />
         </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
 
         <!-- 005 R5.1: WinGet's icon, or a package glyph -->
-        <Grid Width="32" Height="32" VerticalAlignment="Center">
+        <Grid
+            Grid.RowSpan="2"
+            Width="32"
+            Height="32"
+            VerticalAlignment="Center">
             <FontIcon
                 FontSize="22"
                 Foreground="{ThemeResource TextFillColorTertiaryBrush}"
@@ -32,19 +44,23 @@
             <TextBlock
                 Style="{StaticResource BodyStrongTextBlockStyle}"
                 Text="{x:Bind Row.Name, Mode=OneWay}"
-                TextTrimming="CharacterEllipsis" />
+                TextTrimming="CharacterEllipsis"
+                TextWrapping="NoWrap" />
             <TextBlock
                 Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                 Text="{x:Bind Row.Id, Mode=OneWay}"
-                TextTrimming="CharacterEllipsis" />
+                TextTrimming="CharacterEllipsis"
+                TextWrapping="NoWrap" />
         </StackPanel>
 
         <StackPanel
+            x:Name="Versions"
             Grid.Column="2"
             HorizontalAlignment="Right"
             VerticalAlignment="Center"
             Spacing="4">
             <StackPanel
+                x:Name="Badges"
                 HorizontalAlignment="Right"
                 Orientation="Horizontal"
                 Spacing="8">
@@ -56,7 +72,7 @@
                     BorderThickness="1"
                     CornerRadius="4"
                     Visibility="{x:Bind Row.Package.IsInstalled, Mode=OneWay}">
-                    <TextBlock Style="{StaticResource CaptionTextBlockStyle}">
+                    <TextBlock Style="{StaticResource CaptionTextBlockStyle}" TextWrapping="NoWrap">
                         <Run Text="Installed" />
                         <Run Text="{x:Bind Row.Package.InstalledVersion, Mode=OneWay}" />
                     </TextBlock>
@@ -69,17 +85,22 @@
                     BorderThickness="1"
                     CornerRadius="4"
                     Visibility="{x:Bind Row.Package.HasUpdate, Mode=OneWay}">
-                    <TextBlock Style="{StaticResource CaptionTextBlockStyle}" Text="Update available" />
+                    <TextBlock Style="{StaticResource CaptionTextBlockStyle}" Text="Update available" TextWrapping="NoWrap" />
                 </Border>
-                <TextBlock HorizontalAlignment="Right" Text="{x:Bind Row.Package.AvailableVersion, Mode=OneWay}" />
+                <TextBlock Text="{x:Bind Row.Package.AvailableVersion, Mode=OneWay}" TextWrapping="NoWrap" />
             </StackPanel>
             <!-- 002 R1.2, R3.1 -->
             <TextBlock
+                x:Name="SourceLabel"
                 HorizontalAlignment="Right"
                 Foreground="{ThemeResource TextFillColorTertiaryBrush}"
-                Text="{x:Bind Row.Package.SourceText, Mode=OneWay}" />
+                Text="{x:Bind Row.Package.SourceText, Mode=OneWay}"
+                TextWrapping="NoWrap" />
         </StackPanel>
 
-        <controls:PackageActionsView Grid.Column="3" Row="{x:Bind Row, Mode=OneWay}" />
+        <controls:PackageActionsView
+            Grid.RowSpan="2"
+            Grid.Column="3"
+            Row="{x:Bind Row, Mode=OneWay}" />
     </Grid>
 </UserControl>

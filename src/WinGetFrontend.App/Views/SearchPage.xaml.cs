@@ -12,7 +12,7 @@ public sealed partial class SearchPage : Page
     {
         ViewModel = App.Services.GetRequiredService<SearchViewModel>();
         InitializeComponent();
-        DetailsBehavior.Attach(this, ResultsList, ViewModel.Details);
+        DetailsBehavior.Attach(this, ResultsList, ViewModel.Details, DetailsPane);
     }
 
     public SearchViewModel ViewModel { get; }

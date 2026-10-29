@@ -91,26 +91,5 @@
             Width="380"
             ViewModel="{x:Bind ViewModel.Details}"
             Visibility="{x:Bind ViewModel.Details.IsOpen, Mode=OneWay}" />
-
-        <!-- 005: right column on wide windows, full width below 900 px -->
-        <VisualStateManager.VisualStateGroups>
-            <VisualStateGroup>
-                <VisualState x:Name="Wide">
-                    <VisualState.StateTriggers>
-                        <AdaptiveTrigger MinWindowWidth="900" />
-                    </VisualState.StateTriggers>
-                </VisualState>
-                <VisualState x:Name="Narrow">
-                    <VisualState.StateTriggers>
-                        <AdaptiveTrigger MinWindowWidth="0" />
-                    </VisualState.StateTriggers>
-                    <VisualState.Setters>
-                        <Setter Target="DetailsPane.(Grid.Column)" Value="0" />
-                        <Setter Target="DetailsPane.(Grid.ColumnSpan)" Value="2" />
-                        <Setter Target="DetailsPane.Width" Value="NaN" />
-                    </VisualState.Setters>
-                </VisualState>
-            </VisualStateGroup>
-        </VisualStateManager.VisualStateGroups>
     </Grid>
 </Page>

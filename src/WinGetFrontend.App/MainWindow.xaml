@@ -33,7 +33,8 @@
             IsSettingsVisible="True"
             ItemInvoked="Nav_ItemInvoked"
             OpenPaneLength="220"
-            PaneDisplayMode="Left"
+            DisplayModeChanged="Nav_DisplayModeChanged"
+            PaneDisplayMode="Auto"
             SelectionChanged="Nav_SelectionChanged">
             <NavigationView.MenuItems>
                 <NavigationViewItem Content="Search" Tag="search">

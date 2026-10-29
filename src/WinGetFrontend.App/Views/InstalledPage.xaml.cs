@@ -11,7 +11,7 @@ public sealed partial class InstalledPage : Page
     {
         ViewModel = App.Services.GetRequiredService<InstalledViewModel>();
         InitializeComponent();
-        DetailsBehavior.Attach(this, PackagesList, ViewModel.Details);
+        DetailsBehavior.Attach(this, PackagesList, ViewModel.Details, DetailsPane);
     }
 
     public InstalledViewModel ViewModel { get; }

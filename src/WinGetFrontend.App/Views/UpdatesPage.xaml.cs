@@ -11,7 +11,7 @@ public sealed partial class UpdatesPage : Page
     {
         ViewModel = App.Services.GetRequiredService<UpdatesViewModel>();
         InitializeComponent();
-        DetailsBehavior.Attach(this, UpdatesList, ViewModel.Details);
+        DetailsBehavior.Attach(this, UpdatesList, ViewModel.Details, DetailsPane);
     }
 
     public UpdatesViewModel ViewModel { get; }

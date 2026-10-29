@@ -36,29 +36,37 @@
                 </Button>
             </Grid>
 
-            <Grid Grid.Row="1" ColumnSpacing="12">
+            <Grid
+                Grid.Row="1"
+                ColumnSpacing="12"
+                RowSpacing="8">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
                 <!-- R2.1 -->
                 <TextBox
+                    MinWidth="160"
                     AutomationProperties.Name="Filter installed packages"
-                    PlaceholderText="Filter installed packages by name or ID"
+                    PlaceholderText="Filter by name or ID"
                     Text="{x:Bind ViewModel.Filter, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                <!-- R2.4 -->
-                <CheckBox
-                    Grid.Column="1"
-                    Content="Show apps not managed by WinGet"
-                    IsChecked="{x:Bind ViewModel.ShowUnmanaged, Mode=TwoWay}" />
                 <!-- R2.2 -->
                 <TextBlock
-                    Grid.Column="2"
+                    Grid.Column="1"
                     VerticalAlignment="Center"
                     AutomationProperties.LiveSetting="Polite"
                     Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                     Text="{x:Bind ViewModel.CountText, Mode=OneWay}" />
+                <!-- R2.4 -->
+                <CheckBox
+                    Grid.Row="1"
+                    Grid.ColumnSpan="2"
+                    Content="Show apps not managed by WinGet"
+                    IsChecked="{x:Bind ViewModel.ShowUnmanaged, Mode=TwoWay}" />
             </Grid>
 
             <StackPanel Grid.Row="2" Spacing="8">
@@ -100,25 +108,5 @@
             Width="380"
             ViewModel="{x:Bind ViewModel.Details}"
             Visibility="{x:Bind ViewModel.Details.IsOpen, Mode=OneWay}" />
-
-        <VisualStateManager.VisualStateGroups>
-            <VisualStateGroup>
-                <VisualState x:Name="Wide">
-                    <VisualState.StateTriggers>
-                        <AdaptiveTrigger MinWindowWidth="900" />
-                    </VisualState.StateTriggers>
-                </VisualState>
-                <VisualState x:Name="Narrow">
-                    <VisualState.StateTriggers>
-                        <AdaptiveTrigger MinWindowWidth="0" />
-                    </VisualState.StateTriggers>
-                    <VisualState.Setters>
-                        <Setter Target="DetailsPane.(Grid.Column)" Value="0" />
-                        <Setter Target="DetailsPane.(Grid.ColumnSpan)" Value="2" />
-                        <Setter Target="DetailsPane.Width" Value="NaN" />
-                    </VisualState.Setters>
-                </VisualState>
-            </VisualStateGroup>
-        </VisualStateManager.VisualStateGroups>
     </Grid>
 </Page>

@@ -61,7 +61,10 @@ Action button → same commands as the row → queue. The pane reflects the queu
 │                            │ Versions: 2.57.0 · 2.56.0.3 (installed) · … │
 ```
 
-- Wide (≥ 900 px): pane is a right column 380 px wide. Narrow: pane covers the list and has a Back button.
+- Wide: pane is a right column 380 px wide. Narrow: pane covers the list; its Close button acts as Back.
+  *Amended 2026-10-29:* the switch is on the **page** width (860 px), not the window width, so an expanded navigation pane
+  can't squeeze the list. Rows reflow below 620 px (versions move under the name, names never wrap), and the
+  navigation collapses to icons / a menu button on narrow windows (`PaneDisplayMode="Auto"`).
 - `HyperlinkButton`s have accessible names like "Homepage (opens browser)".
 
 ## Error handling and edge cases

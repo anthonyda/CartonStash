@@ -72,6 +72,10 @@ public sealed partial class MainWindow : Window
                 .FirstOrDefault(i => i.Tag is string key && Pages[key] == ContentFrame.CurrentSourcePageType);
     }
 
+    // Narrow windows collapse the navigation to a menu button over the content; keep page titles clear of it.
+    private void Nav_DisplayModeChanged(NavigationView sender, NavigationViewDisplayModeChangedEventArgs args) =>
+        ContentFrame.Margin = args.DisplayMode == NavigationViewDisplayMode.Minimal ? new Thickness(0, 40, 0, 0) : new Thickness(0);
+
     private void CloseActivity_Click(object sender, RoutedEventArgs e) => ActivitySplit.IsPaneOpen = false;
 
     // 003 R6.2: warn before quitting with operations queued or running.
