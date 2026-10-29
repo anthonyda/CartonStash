@@ -179,6 +179,21 @@ public class PackageOperationQueueTests
     }
 
     [Fact]
+    public void Programs_sharing_a_package_id_get_their_own_operations() // 002 R6.5
+    {
+        var app = new TestApp();
+        var oldWsl = Pkg.Installed("Microsoft.WSL") with { InstalledId = @"ARP\Machine\X64\{F8474A47}" };
+        var newWsl = Pkg.Installed("Microsoft.WSL") with { InstalledId = @"MSIX\WindowsSubsystemForLinux_3.0.4.0", IsPrimaryMatch = false };
+
+        var first = app.Queue.Enqueue(OperationKind.Uninstall, oldWsl);
+        var second = app.Queue.Enqueue(OperationKind.Uninstall, newWsl);
+
+        Assert.NotSame(first, second);
+        Assert.Same(first, app.Queue.Find(oldWsl));
+        Assert.Same(second, app.Queue.Find(newWsl));
+    }
+
+    [Fact]
     public void Clear_finished_keeps_active_ones()
     {
         var app = new TestApp();

@@ -1,6 +1,6 @@
 # 002 – Installed packages: Tasks
 
-**Status:** Done (R2.4 added and done 2026-10-29)
+**Status:** Done (R2.4 added and done 2026-10-29). Amendment R6 done 2026-10-30
 **Design:** [design.md](design.md)
 
 - [x] **T1.** `CatalogConnection` with cached remote-first / local-first composites + `Invalidate()`; `SearchAsync` uses it.
@@ -20,6 +20,22 @@
 - [x] **T8.** "Show apps not managed by WinGet" option, off by default. *(R2.4)*
   - Verify: `InstalledViewModelTests.Unmanaged_apps_are_hidden_until_asked_for` + manual, see log.
 
+### Amendment R6: one row per installed program (approved 2026-10-30)
+
+- [x] **T9.** Probe: does the Microsoft.WSL manifest list the WSL 3.0.4.0 PFN / the old update's product code? Measure the extra load time. Record in design.
+  - Result: manifest lists PFN `microsoftcorporationii.windowssubsystemforlinux_8wekyb3d8bbwe` → WSL 3.0.4.0 will be a manifest match.
+    `InstalledVersion.Id` = local entry ID for 330/330 packages (exact primary join). 362 entries, all with a code. Timing in design.
+- [x] **T10.** `InstalledJoin.Join` (pure) + records for installed entries and composite packages. *(R6.1–R6.4)*
+  - Verify: `InstalledJoinTests.*`: WSL case (two entries, one ID), manifest match, no match, case / brace normalisation, fallback.
+- [x] **T11.** `GetInstalledAsync` reads both catalogs in parallel and uses the join; `PackageInfo.InstalledId`, `IsPrimaryMatch`, `Key`. *(R6.1, R6.2)*
+  - Verify: `GetInstalled_has_one_row_per_installed_program`, `Programs_sharing_a_package_id_keep_their_own_versions`, `GetInstalled_contains_git`.
+- [x] **T12.** Queue and row tracking by `Key`; Update only on primary matches. *(R6.4)*
+  - Verify: `PackageOperationQueueTests.Programs_sharing_a_package_id_get_their_own_operations`, `UpdatesViewModelTests.Only_wingets_own_match_is_offered_for_update`, `Rows_sharing_an_id_track_only_their_own_operation`.
+- [x] **T13.** Uninstall by installed entry when `InstalledId` is set. *(R6.5)*
+  - Verify: `WinGetErrorMessageTests.Uninstall_targets_the_installed_entry_when_known`; manual, see log.
+- [x] **T14.** Count and UI check: "of N packages" counts rows; WSL shows two correct rows. *(R6.2, R6.6)*
+  - Verify: manual (UIA + screenshot).
+
 ## Manual verification log
 
 | Criterion | Date | Result | Notes |
@@ -32,4 +48,8 @@
 | R4.2 | 2026-10-29 | Pass | UIA: query "7zip" (10 results) and filter "micro" kept after switching pages |
 | R1.3 | 2026-10-29 | Pass | List reloaded automatically after installing / uninstalling jqlang.jq (see 003) |
 | R2.4 | 2026-10-29 | Pass | UIA: default "89 of 329 packages", no "Not managed by WinGet" rows; checking "Show apps not managed by WinGet" → "329 of 329" |
+| R6.1, R6.2, R6.6 | 2026-10-30 | Pass | UIA: "WSL" filter → two rows: "Windows Subsystem for Linux · Installed 3.0.4.0" and "Windows Subsystem for Linux Update · Installed 5.10.102.1", both Microsoft.WSL / winget. Count "119 of 362" (all shown: "362 of 362", same as `winget list`) |
+| R6.3 | 2026-10-30 | Pass | 29 programs linked through manifest codes, all genuine: x86 copies of runtimes (.NET, VCLibs, UI.Xaml, DirectX), side-by-side WindowsAppRuntime / CUDA versions, WSL 3.0.4.0. Managed rows 90 → 119 |
+| R6.5 | 2026-10-30 | Pass | jqlang.jq installed from Search, then uninstalled from its Installed row via its installed entry; `winget list` no longer finds it |
+| R6 load time | 2026-10-30 | Pass | Installed list ready ~4 s after a cold app start (both catalogs in parallel, background) |
 | R1.4 | 2026-10-29 | Pass (unit) | `IsLoading` covered by tests; not seen live because the list now preloads at startup (004 badge) and was ready in 0.35 s |

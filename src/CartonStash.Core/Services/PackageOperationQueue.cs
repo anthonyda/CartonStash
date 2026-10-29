@@ -35,12 +35,15 @@ public sealed class PackageOperationQueue(IPackageInstaller installer)
     /// <summary>The worker, for tests and the close guard to await.</summary>
     public Task Idle => _worker;
 
-    /// <summary>The newest operation for a package, if any.</summary>
-    public PackageOperation? Find(string packageId)
+    /// <summary>
+    /// The newest operation for this installed program (or package, for search results), if any. Matched by
+    /// <see cref="PackageInfo.Key"/>: programs sharing a WinGet ID don't share operations (002 R6.5).
+    /// </summary>
+    public PackageOperation? Find(PackageInfo package)
     {
         for (var i = 0; i < Operations.Count; i++)
         {
-            if (Operations[i].Package.Id == packageId)
+            if (string.Equals(Operations[i].Package.Key, package.Key, StringComparison.OrdinalIgnoreCase))
             {
                 return Operations[i];
             }
@@ -51,7 +54,7 @@ public sealed class PackageOperationQueue(IPackageInstaller installer)
     /// <summary>Queues an operation, or returns the one already active for this package (R4.2).</summary>
     public PackageOperation Enqueue(OperationKind kind, PackageInfo package, bool acceptAgreements = false)
     {
-        if (Find(package.Id) is { IsActive: true } active)
+        if (Find(package) is { IsActive: true } active)
         {
             return active;
         }
@@ -111,7 +114,7 @@ public sealed class PackageOperationQueue(IPackageInstaller installer)
     /// <summary>Runs a failed or cancelled operation again (R5.2).</summary>
     public void Retry(PackageOperation operation)
     {
-        if (!operation.CanRetry || Find(operation.Package.Id) is { IsActive: true })
+        if (!operation.CanRetry || Find(operation.Package) is { IsActive: true })
         {
             return;
         }

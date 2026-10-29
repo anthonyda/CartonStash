@@ -47,12 +47,76 @@ public sealed class WinGetPackageService(CatalogConnection connection) : IPackag
         return await FindAsync(catalog, options, cancellationToken);
     }
 
+    /// <summary>
+    /// One row per installed program (002 R6): WinGet's installed-only catalog joined with its source matches.
+    /// Both reads run in parallel off the UI thread.
+    /// </summary>
     public async Task<IReadOnlyList<PackageInfo>> GetInstalledAsync(CancellationToken cancellationToken = default)
     {
-        var catalog = await connection.GetLocalFirstAsync(cancellationToken);
+        var entries = Task.Run(() => ReadInstalledEntriesAsync(cancellationToken), cancellationToken);
+        var packages = Task.Run(() => ReadMatchedPackagesAsync(cancellationToken), cancellationToken);
+        await Task.WhenAll(entries, packages);
+        return InstalledJoin.Join(entries.Result, packages.Result);
+    }
 
-        // No selectors: every installed package (002 R1.1).
-        return await FindAsync(catalog, new FindPackagesOptions(), cancellationToken);
+    private async Task<IReadOnlyList<InstalledEntry>> ReadInstalledEntriesAsync(CancellationToken cancellationToken)
+    {
+        var catalog = await connection.GetInstalledOnlyAsync(cancellationToken);
+        var matches = await FindMatchesAsync(catalog, new FindPackagesOptions(), cancellationToken);
+        var entries = new List<InstalledEntry>(matches.Count);
+        for (var i = 0; i < matches.Count; i++)
+        {
+            var package = matches[i].CatalogPackage;
+            var installed = package.InstalledVersion;
+            if (installed is null)
+            {
+                continue;
+            }
+            entries.Add(new InstalledEntry(package.Id, package.Name, installed.Version, ReadCodes(installed)));
+        }
+        return entries;
+    }
+
+    private async Task<IReadOnlyList<MatchedPackage>> ReadMatchedPackagesAsync(CancellationToken cancellationToken)
+    {
+        var catalog = await connection.GetLocalFirstAsync(cancellationToken);
+        var matches = await FindMatchesAsync(catalog, new FindPackagesOptions(), cancellationToken);
+        var packages = new List<MatchedPackage>(matches.Count);
+        for (var i = 0; i < matches.Count; i++)
+        {
+            var package = matches[i].CatalogPackage;
+            var available = package.DefaultInstallVersion;
+            if (available is not null)
+            {
+                _versions[package.Id] = available; // 005 R5 icons
+            }
+            packages.Add(new MatchedPackage(
+                package.Id,
+                package.Name,
+                package.InstalledVersion?.Id,
+                available?.Version,
+                available?.PackageCatalog.Info.Name ?? "",
+                package.IsUpdateAvailable,
+                available is null ? [] : ReadCodes(available)));
+        }
+        return packages;
+    }
+
+    /// <summary>Product codes and package family names, read by index (W2).</summary>
+    private static List<string> ReadCodes(PackageVersionInfo version)
+    {
+        var productCodes = version.ProductCodes;
+        var familyNames = version.PackageFamilyNames;
+        var codes = new List<string>(productCodes.Count + familyNames.Count);
+        for (var i = 0; i < productCodes.Count; i++)
+        {
+            codes.Add(productCodes[i]);
+        }
+        for (var i = 0; i < familyNames.Count; i++)
+        {
+            codes.Add(familyNames[i]);
+        }
+        return codes;
     }
 
     public Task<PackageDetails?> GetDetailsAsync(PackageInfo package, CancellationToken cancellationToken = default)
@@ -156,15 +220,19 @@ public sealed class WinGetPackageService(CatalogConnection connection) : IPackag
 
     public string GetWinGetVersion() => connection.Manager.Version;
 
-    private async Task<IReadOnlyList<PackageInfo>> FindAsync(PackageCatalog catalog, FindPackagesOptions options, CancellationToken cancellationToken)
+    private static async Task<IReadOnlyList<MatchResult>> FindMatchesAsync(PackageCatalog catalog, FindPackagesOptions options, CancellationToken cancellationToken)
     {
         var result = await catalog.FindPackagesAsync(options).AsTask(cancellationToken);
         if (result.Status != FindPackagesResultStatus.Ok)
         {
             throw new WinGetException(DescribeFindFailure(result.Status), result.ExtendedErrorCode);
         }
+        return result.Matches;
+    }
 
-        var matches = result.Matches;
+    private async Task<IReadOnlyList<PackageInfo>> FindAsync(PackageCatalog catalog, FindPackagesOptions options, CancellationToken cancellationToken)
+    {
+        var matches = await FindMatchesAsync(catalog, options, cancellationToken);
         var packages = new List<PackageInfo>(matches.Count);
         for (var i = 0; i < matches.Count; i++)
         {

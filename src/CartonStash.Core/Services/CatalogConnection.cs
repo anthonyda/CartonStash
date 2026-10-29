@@ -14,6 +14,7 @@ public sealed class CatalogConnection
     private readonly HashSet<string> _acceptedSourceAgreements = new(StringComparer.OrdinalIgnoreCase);
     private PackageCatalog? _remoteFirst;
     private PackageCatalog? _localFirst;
+    private PackageCatalog? _installedOnly;
 
     internal PackageManager Manager { get; } = new();
 
@@ -22,6 +23,7 @@ public sealed class CatalogConnection
     {
         _remoteFirst = null;
         _localFirst = null;
+        _installedOnly = null;
     }
 
     /// <summary>The user accepted this source's agreements for this session (006 R3.3).</summary>
@@ -49,6 +51,26 @@ public sealed class CatalogConnection
     /// <summary>The installed catalog correlated with all remote sources; results are installed packages (002).</summary>
     internal Task<PackageCatalog> GetLocalFirstAsync(CancellationToken cancellationToken) =>
         GetAsync(localFirst: true, cancellationToken);
+
+    /// <summary>
+    /// The installed-only catalog: one package per installed program, not merged by package ID (002 R6.1).
+    /// </summary>
+    internal async Task<PackageCatalog> GetInstalledOnlyAsync(CancellationToken cancellationToken)
+    {
+        if (_installedOnly is { } cached)
+        {
+            return cached;
+        }
+
+        // A rare double connect while two loads race is harmless; the last one is kept.
+        var reference = Manager.GetLocalPackageCatalog(LocalPackageCatalog.InstalledPackages);
+        var connect = await reference.ConnectAsync().AsTask(cancellationToken);
+        if (connect.Status != ConnectResultStatus.Ok)
+        {
+            throw new WinGetException(WinGetPackageService.DescribeConnectFailure(connect.Status), connect.ExtendedErrorCode);
+        }
+        return _installedOnly = connect.PackageCatalog;
+    }
 
     private async Task<PackageCatalog> GetAsync(bool localFirst, CancellationToken cancellationToken)
     {
@@ -115,6 +137,28 @@ public sealed class CatalogConnection
     }
 
     /// <summary>Finds one package by exact ID, optionally restricted to a source (003: COM objects never leave Services).</summary>
+    /// <summary>Finds one installed program by its installed entry ID (<c>ARP\...</c>, <c>MSIX\...</c>) (002 R6.5).</summary>
+    internal async Task<CatalogPackage> FindInstalledEntryAsync(string installedId, CancellationToken cancellationToken)
+    {
+        var catalog = await GetInstalledOnlyAsync(cancellationToken);
+        var options = new FindPackagesOptions();
+        options.Selectors.Add(new PackageMatchFilter
+        {
+            Field = PackageMatchField.Id,
+            Option = PackageFieldMatchOption.Equals,
+            Value = installedId,
+        });
+
+        var result = await catalog.FindPackagesAsync(options).AsTask(cancellationToken);
+        if (result.Status != FindPackagesResultStatus.Ok)
+        {
+            throw new WinGetException(WinGetPackageService.DescribeFindFailure(result.Status), result.ExtendedErrorCode);
+        }
+        return result.Matches.Count > 0
+            ? result.Matches[0].CatalogPackage
+            : throw new WinGetException("This program is no longer installed. Refresh the list and try again.", null);
+    }
+
     internal async Task<CatalogPackage> FindByIdAsync(string id, string? source, bool localFirst, CancellationToken cancellationToken)
     {
         var catalog = localFirst ? await GetLocalFirstAsync(cancellationToken) : await GetRemoteFirstAsync(cancellationToken);

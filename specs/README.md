@@ -38,7 +38,7 @@ If implementation reveals the spec is wrong, **stop, update the spec first**, th
 | #   | Feature                                   | Status      |
 |-----|-------------------------------------------|-------------|
 | 001 | [Package search](001-package-search/)                  | Done |
-| 002 | [Installed packages list](002-installed-packages/)     | Done |
+| 002 | [Installed packages list](002-installed-packages/)     | Done; amendment R6 (one row per installed program) done |
 | 003 | [Install / uninstall with progress](003-install-uninstall/) | In progress: code done; UAC check (R6.1) pending |
 | 004 | [Available updates](004-updates/)                      | In progress: code done; live update (R2.1) pending; R3 pins deferred, open |
 | 005 | [Package details pane](005-package-details/)           | In progress: code done; link-opens-browser check (R1.3) pending |

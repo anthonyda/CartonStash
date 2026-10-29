@@ -1,6 +1,6 @@
 # 002 – Installed packages: Requirements
 
-**Status:** Done (2026-10-29)
+**Status:** Done (2026-10-29). Amendment R6 (one row per installed program) done 2026-10-30
 **Depends on:** 001
 
 ## Problem
@@ -32,6 +32,19 @@ Windows knows about (including apps WinGet didn't install) in a hard-to-scan tab
 | R4.1 | US4   | The app shall provide left-side navigation with Search and Installed entries (later: Updates, Settings). The last-used page is not remembered in v1. |
 | R4.2 | US4   | Switching pages shall keep each page's state (query, filter, scroll) for the session. |
 | R5.1 | –     | If loading fails, then the app shall show a readable error with a Retry action. |
+| R6.1 | US1   | The Installed page shall show one row per installed program in WinGet's installed catalog, the same entries `winget list` shows, even when several programs share one WinGet package ID. |
+| R6.2 | US1   | Each row shall show the program's own installed name and version (as Windows records them), not the source package's name. |
+| R6.3 | US3   | A row shall count as managed by WinGet (source, available version, R3.1) when WinGet matched that program to a source package, or when the program's product code or package family name is listed in a source package's manifest. |
+| R6.4 | US3   | When several rows match the same package ID, only the row WinGet itself evaluated shall show "Update available" (R3.2); the others shall not claim an update. |
+| R6.5 | –     | Uninstall on a row (003) shall remove exactly that row's program, never another program sharing its package ID. |
+| R6.6 | US2   | The count (R2.2) shall count programs (rows), e.g. "90 of 362 packages". |
+
+## Amendment R6: why (2026-10-30)
+
+Seen live: WSL 3.0.4.0 and the old "Windows Subsystem for Linux Update" 5.10.102.1 are both installed and both match
+`Microsoft.WSL`. WinGet's composite catalog (COM API 1.29) merges them into one package and reports only the old
+version, so the app showed "Windows Subsystem for Linux 5.10.102.1", which matches neither program. `winget list` shows
+both. WinGet's installed-only catalog returns both separately (362 entries vs. 330 merged packages on the dev machine).
 
 ## Out of scope
 
@@ -39,5 +52,13 @@ Windows knows about (including apps WinGet didn't install) in a hard-to-scan tab
 - Grouping, multi-column sorting, export of the list.
 
 ## Open questions
+
+- **R6: rename rows to the installed name (R6.2)?** **Decided 2026-10-30: yes, the full installed name**, to match `winget list`. Most names barely change;
+  a few get more detail (e.g. "Mozilla Firefox (x64 en-US)"). Search results keep the source package name.
+- **R6: rows matched only through the manifest (R6.3 second case), e.g. WSL 3.0.4.0?** **Decided 2026-10-30: build it as proposed, then review the result.** Proposal: show them as managed
+  (source + available version) but never with Update / Uninstall by package ID; Uninstall goes through the program's own
+  installed entry (R6.5). If the manifest doesn't list the program, the row shows "Not managed by WinGet" and is hidden by
+  default (R2.4). Whether WSL 3.0.4.0 is matched this way depends on the Microsoft.WSL manifest; checked during T9.
+- **R6: also report the merge upstream** (microsoft/winget-cli)? **Decided 2026-10-30: no.**
 
 - Show Microsoft Store / MSIX system components? **Decided: show all, as `winget list` does.** Amended 2026-10-29: apps not managed by WinGet are hidden by default and shown on request (R2.4).

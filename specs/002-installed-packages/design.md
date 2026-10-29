@@ -32,6 +32,42 @@ and the **Installed** page. The service gains `GetInstalledAsync`. WinGet connec
 - Source: `DefaultInstallVersion?.PackageCatalog.Info.Name`. If null, the package is unmanaged (R3.1). Search uses the same mapping.
 - Read collections by index (W2). Status → message mapping is reused from 001.
 
+## Amendment R6: one row per installed program (approved 2026-10-30)
+
+**Two catalogs, joined in Core/Services.** `GetInstalledAsync` connects, in parallel:
+
+1. **Installed-only catalog** `GetLocalPackageCatalog(InstalledPackages)` (not composite): one `CatalogPackage` per installed
+   program, IDs like `ARP\Machine\X64\{GUID}` or `MSIX\<PackageFullName>`. Read per entry: local ID, name, installed version,
+   `InstalledVersion.ProductCodes`, `InstalledVersion.PackageFamilyNames`.
+2. **Local-first composite** (as today): WinGet's matched packages. Read per package: WinGet ID, source, available version,
+   `IsUpdateAvailable`, the installed version's product codes / PFNs (which program WinGet evaluated), and the source
+   manifest's `DefaultInstallVersion.ProductCodes` / `PackageFamilyNames`.
+
+A pure, unit-tested `InstalledJoin.Join(entries, packages)` (plain records in, `PackageInfo` out) builds the rows:
+
+- **Primary match:** the entry whose local ID equals the composite package's `InstalledVersion.Id` → managed row with
+  WinGet ID, source, available version and update flag (R6.3, R6.4). *(T9: `InstalledVersion.Id` is the installed entry's
+  local ID for all 330 composite packages on the dev machine, so this is an exact link, no code matching needed.)*
+- **Manifest match:** any entry not claimed above whose product code / PFN appears in a package's *manifest*
+  (`DefaultInstallVersion.ProductCodes` / `PackageFamilyNames`) → managed row with that WinGet ID and source, **no update flag** (R6.4).
+- **No match:** unmanaged row ("Not managed by WinGet"), as today (R2.4 hides it by default).
+- Codes compare case-insensitively; product codes without braces are normalised.
+- Fallback: a composite package whose `InstalledVersion.Id` matches no entry (not seen in T9) keeps today's single row, so
+  nothing WinGet reports can disappear.
+
+**Model.** `PackageInfo` gains `InstalledId` (the installed entry's local ID) and `IsPrimaryMatch`. A row's identity becomes
+`Key = InstalledId ?? Id`. The operation queue dedupes and rows track operations by `Key`, so two rows sharing `Microsoft.WSL`
+don't share progress or block each other.
+
+**Uninstall (R6.5).** When `InstalledId` is set, the installer finds the program in the installed-only catalog by that local ID
+and uninstalls that `CatalogPackage` (WinGet supports uninstalling installed-catalog entries, like `winget uninstall --id ARP\...`).
+Upgrade still goes through the WinGet ID and is only offered on the primary match.
+
+**Updates page (004)** keeps listing rows with an update flag, so only primary matches: unchanged.
+
+**Cost.** One more catalog connect and ~362 cross-process reads at load (plus manifest codes for ~90 managed packages).
+*T9 measured:* installed-only catalog 362 entries read in ~0.5 s; composite with codes ~2.2 s (incl. connect). Run in parallel. Still loaded once per session in the background (R1.3).
+
 ## Data flow
 
 Navigate to Installed → first visit triggers `LoadCommand` → `GetInstalledAsync` → `_all` list →
@@ -70,6 +106,10 @@ It is still the session's single load.
 | R4.1, R4.2, R1.4 | Manual (UIA script): switch pages, state kept |
 
 ## Risks and alternatives considered
+
+- **R6 match quality** depends on manifests listing product codes / PFNs. Programs WinGet merged but whose manifest lists
+  nothing fall back to "Not managed by WinGet" (still visible with the R2.4 option). Better than showing a wrong version.
+- **R6 alternative rejected:** comparing names / publishers to guess matches (constitution P1: WinGet decides, we don't guess).
 
 - **Loading time** for the local-first composite with remote correlation (a few seconds cold). Mitigation:
   load once and cache (R1.3). Alternative: local-only first, then correlate in the background. Rejected for v1 as too complex.

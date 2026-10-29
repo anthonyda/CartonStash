@@ -32,6 +32,33 @@ public class WinGetPackageServiceIntegrationTests
     }
 
     [Fact]
+    public async Task GetInstalled_has_one_row_per_installed_program() // 002 R6.1, R6.5
+    {
+        var installed = await _service.GetInstalledAsync();
+
+        Assert.All(installed, p => Assert.NotNull(p.InstalledId));
+        Assert.Equal(installed.Count, installed.Select(p => p.Key).Distinct(StringComparer.OrdinalIgnoreCase).Count());
+    }
+
+    [Fact]
+    public async Task Programs_sharing_a_package_id_keep_their_own_versions() // 002 R6.2, R6.4 (WSL on the dev machine)
+    {
+        var installed = await _service.GetInstalledAsync();
+
+        foreach (var group in installed.Where(p => p.IsManaged).GroupBy(p => p.Id).Where(g => g.Count() > 1))
+        {
+            Assert.Single(group, p => p.IsPrimaryMatch);
+            Assert.All(group.Where(p => !p.IsPrimaryMatch), p => Assert.False(p.HasUpdate));
+        }
+
+        var wsl = installed.Where(p => p.Id == "Microsoft.WSL").ToList();
+        if (wsl.Count > 1)
+        {
+            Assert.Equal(wsl.Count, wsl.Select(p => p.InstalledVersion).Distinct().Count());
+        }
+    }
+
+    [Fact]
     public async Task Cached_catalog_is_reused_and_invalidate_reconnects() // 002 T1
     {
         var first = await _service.SearchAsync("Git.Git");

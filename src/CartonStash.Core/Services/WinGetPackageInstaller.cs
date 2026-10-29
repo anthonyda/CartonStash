@@ -38,8 +38,10 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
     public async Task<OperationOutcome> RunAsync(OperationKind kind, PackageInfo package, bool acceptAgreements,
         IProgress<OperationProgress> progress, CancellationToken cancellationToken)
     {
-        // Re-find the package by ID; COM objects never leave this class (A2).
-        var found = await connection.FindByIdAsync(package.Id, package.Source, localFirst: kind != OperationKind.Install, cancellationToken);
+        // Re-find the package; COM objects never leave this class (A2).
+        var found = UninstallsInstalledEntry(kind, package)
+            ? await connection.FindInstalledEntryAsync(package.InstalledId!, cancellationToken)
+            : await connection.FindByIdAsync(package.Id, package.Source, localFirst: kind != OperationKind.Install, cancellationToken);
         try
         {
             return kind switch
@@ -84,6 +86,13 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
 
         return MapUninstallResult(result.Status, result.UninstallerErrorCode, result.RebootRequired);
     }
+
+    /// <summary>
+    /// Uninstall removes the row's own program, found by its installed entry ID, never another program WinGet merged
+    /// under the same package ID (002 R6.5). Install and upgrade still go through the WinGet ID.
+    /// </summary>
+    internal static bool UninstallsInstalledEntry(OperationKind kind, PackageInfo package) =>
+        kind == OperationKind.Uninstall && !string.IsNullOrEmpty(package.InstalledId);
 
     internal static PackageInstallScope ToWinGet(InstallScope scope) => scope switch
     {

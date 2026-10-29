@@ -94,6 +94,33 @@ public class UpdatesViewModelTests
     }
 
     [Fact]
+    public async Task Only_wingets_own_match_is_offered_for_update() // 002 R6.4
+    {
+        var primary = Pkg.Installed("Microsoft.WSL", "WSL Update", update: true) with { InstalledId = "ARP-old" };
+        var secondary = Pkg.Installed("Microsoft.WSL", "WSL", update: true) with { InstalledId = "MSIX-new", IsPrimaryMatch = false, UpdateAvailable = false };
+        var (_, vm) = await CreateLoaded(primary, secondary);
+
+        var row = Assert.Single(vm.Updates);
+        Assert.Equal("ARP-old", row.Package.InstalledId);
+    }
+
+    [Fact]
+    public async Task Rows_sharing_an_id_track_only_their_own_operation() // 002 R6.5
+    {
+        var app = new TestApp();
+        var a = Pkg.Installed("Microsoft.WSL", "WSL Update") with { InstalledId = "ARP-old" };
+        var b = Pkg.Installed("Microsoft.WSL", "WSL") with { InstalledId = "MSIX-new", IsPrimaryMatch = false };
+        app.SetInstalled(a, b);
+        var vm = new InstalledViewModel(app.Store, app.Actions, app.Packages);
+        await vm.LoadAsync();
+
+        app.Queue.Enqueue(OperationKind.Uninstall, b);
+
+        Assert.True(vm.Visible.Single(r => r.Package.InstalledId == "MSIX-new").IsBusy);
+        Assert.False(vm.Visible.Single(r => r.Package.InstalledId == "ARP-old").IsBusy);
+    }
+
+    [Fact]
     public async Task Up_to_date_when_nothing_needs_updating() // R5.1
     {
         var (_, vm) = await CreateLoaded(Pkg.Installed("A"));

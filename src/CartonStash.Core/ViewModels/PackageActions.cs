@@ -42,7 +42,7 @@ public sealed class PackageActions(PackageOperationQueue queue, IPackageInstalle
     /// <summary>Install, after the user accepts the package's agreements if it has any (003 R1.2, R1.3).</summary>
     public async Task InstallAsync(PackageInfo package)
     {
-        if (queue.Find(package.Id) is { IsActive: true })
+        if (queue.Find(package) is { IsActive: true })
         {
             return; // R4.2
         }
@@ -75,7 +75,7 @@ public sealed class PackageActions(PackageOperationQueue queue, IPackageInstalle
     /// <summary>Uninstall, only after the user confirms (003 R2.2, constitution P2).</summary>
     public async Task UninstallAsync(PackageInfo package)
     {
-        if (queue.Find(package.Id) is { IsActive: true })
+        if (queue.Find(package) is { IsActive: true })
         {
             return;
         }

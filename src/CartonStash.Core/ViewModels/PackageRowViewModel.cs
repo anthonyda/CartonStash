@@ -20,7 +20,7 @@ public sealed partial class PackageRowViewModel : ObservableObject
         Package = package;
         _actions = actions;
         _allowed = allowed;
-        Operation = actions.Queue.Find(package.Id);
+        Operation = actions.Queue.Find(package);
     }
 
     public PackageInfo Package { get; }
@@ -106,7 +106,7 @@ internal static class RowOperationTracker
         {
             foreach (var row in rows())
             {
-                if (row.Id == operation.Package.Id)
+                if (string.Equals(row.Package.Key, operation.Package.Key, StringComparison.OrdinalIgnoreCase))
                 {
                     row.Operation = operation;
                 }

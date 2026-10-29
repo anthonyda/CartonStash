@@ -15,6 +15,18 @@ public sealed record PackageInfo(
     string Source,
     bool UpdateAvailable = false)
 {
+    /// <summary>The installed program's own entry ID (<c>ARP\...</c>, <c>MSIX\...</c>); null for search results (002 R6).</summary>
+    public string? InstalledId { get; init; }
+
+    /// <summary>
+    /// False when the row was linked to <see cref="Id"/> through the source manifest rather than by WinGet itself; such
+    /// rows never claim WinGet's update verdict (002 R6.4).
+    /// </summary>
+    public bool IsPrimaryMatch { get; init; } = true;
+
+    /// <summary>Identity of the row: several installed programs can share one WinGet ID (002 R6.5).</summary>
+    public string Key => InstalledId ?? Id;
+
     public bool IsInstalled => InstalledVersion is not null;
 
     public bool HasUpdate => IsInstalled && UpdateAvailable;
