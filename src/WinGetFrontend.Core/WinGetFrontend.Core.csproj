@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- UI-free domain + WinGet access layer. Everything here must be testable without WinUI. -->
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.WindowsPackageManager.ComInterop" GeneratePathProperty="true" />
+    <PackageReference Include="CommunityToolkit.Mvvm" />
+  </ItemGroup>
+
+  <!-- The package only copies its native factory DLL into *this* project's output. Re-publish it as
+       content so it also lands next to the app and test executables (CsWinRT loads it by name to
+       activate WinGet's out-of-proc COM server without registration). -->
+  <ItemGroup>
+    <None Include="$(PkgMicrosoft_WindowsPackageManager_ComInterop)\bin\$(RuntimeIdentifier)\native\static\Microsoft.Management.Deployment.dll"
+          Link="Microsoft.Management.Deployment.dll"
+          CopyToOutputDirectory="PreserveNewest"
+          Visible="false" />
+    <None Include="$(PkgMicrosoft_WindowsPackageManager_ComInterop)\lib\uap10.0\Microsoft.Management.Deployment.winmd"
+          Link="Microsoft.Management.Deployment.winmd"
+          CopyToOutputDirectory="PreserveNewest"
+          Visible="false" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="WinGetFrontend.Core.Tests" />
+  </ItemGroup>
+
+</Project>
