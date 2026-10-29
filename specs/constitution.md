@@ -1,6 +1,6 @@
 # Constitution
 
-Non-negotiable rules for WinGet Frontend. A spec or change that conflicts with these must
+Non-negotiable rules for CartonStash. A spec or change that conflicts with these must
 amend this file first, explicitly and with a reason.
 
 ## 1. Product
@@ -14,8 +14,8 @@ amend this file first, explicitly and with a reason.
 
 ## 2. Architecture
 
-- **A1. Layers.** `WinGetFrontend.Core` holds models, services and view models and has **no WinUI
-  dependency**. `WinGetFrontend.App` holds XAML views, DI wiring and platform glue only.
+- **A1. Layers.** `CartonStash.Core` holds models, services and view models and has **no WinUI
+  dependency**. `CartonStash.App` holds XAML views, DI wiring and platform glue only.
 - **A2. One gateway to WinGet.** Only classes in `Core/Services` touch `Microsoft.Management.Deployment`.
   They return plain records (`Core/Models`), never COM objects.
 - **A3. MVVM.** Views bind to view models with `x:Bind`. Code-behind is limited to view-only concerns

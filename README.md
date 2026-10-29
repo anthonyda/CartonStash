@@ -1,4 +1,6 @@
-# WinGet Frontend
+# CartonStash
+
+*An app manager for WinGet.*
 
 A native Windows 11 app for searching, installing and updating software through
 [WinGet](https://github.com/microsoft/winget-cli), built with WinUI 3 on .NET 10.
@@ -13,7 +15,7 @@ A native Windows 11 app for searching, installing and updating software through
 
 ```
 dotnet build
-dotnet run --project src/WinGetFrontend.App
+dotnet run --project src/CartonStash.App
 dotnet test
 ```
 

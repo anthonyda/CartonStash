@@ -40,7 +40,7 @@ Tick a task only when its verification passes. Keep tasks small enough for one c
 | Criterion | Date | Result | Notes |
 |-----------|------|--------|-------|
 | R1.1 | 2026-10-29 | Pass | Live search "Git.Git" → `Git.Git 2.56.0.3 (installed 2.56.0.3) winget` |
-| T4   | 2026-10-29 | Pass | App starts, window "WinGet Frontend" shown |
+| T4   | 2026-10-29 | Pass | App starts, window "CartonStash" shown |
 | R1.4, R2.1 | 2026-10-29 | Pass | UIA: search "Git.Git" → row `Git · Git.Git · Installed 2.56.0.3 · 2.56.0.3 · winget` |
 | R2.2 | 2026-10-29 | Pass | UIA: search "Anaconda.Miniconda3" → `Installed py312_24.11.1-0 · Update available · py314_26.9.4-0` |
 | R3.3 | 2026-10-29 | Pass | UIA: search "zzqqxxnotapackage" → "No packages found for 'zzqqxxnotapackage'" |

@@ -38,10 +38,12 @@ and trust what they're running.
 - **Code signing certificate:** a self-signed certificate only works for testing (users must trust it manually).
   Options: Azure Trusted Signing (~$10/month), an OV certificate (~$200–400/year), or Microsoft Store distribution
   (free signing by Microsoft). *Needs your decision.*
-- **App name and publisher identity:** "WinGet Frontend" is a working title. A final name, publisher display name and
+- **App name and publisher identity:** "WinGet Frontend" was the working title. A final name, publisher display name and
   icon are needed for the manifest and the winget-pkgs submission. Avoid "WinGet" in the product name to
   reduce trademark and confusion risk with Microsoft's tools.
+- **Name rule: decided 2026-10-29.** The product name must **not** contain "WinGet" (Microsoft's product name). WinGet may only be mentioned in descriptions (e.g. "an app manager for WinGet").
+- **Name: decided 2026-10-30: CartonStash.** Free in the WinGet catalog (user checked other options were taken). Used for the window, title bar, Settings, diagnostics, the exe (`CartonStash.exe`) and the settings folder (`%LOCALAPPDATA%\CartonStash`, copied once from the old `WinGetFrontend` folder). Renamed everywhere on 2026-10-30: solution, projects, namespaces, repo folder (`C:\dev\CartonStash`) and GitHub repo. Publisher display name still open.
 - **Icon: decided 2026-10-29.** Open cardboard box with an up arrow on a green rounded square. Source:
-  `src/WinGetFrontend.App/Assets/AppIcon.svg`; `AppIcon.ico` (16–256 px) is rendered from it and already used for the
+  `src/CartonStash.App/Assets/AppIcon.svg`; `AppIcon.ico` (16–256 px) is rendered from it and already used for the
   unpackaged app (exe, window, taskbar, title bar). The MSIX logo set (T1) is generated from the same SVG.
 - **Repository hosting:** GitHub (assumed by R2 and R3)?

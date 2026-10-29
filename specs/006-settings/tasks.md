@@ -25,5 +25,5 @@
 | R3.1 | 2026-10-29 | Pass | msstore (Microsoft.Rest), winget, winget-font (explicit) with trust level and last update time |
 | R3.2 | 2026-10-29 | Pass | Refresh sources → "Sources refreshed." |
 | R3.3 | 2026-10-29 | Pass | msstore Agreements → dialog "Terms of Transaction" [Accept] [Decline]; Decline accepted nothing |
-| R4.1, R4.2 | 2026-10-29 | Pass | "WinGet Frontend 1.0.0 · WinGet 1.29.380"; clipboard holds versions, OS build and the 3 sources |
+| R4.1, R4.2 | 2026-10-29 | Pass | "CartonStash 1.0.0 · WinGet 1.29.380"; clipboard holds versions, OS build and the 3 sources |
 | R1.1 (high contrast) | – | **Pending** | Check the app with a Windows contrast theme on (constitution Q5) |

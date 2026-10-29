@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- WinUI 3 shell: views, DI wiring, app startup. Logic lives in CartonStash.Core. -->
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <RootNamespace>CartonStash.App</RootNamespace>
+    <AssemblyName>CartonStash</AssemblyName>
+    <Product>CartonStash</Product>
+    <AssemblyTitle>CartonStash</AssemblyTitle>
+    <Description>An app manager for WinGet</Description>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
+    <Platforms>x64;ARM64</Platforms>
+    <!-- One output folder whether built via the solution (Platform=x64) or the project; the RID already names the arch. -->
+    <AppendPlatformToOutputPath>false</AppendPlatformToOutputPath>
+    <UseWinUI>true</UseWinUI>
+    <!-- Unpackaged for now (plain .exe, F5 just works). Switch to MSIX later via a spec. -->
+    <WindowsPackageType>None</WindowsPackageType>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.WindowsAppSDK" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+  </ItemGroup>
+
+  <!-- App icon: AppIcon.svg is the source; AppIcon.ico is rendered from it (16–256 px). -->
+  <ItemGroup>
+    <Content Include="Assets\AppIcon.ico" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Assets\AppIcon.svg" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CartonStash.Core\CartonStash.Core.csproj" />
+  </ItemGroup>
+
+</Project>

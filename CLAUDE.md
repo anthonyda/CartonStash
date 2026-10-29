@@ -1,4 +1,4 @@
-# WinGet Frontend
+# CartonStash
 
 Windows desktop frontend for WinGet. C# / .NET 10, WinUI 3 (Windows App SDK), WinGet COM API.
 
@@ -14,9 +14,9 @@ Read `specs/README.md` (workflow) and `specs/constitution.md` (rules) before cha
 
 ## Layout
 
-- `src/WinGetFrontend.Core`: models, services (the only code that touches WinGet), view models. No WinUI.
-- `src/WinGetFrontend.App`: WinUI 3 views, DI wiring in `App.xaml.cs`.
-- `tests/WinGetFrontend.Core.Tests`: xUnit. Integration tests are tagged `Category=Integration`.
+- `src/CartonStash.Core`: models, services (the only code that touches WinGet), view models. No WinUI.
+- `src/CartonStash.App`: WinUI 3 views, DI wiring in `App.xaml.cs`.
+- `tests/CartonStash.Core.Tests`: xUnit. Integration tests are tagged `Category=Integration`.
 
 ## Commands
 
@@ -24,7 +24,7 @@ Read `specs/README.md` (workflow) and `specs/constitution.md` (rules) before cha
 dotnet build                                            # whole solution (RID defaults to this machine)
 dotnet test                                             # all tests, incl. live WinGet
 dotnet test --filter "Category!=Integration"            # unit tests only
-dotnet run --project src/WinGetFrontend.App             # run the app
+dotnet run --project src/CartonStash.App             # run the app
 ```
 
 ## Gotchas

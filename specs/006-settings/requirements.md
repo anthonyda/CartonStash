@@ -38,4 +38,4 @@ today. Users need one place to see and change them.
 
 ## Open questions
 
-- Settings storage? **Decided: JSON in `%LOCALAPPDATA%\WinGetFrontend\settings.json` behind `ISettingsStore`; `ApplicationData` comes with 007.**
+- Settings storage? **Decided: JSON in `%LOCALAPPDATA%\CartonStash\settings.json` behind `ISettingsStore`; `ApplicationData` comes with 007.**

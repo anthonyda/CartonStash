@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="CartonStash.App.Views.SettingsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:models="using:CartonStash.Core.Models"
+    xmlns:ui="using:CartonStash.App"
+    NavigationCacheMode="Required">
+
+    <Page.Resources>
+        <Style x:Key="CardStyle" TargetType="Grid">
+            <Setter Property="Padding" Value="16" />
+            <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}" />
+            <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="{StaticResource OverlayCornerRadius}" />
+            <Setter Property="ColumnSpacing" Value="16" />
+        </Style>
+    </Page.Resources>
+
+    <ScrollViewer>
+        <StackPanel
+            MaxWidth="1000"
+            Padding="24,16,24,24"
+            HorizontalAlignment="Stretch"
+            Spacing="8">
+            <TextBlock
+                Margin="0,0,0,12"
+                AutomationProperties.HeadingLevel="Level1"
+                Style="{StaticResource TitleTextBlockStyle}"
+                Text="Settings" />
+
+            <!-- Appearance (R1.1) -->
+            <TextBlock AutomationProperties.HeadingLevel="Level2" Style="{StaticResource BodyStrongTextBlockStyle}" Text="Appearance" />
+            <Grid Style="{StaticResource CardStyle}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="Theme" />
+                    <TextBlock Foreground="{ThemeResource TextFillColorSecondaryBrush}" Style="{StaticResource CaptionTextBlockStyle}" Text="Applies immediately" />
+                </StackPanel>
+                <ComboBox
+                    Grid.Column="1"
+                    MinWidth="200"
+                    AutomationProperties.Name="Theme"
+                    SelectedIndex="{x:Bind ViewModel.ThemeIndex, Mode=TwoWay}">
+                    <x:String>Use system setting</x:String>
+                    <x:String>Light</x:String>
+                    <x:String>Dark</x:String>
+                </ComboBox>
+            </Grid>
+
+            <!-- Installing (R2.1, R2.2) -->
+            <TextBlock Margin="0,12,0,0" AutomationProperties.HeadingLevel="Level2" Style="{StaticResource BodyStrongTextBlockStyle}" Text="Installing" />
+            <Grid Style="{StaticResource CardStyle}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="Default install scope" />
+                    <TextBlock Foreground="{ThemeResource TextFillColorSecondaryBrush}" Style="{StaticResource CaptionTextBlockStyle}" Text="Used for every install and update" />
+                </StackPanel>
+                <ComboBox
+                    Grid.Column="1"
+                    MinWidth="200"
+                    AutomationProperties.Name="Default install scope"
+                    SelectedIndex="{x:Bind ViewModel.ScopeIndex, Mode=TwoWay}">
+                    <x:String>Let WinGet decide</x:String>
+                    <x:String>Current user</x:String>
+                    <x:String>All users (machine)</x:String>
+                </ComboBox>
+            </Grid>
+            <InfoBar
+                IsClosable="False"
+                IsOpen="{x:Bind ViewModel.ShowScopeWarning, Mode=OneWay}"
+                Message="Installers for all users usually need administrator rights, so Windows may show a UAC prompt for each install."
+                Severity="Informational" />
+
+            <!-- Sources (R3.1–R3.3) -->
+            <Grid Margin="0,12,0,0">
+                <TextBlock
+                    VerticalAlignment="Bottom"
+                    AutomationProperties.HeadingLevel="Level2"
+                    Style="{StaticResource BodyStrongTextBlockStyle}"
+                    Text="Sources" />
+                <Button
+                    HorizontalAlignment="Right"
+                    Command="{x:Bind ViewModel.RefreshSourcesCommand}"
+                    Content="Refresh sources"
+                    IsEnabled="{x:Bind ui:Ui.Not(ViewModel.IsBusy), Mode=OneWay}" />
+            </Grid>
+            <ProgressBar
+                AutomationProperties.Name="Refreshing sources"
+                IsIndeterminate="True"
+                Visibility="{x:Bind ViewModel.IsBusy, Mode=OneWay}" />
+            <TextBlock
+                AutomationProperties.LiveSetting="Polite"
+                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                Text="{x:Bind ViewModel.SourcesStatus, Mode=OneWay}"
+                Visibility="{x:Bind ui:Ui.VisibleIf(ViewModel.SourcesStatus), Mode=OneWay}" />
+            <InfoBar
+                Title="Some sources couldn't be refreshed"
+                IsClosable="False"
+                IsOpen="{x:Bind ui:Ui.HasText(ViewModel.SourcesError), Mode=OneWay}"
+                Message="{x:Bind ViewModel.SourcesError, Mode=OneWay}"
+                Severity="Warning" />
+            <ItemsControl ItemsSource="{x:Bind ViewModel.Sources}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="models:SourceInfo">
+                        <Grid Margin="0,0,0,4" Style="{StaticResource CardStyle}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}" Text="{x:Bind Name}" />
+                                <TextBlock
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                    IsTextSelectionEnabled="True"
+                                    Style="{StaticResource CaptionTextBlockStyle}"
+                                    Text="{x:Bind DetailText}"
+                                    TextWrapping="Wrap" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock HorizontalAlignment="Right" Text="{x:Bind TrustText}" />
+                                <TextBlock
+                                    HorizontalAlignment="Right"
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                    Style="{StaticResource CaptionTextBlockStyle}"
+                                    Text="{x:Bind LastUpdatedText}" />
+                            </StackPanel>
+                            <Button
+                                Grid.Column="2"
+                                VerticalAlignment="Center"
+                                AutomationProperties.Name="{x:Bind ui:Ui.Format('Review agreements for {0}', Name)}"
+                                Click="ReviewAgreements_Click"
+                                Content="Agreements"
+                                Tag="{x:Bind}"
+                                Visibility="{x:Bind HasAgreements}" />
+                        </Grid>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <!-- About (R4.1, R4.2) -->
+            <TextBlock Margin="0,12,0,0" AutomationProperties.HeadingLevel="Level2" Style="{StaticResource BodyStrongTextBlockStyle}" Text="About" />
+            <Grid Style="{StaticResource CardStyle}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock
+                    VerticalAlignment="Center"
+                    IsTextSelectionEnabled="True"
+                    Text="{x:Bind ViewModel.VersionText, Mode=OneWay}" />
+                <Button
+                    Grid.Column="1"
+                    Command="{x:Bind ViewModel.CopyDiagnosticsCommand}"
+                    Content="Copy diagnostic info" />
+            </Grid>
+        </StackPanel>
+    </ScrollViewer>
+</Page>

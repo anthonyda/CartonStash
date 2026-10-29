@@ -15,7 +15,7 @@ root element and updating the title-bar button colours.
 |-------|------|----------------|---------------|
 | Core/Models | `AppSettings` | `Theme` (System/Light/Dark), `InstallScope` (Any/User/System) | new |
 | Core/Models | `SourceInfo` | Name, Type, Argument (URL), TrustLevel, Explicit, LastUpdated, AgreementsPending | new |
-| Core/Services | `ISettingsStore` + `JsonSettingsStore` | Load / save `%LOCALAPPDATA%\WinGetFrontend\settings.json`; tolerant of missing or corrupt files (fall back to defaults, keep a `.bak`) | new |
+| Core/Services | `ISettingsStore` + `JsonSettingsStore` | Load / save `%LOCALAPPDATA%\CartonStash\settings.json` (*amended 2026-10-30:* folder renamed with the app; the old `WinGetFrontend` file is copied once); tolerant of missing or corrupt files (fall back to defaults, keep a `.bak`) | new |
 | Core/Services | `ISettings` (singleton) | Current settings + `Changed` event; used by the 003 installer for scope (R2.1) | new |
 | Core/Services | `IPackageService` | `GetSourcesAsync`, `RefreshSourceAsync(name)` (*amended:* one source per call; the view model loops and reports "n of m"), `GetWinGetVersion()`, `AcceptSourceAgreements(name)` | new methods |
 | Core/ViewModels | `SettingsViewModel` | Theme, scope, sources, refresh command, versions, diagnostic text | new |
@@ -50,7 +50,7 @@ Settings
  Sources          winget     Microsoft.PreIndexed.Package   Trusted   updated 2 h ago
                   msstore    Microsoft.Rest                 Trusted   updated 2 h ago
                   [ Refresh sources ]
- About            WinGet Frontend 0.1.0 · WinGet 1.29.380   [ Copy diagnostic info ]
+ About            CartonStash 0.1.0 · WinGet 1.29.380   [ Copy diagnostic info ]
 ```
 
 ## Error handling and edge cases
