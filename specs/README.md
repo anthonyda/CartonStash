@@ -42,7 +42,7 @@ If implementation reveals the spec is wrong, **stop, update the spec first**, th
 | 003 | [Install / uninstall with progress](003-install-uninstall/) | In progress: code done; UAC check (R6.1) pending |
 | 004 | [Available updates](004-updates/)                      | In progress: code done; live update (R2.1) pending; R3 pins deferred, open |
 | 005 | [Package details pane](005-package-details/)           | In progress: code done; link-opens-browser check (R1.3) pending |
-| 006 | [Settings](006-settings/)                              | In progress: code done; high-contrast check pending |
+| 006 | [Settings](006-settings/)                              | In progress: code done; high-contrast check pending; amendment R5 (start page) approved |
 | 007 | [Packaging and release](007-packaging-release/)        | Draft: on hold, **decisions needed** (signing, name, hosting) |
 
 Suggested build order: 002 → 003 → 004 → 005 → 006 → 007 (006's scope setting slots into 003's installer when it lands).

@@ -25,6 +25,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         _clipboard = clipboard;
         ThemeIndex = (int)settings.Current.Theme;
         ScopeIndex = (int)settings.Current.InstallScope;
+        StartPageIndex = (int)settings.Current.StartPage;
     }
 
     /// <summary>ComboBox index of <see cref="AppTheme"/>: System, Light, Dark (R1.1).</summary>
@@ -35,6 +36,10 @@ public sealed partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowScopeWarning))]
     public partial int ScopeIndex { get; set; }
+
+    /// <summary>ComboBox index of <see cref="StartPage"/>: Search, Installed, Updates (R5.1). Applies at next start (R5.3).</summary>
+    [ObservableProperty]
+    public partial int StartPageIndex { get; set; }
 
     /// <summary>"All users" may show UAC prompts (R2.2).</summary>
     public bool ShowScopeWarning => ScopeIndex == (int)InstallScope.System;
@@ -150,6 +155,14 @@ public sealed partial class SettingsViewModel : ObservableObject
         if (Enum.IsDefined((AppTheme)value))
         {
             _settings.Update(s => s with { Theme = (AppTheme)value });
+        }
+    }
+
+    partial void OnStartPageIndexChanged(int value)
+    {
+        if (Enum.IsDefined((StartPage)value))
+        {
+            _settings.Update(s => s with { StartPage = (StartPage)value });
         }
     }
 

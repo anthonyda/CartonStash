@@ -13,15 +13,28 @@ root element and updating the title-bar button colours.
 
 | Layer | Type | Responsibility | New / changed |
 |-------|------|----------------|---------------|
-| Core/Models | `AppSettings` | `Theme` (System/Light/Dark), `InstallScope` (Any/User/System) | new |
+| Core/Models | `AppSettings` | `Theme` (System/Light/Dark), `InstallScope` (Any/User/System), `StartPage` (Search/Installed/Updates, R5) | new; `StartPage` added by amendment R5 |
 | Core/Models | `SourceInfo` | Name, Type, Argument (URL), TrustLevel, Explicit, LastUpdated, AgreementsPending | new |
 | Core/Services | `ISettingsStore` + `JsonSettingsStore` | Load / save `%LOCALAPPDATA%\CartonStash\settings.json` (*amended 2026-10-30:* folder renamed with the app; the old `WinGetFrontend` file is copied once); tolerant of missing or corrupt files (fall back to defaults, keep a `.bak`) | new |
 | Core/Services | `ISettings` (singleton) | Current settings + `Changed` event; used by the 003 installer for scope (R2.1) | new |
 | Core/Services | `IPackageService` | `GetSourcesAsync`, `RefreshSourceAsync(name)` (*amended:* one source per call; the view model loops and reports "n of m"), `GetWinGetVersion()`, `AcceptSourceAgreements(name)` | new methods |
-| Core/ViewModels | `SettingsViewModel` | Theme, scope, sources, refresh command, versions, diagnostic text | new |
+| Core/ViewModels | `SettingsViewModel` | Theme, scope, start page (R5), sources, refresh command, versions, diagnostic text | new |
 | App | `SettingsPage` | `SettingsCard`-style layout (from WinUI Gallery patterns), `NavigationView` settings item | new |
 | App | `ThemeService` | Applies `ElementTheme` + title-bar colours (R1.1) | new |
 | App | `IClipboardService` | Copies the diagnostic text (R4.2) | new |
+
+## Start page (amendment R5, approved 2026-10-30)
+
+- `AppSettings.StartPage` is a new enum `StartPage { Search, Installed, Updates }`, default `Search`. Stored by name in the
+  same JSON file (`"StartPage": "Updates"`).
+- Older settings files have no `StartPage`: System.Text.Json leaves the record's default (`Search`), so no reset notice (R5.4).
+  An unknown value (`"StartPage": "Purple"`) counts as a corrupt file, like an unknown theme today.
+- `SettingsViewModel.StartPageIndex` binds a ComboBox under **Appearance → Start page** and calls `ISettings.Update` (saved at once).
+  Nothing navigates when it changes (R5.3).
+- `MainWindow` reads `ISettings.Current.StartPage` once at startup, selects the matching `NavigationViewItem` and navigates the
+  frame to that page (R5.2). Today it always opens Search.
+- The installed list still preloads in the background at startup (004 badge), so opening on Installed or Updates shows the
+  progress bar briefly, then the list. No extra WinGet calls.
 
 ## WinGet API usage
 
@@ -45,6 +58,7 @@ reads the scope on its next operation. Settings page load → `GetSourcesAsync` 
 ```
 Settings
  Appearance       Theme                 [ Use system setting ▾ ]
+                  Start page            [ Search ▾ ]            (R5: Search / Installed / Updates)
  Installing       Default install scope [ Let WinGet decide ▾ ]
                   ⓘ "All users" may show a UAC prompt for each install.
  Sources          winget     Microsoft.PreIndexed.Package   Trusted   updated 2 h ago

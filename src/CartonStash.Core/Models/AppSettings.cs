@@ -15,12 +15,23 @@ public enum InstallScope
     System,
 }
 
+/// <summary>The page the app opens on (006 R5.1). Values match the navigation order.</summary>
+public enum StartPage
+{
+    Search,
+    Installed,
+    Updates,
+}
+
 /// <summary>Per-user app settings (spec 006), saved as JSON.</summary>
 public sealed record AppSettings
 {
     public AppTheme Theme { get; init; } = AppTheme.System;
 
     public InstallScope InstallScope { get; init; } = InstallScope.Any;
+
+    /// <summary>Missing in files saved before 006 R5, which then keep this default (R5.4).</summary>
+    public StartPage StartPage { get; init; } = StartPage.Search;
 }
 
 /// <summary>A configured WinGet source (006 R3.1).</summary>

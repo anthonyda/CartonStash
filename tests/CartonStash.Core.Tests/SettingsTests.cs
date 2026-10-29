@@ -25,10 +25,11 @@ public sealed class SettingsTests : IDisposable
     {
         var store = new JsonSettingsStore(SettingsPath);
 
-        store.Save(new AppSettings { Theme = AppTheme.Dark, InstallScope = InstallScope.User });
+        var saved = new AppSettings { Theme = AppTheme.Dark, InstallScope = InstallScope.User, StartPage = StartPage.Updates };
+        store.Save(saved);
         var (loaded, reset) = new JsonSettingsStore(SettingsPath).Load();
 
-        Assert.Equal(new AppSettings { Theme = AppTheme.Dark, InstallScope = InstallScope.User }, loaded);
+        Assert.Equal(saved, loaded);
         Assert.False(reset);
     }
 
@@ -46,6 +47,7 @@ public sealed class SettingsTests : IDisposable
     [InlineData("""{ "Theme": "Purple" }""")]
     [InlineData("""{ "Theme": 42 }""")]
     [InlineData("null")]
+    [InlineData("""{ "StartPage": "Purple" }""")]
     public void Corrupt_file_gives_defaults_and_keeps_a_backup(string content)
     {
         Directory.CreateDirectory(_dir);
@@ -56,6 +58,19 @@ public sealed class SettingsTests : IDisposable
         Assert.Equal(new AppSettings(), loaded);
         Assert.True(reset);
         Assert.Equal(content, File.ReadAllText(SettingsPath + ".bak"));
+    }
+
+    [Fact]
+    public void File_from_before_start_page_opens_on_search_without_a_reset() // R5.4
+    {
+        Directory.CreateDirectory(_dir);
+        File.WriteAllText(SettingsPath, """{ "Theme": "Dark", "InstallScope": "User" }""");
+
+        var (loaded, reset) = new JsonSettingsStore(SettingsPath).Load();
+
+        Assert.Equal(StartPage.Search, loaded.StartPage);
+        Assert.Equal(AppTheme.Dark, loaded.Theme);
+        Assert.False(reset);
     }
 
     [Fact]
@@ -94,6 +109,20 @@ public sealed class SettingsTests : IDisposable
         Assert.Equal(AppTheme.Dark, settings.Current.Theme);
         Assert.Equal(InstallScope.System, settings.Current.InstallScope);
         Assert.True(vm.ShowScopeWarning);
+    }
+
+    [Fact]
+    public void View_model_shows_and_writes_the_start_page() // R5.1, R5.3
+    {
+        var settings = new FakeSettings(new AppSettings { StartPage = StartPage.Installed });
+        var vm = new SettingsViewModel(settings, new FakePackageService(), new FakeDialogs(), new FakeClipboard());
+        Assert.Equal((int)StartPage.Installed, vm.StartPageIndex);
+
+        vm.StartPageIndex = (int)StartPage.Updates;
+        Assert.Equal(StartPage.Updates, settings.Current.StartPage);
+
+        vm.StartPageIndex = -1; // ComboBox with no selection: ignored
+        Assert.Equal(StartPage.Updates, settings.Current.StartPage);
     }
 
     [Fact]

@@ -52,6 +52,27 @@
                 </ComboBox>
             </Grid>
 
+            <!-- Start page (R5.1, R5.3) -->
+            <Grid Style="{StaticResource CardStyle}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="Start page" />
+                    <TextBlock Foreground="{ThemeResource TextFillColorSecondaryBrush}" Style="{StaticResource CaptionTextBlockStyle}" Text="Used the next time the app starts" />
+                </StackPanel>
+                <ComboBox
+                    Grid.Column="1"
+                    MinWidth="200"
+                    AutomationProperties.Name="Start page"
+                    SelectedIndex="{x:Bind ViewModel.StartPageIndex, Mode=TwoWay}">
+                    <x:String>Search</x:String>
+                    <x:String>Installed</x:String>
+                    <x:String>Updates</x:String>
+                </ComboBox>
+            </Grid>
+
             <!-- Installing (R2.1, R2.2) -->
             <TextBlock Margin="0,12,0,0" AutomationProperties.HeadingLevel="Level2" Style="{StaticResource BodyStrongTextBlockStyle}" Text="Installing" />
             <Grid Style="{StaticResource CardStyle}">

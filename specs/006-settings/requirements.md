@@ -1,6 +1,6 @@
 # 006 – Settings: Requirements
 
-**Status:** Approved (2026-10-29)
+**Status:** Approved (2026-10-29). Amendment R5 (start page) approved 2026-10-30
 **Depends on:** 002, 003
 
 ## Problem
@@ -14,6 +14,7 @@ today. Users need one place to see and change them.
 - **US2.** As a user, I want to choose the default install scope (WinGet default, Current user, All users / machine).
 - **US3.** As a user, I want to see WinGet's sources and refresh them when results look stale.
 - **US4.** As a user, I want to see the app and WinGet versions to report problems.
+- **US5.** As a user, I want to choose which page the app opens on, so I land where I usually start (e.g. Updates).
 
 ## Acceptance criteria (EARS)
 
@@ -28,6 +29,10 @@ today. Users need one place to see and change them.
 | R3.3 | US3   | If a source requires accepting an agreement, then the app shall show the agreement text with Accept / Decline before using that source. |
 | R4.1 | US4   | The Settings page shall show the app version and the WinGet (App Installer) version. |
 | R4.2 | US4   | The Settings page shall show a "Copy diagnostic info" button that copies versions, OS build and source list as plain text. |
+| R5.1 | US5   | The Settings page shall offer a **Start page** setting with the choices Search, Installed and Updates. The default is Search. |
+| R5.2 | US5   | When the app starts, it shall open the chosen start page and show it as selected in the navigation. |
+| R5.3 | US5   | Changing the start page shall take effect the next time the app starts; it shall not navigate away from Settings. |
+| R5.4 | –     | If the saved start page is missing (settings from an older version), the app shall use Search without reporting a reset. |
 
 ## Out of scope
 
@@ -37,5 +42,9 @@ today. Users need one place to see and change them.
 - Language / localization (English only in v1).
 
 ## Open questions
+
+- **Start page (R5): also offer "Last used page"?** **Decided 2026-10-30: no for now.** 002 R4.1 deliberately doesn't remember the last page in v1;
+  a fixed choice is predictable. Can be added later as a fourth option without changing the stored format much.
+- **Start page: offer Settings as a choice?** **Decided 2026-10-30: no.** Nobody needs to land on Settings every day.
 
 - Settings storage? **Decided: JSON in `%LOCALAPPDATA%\CartonStash\settings.json` behind `ISettingsStore`; `ApplicationData` comes with 007.**

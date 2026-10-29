@@ -3,6 +3,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using CartonStash.App.Services;
 using CartonStash.App.Views;
+using CartonStash.Core.Models;
 using CartonStash.Core.Services;
 using CartonStash.Core.ViewModels;
 
@@ -22,7 +23,7 @@ public sealed partial class MainWindow : Window
     private bool _closeConfirmed;
 
     public MainWindow(ShellViewModel shell, ActivityViewModel activity, DialogService dialogs, ThemeService theme,
-        InstalledPackagesStore installed)
+        InstalledPackagesStore installed, ISettings settings)
     {
         Shell = shell;
         Activity = activity;
@@ -37,8 +38,7 @@ public sealed partial class MainWindow : Window
         Root.Loaded += (_, _) => dialogs.XamlRoot = Root.XamlRoot;
         theme.Attach(this);
 
-        Nav.SelectedItem = Nav.MenuItems[0];
-        ContentFrame.Navigate(typeof(SearchPage));
+        OpenStartPage(settings.Current.StartPage);
 
         // Load installed data in the background so the Updates badge appears (004 R4.1).
         _ = installed.EnsureLoadedAsync();
@@ -47,6 +47,19 @@ public sealed partial class MainWindow : Window
     public ShellViewModel Shell { get; }
 
     public ActivityViewModel Activity { get; }
+
+    // 006 R5.2: open the saved start page and select its navigation item.
+    private void OpenStartPage(StartPage start)
+    {
+        var key = start switch
+        {
+            StartPage.Installed => "installed",
+            StartPage.Updates => "updates",
+            _ => "search",
+        };
+        Nav.SelectedItem = Nav.MenuItems.OfType<NavigationViewItem>().First(i => (string)i.Tag == key);
+        ContentFrame.Navigate(Pages[key]);
+    }
 
     private void Nav_ItemInvoked(NavigationView sender, NavigationViewItemInvokedEventArgs args)
     {
