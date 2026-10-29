@@ -8,6 +8,50 @@
     xmlns:vm="using:CartonStash.Core.ViewModels"
     NavigationCacheMode="Required">
 
+    <Page.Resources>
+        <ResourceDictionary>
+            <!-- 002 R8: a selected chip is shown with a neutral fill and outline, not the accent color, so the
+                 colored dots stay the only color cue (the accent could be green, blue or amber itself).
+                 Per-theme dictionaries so the referenced brushes follow light / dark / high contrast. -->
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Default">
+                    <StaticResource x:Key="ToggleButtonBackgroundChecked" ResourceKey="SubtleFillColorTertiaryBrush" />
+                    <StaticResource x:Key="ToggleButtonBackgroundCheckedPointerOver" ResourceKey="SubtleFillColorSecondaryBrush" />
+                    <StaticResource x:Key="ToggleButtonBackgroundCheckedPressed" ResourceKey="SubtleFillColorTertiaryBrush" />
+                    <StaticResource x:Key="ToggleButtonForegroundChecked" ResourceKey="TextFillColorPrimaryBrush" />
+                    <StaticResource x:Key="ToggleButtonForegroundCheckedPointerOver" ResourceKey="TextFillColorPrimaryBrush" />
+                    <StaticResource x:Key="ToggleButtonForegroundCheckedPressed" ResourceKey="TextFillColorSecondaryBrush" />
+                    <StaticResource x:Key="ToggleButtonBorderBrushChecked" ResourceKey="TextFillColorPrimaryBrush" />
+                    <StaticResource x:Key="ToggleButtonBorderBrushCheckedPointerOver" ResourceKey="TextFillColorPrimaryBrush" />
+                    <StaticResource x:Key="ToggleButtonBorderBrushCheckedPressed" ResourceKey="TextFillColorSecondaryBrush" />
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Light">
+                    <StaticResource x:Key="ToggleButtonBackgroundChecked" ResourceKey="SubtleFillColorTertiaryBrush" />
+                    <StaticResource x:Key="ToggleButtonBackgroundCheckedPointerOver" ResourceKey="SubtleFillColorSecondaryBrush" />
+                    <StaticResource x:Key="ToggleButtonBackgroundCheckedPressed" ResourceKey="SubtleFillColorTertiaryBrush" />
+                    <StaticResource x:Key="ToggleButtonForegroundChecked" ResourceKey="TextFillColorPrimaryBrush" />
+                    <StaticResource x:Key="ToggleButtonForegroundCheckedPointerOver" ResourceKey="TextFillColorPrimaryBrush" />
+                    <StaticResource x:Key="ToggleButtonForegroundCheckedPressed" ResourceKey="TextFillColorSecondaryBrush" />
+                    <StaticResource x:Key="ToggleButtonBorderBrushChecked" ResourceKey="TextFillColorPrimaryBrush" />
+                    <StaticResource x:Key="ToggleButtonBorderBrushCheckedPointerOver" ResourceKey="TextFillColorPrimaryBrush" />
+                    <StaticResource x:Key="ToggleButtonBorderBrushCheckedPressed" ResourceKey="TextFillColorSecondaryBrush" />
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="HighContrast">
+                    <StaticResource x:Key="ToggleButtonBackgroundChecked" ResourceKey="SystemColorHighlightColorBrush" />
+                    <StaticResource x:Key="ToggleButtonForegroundChecked" ResourceKey="SystemColorHighlightTextColorBrush" />
+                    <StaticResource x:Key="ToggleButtonBorderBrushChecked" ResourceKey="SystemColorHighlightTextColorBrush" />
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+
+            <!-- 002 R8: pill-shaped toggle chips -->
+            <Style x:Key="ChipStyle" BasedOn="{StaticResource DefaultToggleButtonStyle}" TargetType="ToggleButton">
+                <Setter Property="CornerRadius" Value="14" />
+                <Setter Property="Padding" Value="12,4" />
+                <Setter Property="MinHeight" Value="28" />
+            </Style>
+        </ResourceDictionary>
+    </Page.Resources>
+
     <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*" />
@@ -47,6 +91,7 @@
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
                 <!-- R2.1 -->
                 <TextBox
@@ -61,9 +106,76 @@
                     AutomationProperties.LiveSetting="Polite"
                     Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                     Text="{x:Bind ViewModel.CountText, Mode=OneWay}" />
+                <!-- 002 R8: status chips, also the legend for the badge colors (R7) -->
+                <ScrollViewer
+                    Grid.Row="1"
+                    Grid.ColumnSpan="2"
+                    HorizontalScrollBarVisibility="Auto"
+                    HorizontalScrollMode="Auto"
+                    VerticalScrollBarVisibility="Disabled"
+                    VerticalScrollMode="Disabled">
+                    <StackPanel
+                        AutomationProperties.Name="Filter by version status"
+                        Orientation="Horizontal"
+                        Spacing="8">
+                    <ToggleButton
+                        AutomationProperties.Name="All statuses"
+                        Content="All"
+                        IsChecked="{x:Bind ViewModel.IsAllSelected, Mode=TwoWay}"
+                        Style="{StaticResource ChipStyle}" />
+                    <ToggleButton
+                        AutomationProperties.Name="{x:Bind ui:Ui.Chip('Up to date', ViewModel.SameCount, 'Same version as the source'), Mode=OneWay}"
+                        IsChecked="{x:Bind ViewModel.IsSameSelected, Mode=TwoWay}"
+                        Opacity="{x:Bind ui:Ui.DimIfZero(ViewModel.SameCount), Mode=OneWay}"
+                        Style="{StaticResource ChipStyle}"
+                        ToolTipService.ToolTip="{x:Bind ui:Ui.Chip('Up to date', ViewModel.SameCount, 'Same version as the source'), Mode=OneWay}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Ellipse Width="8" Height="8" VerticalAlignment="Center" Fill="{ThemeResource SystemFillColorSuccessBrush}" />
+                            <TextBlock Text="Up to date" />
+                            <TextBlock Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="{x:Bind ViewModel.SameCount, Mode=OneWay}" />
+                        </StackPanel>
+                    </ToggleButton>
+                    <ToggleButton
+                        AutomationProperties.Name="{x:Bind ui:Ui.Chip('Update available', ViewModel.UpdateCount, 'Older, and WinGet offers an update'), Mode=OneWay}"
+                        IsChecked="{x:Bind ViewModel.IsUpdateSelected, Mode=TwoWay}"
+                        Opacity="{x:Bind ui:Ui.DimIfZero(ViewModel.UpdateCount), Mode=OneWay}"
+                        Style="{StaticResource ChipStyle}"
+                        ToolTipService.ToolTip="{x:Bind ui:Ui.Chip('Update available', ViewModel.UpdateCount, 'Older, and WinGet offers an update'), Mode=OneWay}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Ellipse Width="8" Height="8" VerticalAlignment="Center" Fill="{ThemeResource SystemFillColorCautionBrush}" />
+                            <TextBlock Text="Update available" />
+                            <TextBlock Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="{x:Bind ViewModel.UpdateCount, Mode=OneWay}" />
+                        </StackPanel>
+                    </ToggleButton>
+                    <ToggleButton
+                        AutomationProperties.Name="{x:Bind ui:Ui.Chip('Newer', ViewModel.NewerCount, 'Newer than the version the source offers'), Mode=OneWay}"
+                        IsChecked="{x:Bind ViewModel.IsNewerSelected, Mode=TwoWay}"
+                        Opacity="{x:Bind ui:Ui.DimIfZero(ViewModel.NewerCount), Mode=OneWay}"
+                        Style="{StaticResource ChipStyle}"
+                        ToolTipService.ToolTip="{x:Bind ui:Ui.Chip('Newer', ViewModel.NewerCount, 'Newer than the version the source offers'), Mode=OneWay}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Ellipse Width="8" Height="8" VerticalAlignment="Center" Fill="{ThemeResource VersionNewerBorderBrush}" />
+                            <TextBlock Text="Newer" />
+                            <TextBlock Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="{x:Bind ViewModel.NewerCount, Mode=OneWay}" />
+                        </StackPanel>
+                    </ToggleButton>
+                    <ToggleButton
+                        AutomationProperties.Name="{x:Bind ui:Ui.Chip('Other', ViewModel.OtherCount, 'Not managed by WinGet, or WinGet cannot compare the versions'), Mode=OneWay}"
+                        IsChecked="{x:Bind ViewModel.IsOtherSelected, Mode=TwoWay}"
+                        Opacity="{x:Bind ui:Ui.DimIfZero(ViewModel.OtherCount), Mode=OneWay}"
+                        Style="{StaticResource ChipStyle}"
+                        ToolTipService.ToolTip="{x:Bind ui:Ui.Chip('Other', ViewModel.OtherCount, 'Not managed by WinGet, or WinGet cannot compare the versions'), Mode=OneWay}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Ellipse Width="8" Height="8" VerticalAlignment="Center" Fill="{ThemeResource ControlStrongStrokeColorDefaultBrush}" />
+                            <TextBlock Text="Other" />
+                            <TextBlock Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="{x:Bind ViewModel.OtherCount, Mode=OneWay}" />
+                        </StackPanel>
+                    </ToggleButton>
+                    </StackPanel>
+                </ScrollViewer>
                 <!-- R2.4 -->
                 <CheckBox
-                    Grid.Row="1"
+                    Grid.Row="2"
                     Grid.ColumnSpan="2"
                     Content="Show apps not managed by WinGet"
                     IsChecked="{x:Bind ViewModel.ShowUnmanaged, Mode=TwoWay}" />

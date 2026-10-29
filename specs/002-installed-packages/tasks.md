@@ -1,6 +1,6 @@
 # 002 – Installed packages: Tasks
 
-**Status:** Done (R2.4 added and done 2026-10-29). Amendment R6 done 2026-10-30. Amendment R7 done 2026-10-30 (high-contrast check pending, with 006)
+**Status:** Done (R2.4 added and done 2026-10-29). Amendment R6 done 2026-10-30. Amendment R7 done 2026-10-30 (high-contrast check pending, with 006). Amendment R8 done 2026-10-30
 **Design:** [design.md](design.md)
 
 - [x] **T1.** `CatalogConnection` with cached remote-first / local-first composites + `Invalidate()`; `SearchAsync` uses it.
@@ -43,6 +43,13 @@
 - [x] **T16.** Badge colors, tooltip and accessible name in rows and the details pane. *(R7.1, R7.3)*
   - Verify: manual screenshots in dark and light (high contrast with the 006 check).
 
+### Amendment R8: status filter chips (approved 2026-10-30)
+
+- [x] **T17.** `StatusFilter` + counts in `InstalledViewModel` (combined with text and unmanaged filters). *(R8.2, R8.3, R8.5)*
+  - Verify: `InstalledViewModelTests.*` (each state, toggle off, counts follow text filter, combined with unmanaged option).
+- [x] **T18.** Chip row on `InstalledPage` with dots, labels, counts, tooltips; shared badge brushes. *(R8.1, R8.4)*
+  - Verify: manual (UIA: names and counts; screenshots dark + light; click each chip).
+
 ## Manual verification log
 
 | Criterion | Date | Result | Notes |
@@ -63,4 +70,8 @@
 | R7.2 | 2026-10-30 | Pass | UIA: WindowsAppRuntime.1.8 x86 / other copies and WSL 3.0.4.0 neutral ("winget has …"). Found during T16: comparing raw MSIX versions (8000.x) with product versions (1.8.10) gave a false "newer"; spec R6.2 / R7.2 amended, primary rows show WinGet's version again ("> 1.8.10") |
 | R7.3 | 2026-10-30 | Pass | UIA names: "Installed 2.5.6, newer than winget's 2.5.5", "… update to py314_26.9.4-0 available from winget", "… same as winget" |
 | R7 high contrast | – | **Pending** | Check with the 006 high-contrast pass |
+| R8.1, R8.4 | 2026-10-30 | Pass | UIA names: "Up to date: 72 programs. Same version as the source", "Update available: 1 program…", "Newer: 17 programs…", "Other: 29 programs…" (72 + 1 + 17 + 29 = 119 managed). Screenshots dark + light |
+| R8.2 | 2026-10-30 | Pass | UIA: Newer → "17 of 362", All unchecked; Update available replaces it → "1 of 362"; clicking it again → "119 of 362", All checked |
+| R8.3 | 2026-10-30 | Pass | Text "microsoft" → chips 39 / 0 (dimmed) / 11 / 25 |
+| R8 selected style | 2026-10-30 | Fixed | First build filled the selected chip with the accent color (green here), clashing with the dots; and light theme showed white text after a live theme switch. Now neutral fill + outline from per-theme dictionaries; checked dark, light after live switch |
 | R1.4 | 2026-10-29 | Pass (unit) | `IsLoading` covered by tests; not seen live because the list now preloads at startup (004 badge) and was ready in 0.35 s |

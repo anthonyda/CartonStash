@@ -83,6 +83,18 @@ Upgrade still goes through the WinGet ID and is only offered on the primary matc
   ("Installed 2.5.6") and `VersionStatusText` ("newer than winget's 2.5.5") for the tooltip and accessible name.
 - Cost: one extra cross-process call per managed row at load (~120 here); measured during implementation.
 
+## Amendment R8: status filter chips (approved 2026-10-30)
+
+- `InstalledViewModel` gains `StatusFilter` (`VersionBadge?`, null = All) and four counts (`SameCount`, `UpdateCount`,
+  `NewerCount`, `OtherCount`). `ApplyFilter()` applies text (R2.1) + unmanaged (R2.4) first, computes the counts from that
+  set (R8.3), then applies `StatusFilter` (R8.2). In memory only, no WinGet call. `CountText` (R2.2) counts the final rows.
+- Row state is `PackageRowViewModel.VersionBadge` (R7), so chips and badges can't disagree. Gray "Other" = `Neutral`.
+- `InstalledPage`: a horizontal row of `ToggleButton`s styled as pills under the filter box: colored dot (same theme
+  brushes as the R7 badge) + label + count. Exactly one can be checked; clicking the checked one clears it. Count 0 → dimmed
+  (still focusable). Tooltip + `AutomationProperties.Name` = "Newer: 31 programs newer than the version WinGet's source offers" (R8.4).
+- The chip dots use the same brushes as the badge borders (system Success / Caution brushes and the app's
+  `VersionNewerBorderBrush` in `App.xaml`). A selected chip uses a neutral fill and outline, set per theme, not the accent color.
+
 ## Data flow
 
 Navigate to Installed → first visit triggers `LoadCommand` → `GetInstalledAsync` → `_all` list →

@@ -22,6 +22,13 @@ public static class Ui
 
     public static string Choose(bool condition, string whenTrue, string whenFalse) => condition ? whenTrue : whenFalse;
 
+    /// <summary>Status chip tooltip and accessible name (002 R8.4): "Newer: 31 programs. Newer than the version the source offers".</summary>
+    public static string Chip(string label, int count, string meaning) =>
+        $"{label}: {count} {(count == 1 ? "program" : "programs")}. {meaning}";
+
+    /// <summary>Chips with no rows stay visible (they are the legend) but dimmed (002 R8).</summary>
+    public static double DimIfZero(int count) => count == 0 ? 0.5 : 1.0;
+
     public static InfoBarSeverity Severity(NotificationSeverity severity) => severity switch
     {
         NotificationSeverity.Success => InfoBarSeverity.Success,

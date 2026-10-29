@@ -128,6 +128,88 @@ public class InstalledViewModelTests
         Assert.Equal(["Game"], vm.Visible.Select(r => r.Name));
     }
 
+    // 002 R8: one program per badge state (R7 decides the state).
+    private static PackageInfo[] Mixed() =>
+    [
+        Pkg.Installed("Git.Git", "Git") with { VersionStatus = VersionStatus.Same },
+        Pkg.Installed("Anaconda.Miniconda3", "Miniconda", update: true) with { VersionStatus = VersionStatus.Older },
+        Pkg.Installed("Chatterino.Chatterino", "Chatterino") with { VersionStatus = VersionStatus.Newer },
+        Pkg.Installed("Microsoft.WindowsAppRuntime.1.8", "Windows App Runtime") with { VersionStatus = VersionStatus.Unknown },
+        Pkg.Installed("ARP-Steam-1", "Game", source: ""),
+    ];
+
+    [Fact]
+    public async Task Status_chips_count_each_state() // R8.1, R8.3
+    {
+        var (_, vm) = Create(Mixed());
+        await vm.LoadAsync();
+
+        Assert.Equal((1, 1, 1, 1), (vm.SameCount, vm.UpdateCount, vm.NewerCount, vm.OtherCount)); // unmanaged hidden (R2.4)
+        Assert.True(vm.IsAllSelected);
+    }
+
+    [Theory] // R8.2
+    [InlineData(VersionBadge.Same, "Git")]
+    [InlineData(VersionBadge.UpdateOffered, "Miniconda")]
+    [InlineData(VersionBadge.Newer, "Chatterino")]
+    [InlineData(VersionBadge.Neutral, "Windows App Runtime")]
+    public async Task Selecting_a_chip_shows_only_that_state(VersionBadge state, string expected)
+    {
+        var (_, vm) = Create(Mixed());
+        await vm.LoadAsync();
+
+        vm.StatusFilter = state;
+
+        Assert.Equal([expected], vm.Visible.Select(r => r.Name));
+        Assert.False(vm.IsAllSelected);
+        Assert.Equal("1 of 5 packages", vm.CountText);
+    }
+
+    [Fact]
+    public async Task Clicking_the_selected_chip_again_clears_it() // R8.2
+    {
+        var (_, vm) = Create(Mixed());
+        await vm.LoadAsync();
+
+        vm.IsNewerSelected = true;
+        Assert.Equal(VersionBadge.Newer, vm.StatusFilter);
+
+        vm.IsNewerSelected = false; // the ToggleButton unchecks itself
+        Assert.Null(vm.StatusFilter);
+        Assert.True(vm.IsAllSelected);
+        Assert.Equal(4, vm.Visible.Count);
+    }
+
+    [Fact]
+    public async Task Choosing_another_chip_replaces_the_first() // R8.2: one at a time
+    {
+        var (_, vm) = Create(Mixed());
+        await vm.LoadAsync();
+
+        vm.IsSameSelected = true;
+        vm.IsUpdateSelected = true;
+
+        Assert.Equal(VersionBadge.UpdateOffered, vm.StatusFilter);
+        Assert.False(vm.IsSameSelected);
+    }
+
+    [Fact]
+    public async Task Counts_follow_the_text_filter_and_unmanaged_option() // R8.3
+    {
+        var (_, vm) = Create(Mixed());
+        await vm.LoadAsync();
+
+        vm.Filter = "git";
+        Assert.Equal((1, 0, 0, 0), (vm.SameCount, vm.UpdateCount, vm.NewerCount, vm.OtherCount));
+
+        vm.Filter = "";
+        vm.ShowUnmanaged = true;
+        Assert.Equal(2, vm.OtherCount); // the unmanaged game joins "Other"
+
+        vm.StatusFilter = VersionBadge.Neutral;
+        Assert.Equal(["Game", "Windows App Runtime"], vm.Visible.Select(r => r.Name));
+    }
+
     [Fact]
     public async Task Load_failure_shows_error_and_retry_recovers() // R5.1
     {

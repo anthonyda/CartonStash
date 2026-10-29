@@ -1,6 +1,6 @@
 # 002 – Installed packages: Requirements
 
-**Status:** Done (2026-10-29). Amendment R6 (one row per installed program) done 2026-10-30. Amendment R7 (version badge colors) done 2026-10-30
+**Status:** Done (2026-10-29). Amendment R6 (one row per installed program) done 2026-10-30. Amendment R7 (version badge colors) done 2026-10-30. Amendment R8 (status filter chips) done 2026-10-30
 **Depends on:** 001
 
 ## Problem
@@ -40,6 +40,11 @@ Windows knows about (including apps WinGet didn't install) in a hard-to-scan tab
 | R7.1 | US3   | The "Installed *version*" badge shall be colored by how the installed version compares with the source's available version, as decided by WinGet's own version comparer (never by comparing strings in the app): **same** → green; **older, update offered** → amber; **newer than the source** → blue; **different but WinGet offers no update or can't compare** (e.g. `Unknown`, ranges like `> 1.8.10`, explicit-upgrade packages) → neutral gray. |
 | R7.2 | US3   | Unmanaged rows (no available version) and rows linked only through manifest codes (R6.3) shall keep a neutral badge: their recorded version may use a different numbering than the source. *(Manifest part amended 2026-10-30 during implementation.)* |
 | R7.3 | –     | Each color shall come with a tooltip and an accessible name that says the state in words ("Installed 2.5.6, newer than winget's 2.5.5"), so the meaning never depends on color alone (constitution Q5). |
+| R8.1 | US2, US3 | The Installed page shall show a row of filter chips, one per badge state: **Up to date** (green), **Update available** (amber), **Newer** (blue), **Other** (gray). Each chip shows the badge color as a dot, its label and the number of rows in that state. |
+| R8.2 | US2   | Selecting a chip shall show only rows in that state; selecting it again (or **All**) shall clear it. One state at a time. It combines with the text filter (R2.1) and the unmanaged option (R2.4), and needs no new WinGet call. |
+| R8.3 | US2   | Chip counts shall follow the text filter and the unmanaged option, so they always describe what the user could see. |
+| R8.4 | US3   | Each chip shall have a one-line tooltip and accessible name explaining the color (e.g. "Newer than the version WinGet's source offers"), so the chips act as the legend for R7 without extra text on the page. |
+| R8.5 | –     | The selected chip is kept while switching pages (R4.2) but not saved between sessions. |
 | R6.6 | US2   | The count (R2.2) shall count programs (rows), e.g. "90 of 362 packages". |
 
 ## Amendment R6: why (2026-10-30)
@@ -55,6 +60,11 @@ both. WinGet's installed-only catalog returns both separately (362 entries vs. 3
 - Grouping, multi-column sorting, export of the list.
 
 ## Open questions
+
+- **R8 labels:** **Decided 2026-10-30:** "Up to date", "Update available", "Newer", "Other". Short enough for one row; the tooltip carries the detail
+  ("Other: not managed by WinGet, or WinGet can't compare the versions").
+- **R8 one state at a time, or several?** **Decided 2026-10-30: one at a time** (simpler, behaves like tabs). Several could come later.
+- **R8 chips with a count of 0:** **Decided 2026-10-30:** still shown but dimmed, so the legend is always complete.
 
 - **R7 colors:** **Decided 2026-10-30:** green / amber / blue / gray as in R7.1, using the WinUI theme brushes (Success, Caution, Informational,
   neutral) so they work in light, dark and high contrast. The existing "Update available" badge stays as is.

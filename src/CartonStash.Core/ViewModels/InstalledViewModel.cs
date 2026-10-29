@@ -35,6 +35,49 @@ public sealed partial class InstalledViewModel : ObservableObject
     [ObservableProperty]
     public partial bool ShowUnmanaged { get; set; }
 
+    /// <summary>The selected status chip (R8.2); null = All.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsAllSelected), nameof(IsSameSelected), nameof(IsUpdateSelected), nameof(IsNewerSelected), nameof(IsOtherSelected))]
+    public partial VersionBadge? StatusFilter { get; set; }
+
+    // Two-way targets for the chip ToggleButtons: checking one selects it, unchecking the selected one clears the filter.
+    public bool IsAllSelected
+    {
+        get => StatusFilter is null;
+        set
+        {
+            if (value)
+            {
+                StatusFilter = null;
+            }
+            else
+            {
+                OnPropertyChanged(); // "All" stays checked until another chip is chosen
+            }
+        }
+    }
+
+    public bool IsSameSelected { get => StatusFilter == VersionBadge.Same; set => Select(VersionBadge.Same, value); }
+
+    public bool IsUpdateSelected { get => StatusFilter == VersionBadge.UpdateOffered; set => Select(VersionBadge.UpdateOffered, value); }
+
+    public bool IsNewerSelected { get => StatusFilter == VersionBadge.Newer; set => Select(VersionBadge.Newer, value); }
+
+    public bool IsOtherSelected { get => StatusFilter == VersionBadge.Neutral; set => Select(VersionBadge.Neutral, value); }
+
+    /// <summary>Rows per state after the text and unmanaged filters (R8.3).</summary>
+    [ObservableProperty]
+    public partial int SameCount { get; private set; }
+
+    [ObservableProperty]
+    public partial int UpdateCount { get; private set; }
+
+    [ObservableProperty]
+    public partial int NewerCount { get; private set; }
+
+    [ObservableProperty]
+    public partial int OtherCount { get; private set; }
+
     public bool IsLoading => _store.IsLoading;
 
     public string? ErrorMessage => _store.ErrorMessage;
@@ -54,6 +97,20 @@ public sealed partial class InstalledViewModel : ObservableObject
     partial void OnFilterChanged(string value) => ApplyFilter();
 
     partial void OnShowUnmanagedChanged(bool value) => ApplyFilter();
+
+    partial void OnStatusFilterChanged(VersionBadge? value) => ApplyFilter();
+
+    private void Select(VersionBadge state, bool selected)
+    {
+        if (selected)
+        {
+            StatusFilter = state;
+        }
+        else if (StatusFilter == state)
+        {
+            StatusFilter = null;
+        }
+    }
 
     private void OnStoreChanged(object? sender, PropertyChangedEventArgs e)
     {
@@ -85,10 +142,11 @@ public sealed partial class InstalledViewModel : ObservableObject
         ApplyFilter();
     }
 
-    // In memory only: never queries WinGet again (R2.1).
+    // In memory only: never queries WinGet again (R2.1, R8.2).
     private void ApplyFilter()
     {
         var text = Filter.Trim();
+        int same = 0, update = 0, newer = 0, other = 0;
         Visible.Clear();
         foreach (var row in _all)
         {
@@ -96,13 +154,29 @@ public sealed partial class InstalledViewModel : ObservableObject
             {
                 continue;
             }
-            if (text.Length == 0
-                || row.Name.Contains(text, StringComparison.CurrentCultureIgnoreCase)
-                || row.Id.Contains(text, StringComparison.OrdinalIgnoreCase))
+            if (text.Length > 0
+                && !row.Name.Contains(text, StringComparison.CurrentCultureIgnoreCase)
+                && !row.Id.Contains(text, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            // Counts describe what the text and unmanaged filters leave (R8.3).
+            var state = row.VersionBadge;
+            switch (state)
+            {
+                case VersionBadge.Same: same++; break;
+                case VersionBadge.UpdateOffered: update++; break;
+                case VersionBadge.Newer: newer++; break;
+                default: other++; break;
+            }
+
+            if (StatusFilter is null || StatusFilter == state)
             {
                 Visible.Add(row);
             }
         }
+        (SameCount, UpdateCount, NewerCount, OtherCount) = (same, update, newer, other);
         OnPropertyChanged(nameof(CountText));
     }
 }
