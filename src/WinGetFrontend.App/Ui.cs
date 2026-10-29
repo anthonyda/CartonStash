@@ -1,5 +1,7 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Media.Imaging;
 using WinGetFrontend.Core.ViewModels;
 
 namespace WinGetFrontend.App;
@@ -21,6 +23,10 @@ public static class Ui
     public static string Format(string format, string? value) => string.Format(format, value);
 
     public static string Choose(bool condition, string whenTrue, string whenFalse) => condition ? whenTrue : whenFalse;
+
+    /// <summary>A package icon (005 R5); decoded at the size it's shown.</summary>
+    public static ImageSource? Icon(Uri? uri, int size) =>
+        uri is null ? null : new BitmapImage { UriSource = uri, DecodePixelWidth = size, DecodePixelType = DecodePixelType.Logical };
 
     public static InfoBarSeverity Severity(NotificationSeverity severity) => severity switch
     {

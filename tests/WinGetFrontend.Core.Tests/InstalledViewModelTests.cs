@@ -112,6 +112,23 @@ public class InstalledViewModelTests
     }
 
     [Fact]
+    public async Task Unmanaged_apps_are_hidden_until_asked_for() // R2.4
+    {
+        var (_, vm) = Create(Pkg.Installed("Git.Git", "Git"), Pkg.Installed("ARP.X", "Contoso", source: ""), Pkg.Installed("ARP.Y", "Game", source: ""));
+        await vm.LoadAsync();
+
+        Assert.False(vm.ShowUnmanaged);
+        Assert.Equal(["Git"], vm.Visible.Select(r => r.Name));
+        Assert.Equal("1 of 3 packages", vm.CountText);
+
+        vm.ShowUnmanaged = true;
+        Assert.Equal(["Contoso", "Game", "Git"], vm.Visible.Select(r => r.Name));
+
+        vm.Filter = "game";
+        Assert.Equal(["Game"], vm.Visible.Select(r => r.Name));
+    }
+
+    [Fact]
     public async Task Load_failure_shows_error_and_retry_recovers() // R5.1
     {
         var (app, vm) = Create();
@@ -151,6 +168,7 @@ public class InstalledViewModelTests
     {
         var (_, vm) = Create(Pkg.Installed("Git.Git", "Git"), Pkg.Installed("ARP.X", "Contoso", source: ""));
         await vm.LoadAsync();
+        vm.ShowUnmanaged = true;
 
         Assert.True(vm.Visible.Single(r => r.Id == "Git.Git").ShowUninstall);
         Assert.False(vm.Visible.Single(r => r.Id == "ARP.X").ShowUninstall);

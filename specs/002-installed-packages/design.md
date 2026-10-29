@@ -35,7 +35,7 @@ and the **Installed** page. The service gains `GetInstalledAsync`. WinGet connec
 ## Data flow
 
 Navigate to Installed → first visit triggers `LoadCommand` → `GetInstalledAsync` → `_all` list →
-`ApplyFilter()` rebuilds `Visible` (sorted by name, R2.3) → counts. Filter changes call `ApplyFilter()` only (R2.1).
+`ApplyFilter()` rebuilds `Visible` (sorted by name, R2.3) → counts. Filter changes call `ApplyFilter()` only (R2.1). `ShowUnmanaged` (default false, kept for the session) is part of the same in-memory filter (R2.4).
 Queue `Drained` (spec 003), if any operation succeeded → `Invalidate()` + one reload (R1.3).
 *Amended:* the store also starts loading at app start (in the background) so the 004 Updates badge can appear.
 It is still the session's single load.

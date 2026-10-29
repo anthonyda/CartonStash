@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Microsoft.Management.Deployment;
 using WinGetFrontend.Core.Models;
 
@@ -15,6 +16,12 @@ namespace WinGetFrontend.Core.Services;
 /// </remarks>
 public sealed class WinGetPackageService(CatalogConnection connection) : IPackageService
 {
+    // 005 R5: version info of packages from the latest lists, so icons can be read later without searching again.
+    // COM objects stay in this class (A2).
+    private readonly ConcurrentDictionary<string, PackageVersionInfo> _versions = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, string?> _iconUrls = new(StringComparer.OrdinalIgnoreCase);
+    private readonly SemaphoreSlim _iconReads = new(4, 4);
+
     public WinGetPackageService()
         : this(new CatalogConnection())
     {
@@ -69,7 +76,35 @@ public sealed class WinGetPackageService(CatalogConnection connection) : IPackag
         }, cancellationToken);
     }
 
-    public void InvalidateCache() => connection.Invalidate();
+    public async Task<string?> GetIconUrlAsync(PackageInfo package, CancellationToken cancellationToken = default)
+    {
+        if (_iconUrls.TryGetValue(package.Id, out var cached))
+        {
+            return cached;
+        }
+        if (!_versions.TryGetValue(package.Id, out var version))
+        {
+            return null;
+        }
+
+        await _iconReads.WaitAsync(cancellationToken);
+        try
+        {
+            var url = await Task.Run(() => PickIcon(version.GetCatalogPackageMetadata().Icons), cancellationToken);
+            _iconUrls[package.Id] = url;
+            return url;
+        }
+        finally
+        {
+            _iconReads.Release();
+        }
+    }
+
+    public void InvalidateCache()
+    {
+        _versions.Clear(); // the next load fills it again; icon URLs stay cached
+        connection.Invalidate();
+    }
 
     public Task<IReadOnlyList<SourceInfo>> GetSourcesAsync(CancellationToken cancellationToken = default) =>
         Task.Run<IReadOnlyList<SourceInfo>>(() =>
@@ -121,7 +156,7 @@ public sealed class WinGetPackageService(CatalogConnection connection) : IPackag
 
     public string GetWinGetVersion() => connection.Manager.Version;
 
-    private static async Task<IReadOnlyList<PackageInfo>> FindAsync(PackageCatalog catalog, FindPackagesOptions options, CancellationToken cancellationToken)
+    private async Task<IReadOnlyList<PackageInfo>> FindAsync(PackageCatalog catalog, FindPackagesOptions options, CancellationToken cancellationToken)
     {
         var result = await catalog.FindPackagesAsync(options).AsTask(cancellationToken);
         if (result.Status != FindPackagesResultStatus.Ok)
@@ -133,9 +168,35 @@ public sealed class WinGetPackageService(CatalogConnection connection) : IPackag
         var packages = new List<PackageInfo>(matches.Count);
         for (var i = 0; i < matches.Count; i++)
         {
-            packages.Add(ToPackageInfo(matches[i].CatalogPackage));
+            var package = matches[i].CatalogPackage;
+            var info = ToPackageInfo(package);
+            if (package.DefaultInstallVersion is { } version)
+            {
+                _versions[info.Id] = version;
+            }
+            packages.Add(info);
         }
         return packages;
+    }
+
+    /// <summary>Prefers the theme-neutral icon; only web URLs (005 R5.2).</summary>
+    private static string? PickIcon(IReadOnlyList<Icon> icons)
+    {
+        string? fallback = null;
+        for (var i = 0; i < icons.Count; i++)
+        {
+            var url = icons[i].Url;
+            if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || (uri.Scheme != Uri.UriSchemeHttps && uri.Scheme != Uri.UriSchemeHttp))
+            {
+                continue;
+            }
+            if (icons[i].Theme == IconTheme.Default)
+            {
+                return url;
+            }
+            fallback ??= url;
+        }
+        return fallback;
     }
 
     // User-facing messages (spec 001 R3.4). The HRESULT stays on WinGetException.HResult.

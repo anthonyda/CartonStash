@@ -26,6 +26,7 @@ Windows knows about (including apps WinGet didn't install) in a hard-to-scan tab
 | R2.1 | US2   | When the user types in the filter box, the app shall show only rows whose name or ID contains the text (case-insensitive), without querying WinGet again. |
 | R2.2 | US2   | The app shall show the count "*shown* of *total* packages". |
 | R2.3 | US2   | The list shall be sorted by name by default. |
+| R2.4 | US2, US3 | The page shall offer a "Show apps not managed by WinGet" option, **off by default**. While it is off, packages not matched to a WinGet source are hidden. The count (R2.2) counts shown rows against all installed packages. *(Added 2026-10-29 at the user's request.)* |
 | R3.1 | US3   | When a package is matched to a WinGet source, its row shall show the source. Otherwise it shall show "Not managed by WinGet". |
 | R3.2 | US3   | When an installed package has an update, its row shall show the "Update available" badge from spec 001. |
 | R4.1 | US4   | The app shall provide left-side navigation with Search and Installed entries (later: Updates, Settings). The last-used page is not remembered in v1. |
@@ -39,4 +40,4 @@ Windows knows about (including apps WinGet didn't install) in a hard-to-scan tab
 
 ## Open questions
 
-- Show Microsoft Store / MSIX system components? **Decided: show all, as `winget list` does.**
+- Show Microsoft Store / MSIX system components? **Decided: show all, as `winget list` does.** Amended 2026-10-29: apps not managed by WinGet are hidden by default and shown on request (R2.4).

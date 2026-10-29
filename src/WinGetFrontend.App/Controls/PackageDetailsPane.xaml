@@ -17,12 +17,25 @@
         </Grid.RowDefinitions>
 
         <!-- Header: name, publisher, close (R4.1) -->
-        <Grid Padding="20,16,12,8" ColumnSpacing="8">
+        <Grid Padding="20,16,12,8" ColumnSpacing="12">
             <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <StackPanel>
+            <!-- 005 R5.1 -->
+            <Grid Width="48" Height="48" VerticalAlignment="Top">
+                <FontIcon
+                    FontSize="32"
+                    Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                    Glyph="&#xE7B8;"
+                    Visibility="{x:Bind ui:Ui.Collapsed(ViewModel.Row.HasIcon), Mode=OneWay}" />
+                <Image
+                    AutomationProperties.AccessibilityView="Raw"
+                    Source="{x:Bind ui:Ui.Icon(ViewModel.Row.IconUri, 48), Mode=OneWay}"
+                    Stretch="Uniform" />
+            </Grid>
+            <StackPanel Grid.Column="1">
                 <TextBlock
                     AutomationProperties.HeadingLevel="Level2"
                     Style="{StaticResource SubtitleTextBlockStyle}"
@@ -38,7 +51,7 @@
                     Text="{x:Bind ViewModel.Row.Id, Mode=OneWay}" />
             </StackPanel>
             <Button
-                Grid.Column="1"
+                Grid.Column="2"
                 VerticalAlignment="Top"
                 AutomationProperties.Name="Close details"
                 Command="{x:Bind ViewModel.CloseCommand, Mode=OneWay}"

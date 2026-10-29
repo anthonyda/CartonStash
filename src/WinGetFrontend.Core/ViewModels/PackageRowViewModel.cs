@@ -13,6 +13,7 @@ public sealed partial class PackageRowViewModel : ObservableObject
 {
     private readonly PackageActions _actions;
     private readonly RowActions _allowed;
+    private Task? _iconLoad;
 
     public PackageRowViewModel(PackageInfo package, PackageActions actions, RowActions allowed)
     {
@@ -31,6 +32,18 @@ public sealed partial class PackageRowViewModel : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsBusy), nameof(ShowInstall), nameof(ShowUpdate), nameof(ShowUninstall), nameof(ResultText), nameof(HasResult))]
     public partial PackageOperation? Operation { get; set; }
+
+    /// <summary>The package's icon from WinGet; null shows a generic glyph (005 R5.1).</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasIcon))]
+    public partial Uri? IconUri { get; private set; }
+
+    public bool HasIcon => IconUri is not null;
+
+    /// <summary>Loads the icon once. The row control calls this when it shows the row, so only rows on screen ask (R5.2).</summary>
+    public Task EnsureIconAsync() => _iconLoad ??= LoadIconAsync();
+
+    private async Task LoadIconAsync() => IconUri = await _actions.GetIconAsync(Package);
 
     /// <summary>An operation for this package is queued or running (R4.2: buttons give way to progress).</summary>
     public bool IsBusy => Operation?.IsActive == true;

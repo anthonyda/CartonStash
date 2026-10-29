@@ -47,6 +47,16 @@ internal sealed class FakePackageService : IPackageService
     public Task<PackageDetails?> GetDetailsAsync(PackageInfo package, CancellationToken cancellationToken = default) =>
         Details(package, cancellationToken);
 
+    public Dictionary<string, string?> IconUrls { get; } = [];
+
+    public List<string> IconRequests { get; } = [];
+
+    public Task<string?> GetIconUrlAsync(PackageInfo package, CancellationToken cancellationToken = default)
+    {
+        IconRequests.Add(package.Id);
+        return Task.FromResult(IconUrls.GetValueOrDefault(package.Id));
+    }
+
     public void InvalidateCache() => Invalidations++;
 
     public Task<IReadOnlyList<SourceInfo>> GetSourcesAsync(CancellationToken cancellationToken = default) =>
@@ -154,7 +164,7 @@ internal sealed class TestApp
         // The app runs the queue on the UI thread; here, run posted callbacks inline so tests are deterministic.
         SynchronizationContext.SetSynchronizationContext(new InlineSynchronizationContext());
         Queue = new PackageOperationQueue(Installer);
-        Actions = new PackageActions(Queue, Installer, Dialogs);
+        Actions = new PackageActions(Queue, Installer, Dialogs, Packages);
         Store = new InstalledPackagesStore(Packages, Queue);
     }
 

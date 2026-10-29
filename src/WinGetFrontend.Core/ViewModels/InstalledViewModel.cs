@@ -31,6 +31,10 @@ public sealed partial class InstalledViewModel : ObservableObject
     [ObservableProperty]
     public partial string Filter { get; set; } = "";
 
+    /// <summary>Show apps WinGet doesn't manage; off by default (R2.4).</summary>
+    [ObservableProperty]
+    public partial bool ShowUnmanaged { get; set; }
+
     public bool IsLoading => _store.IsLoading;
 
     public string? ErrorMessage => _store.ErrorMessage;
@@ -48,6 +52,8 @@ public sealed partial class InstalledViewModel : ObservableObject
     private Task RefreshAsync() => _store.ReloadAsync();
 
     partial void OnFilterChanged(string value) => ApplyFilter();
+
+    partial void OnShowUnmanagedChanged(bool value) => ApplyFilter();
 
     private void OnStoreChanged(object? sender, PropertyChangedEventArgs e)
     {
@@ -86,6 +92,10 @@ public sealed partial class InstalledViewModel : ObservableObject
         Visible.Clear();
         foreach (var row in _all)
         {
+            if (!ShowUnmanaged && !row.Package.IsManaged)
+            {
+                continue;
+            }
             if (text.Length == 0
                 || row.Name.Contains(text, StringComparison.CurrentCultureIgnoreCase)
                 || row.Id.Contains(text, StringComparison.OrdinalIgnoreCase))

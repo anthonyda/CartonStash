@@ -17,6 +17,12 @@ public interface IPackageService
     /// <summary>Metadata and versions for the details pane (005). Returns null when WinGet has no metadata (R1.5).</summary>
     Task<PackageDetails?> GetDetailsAsync(PackageInfo package, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// The package's icon URL from WinGet, or null (005 R5). Works for packages from the latest search or installed list;
+    /// results are cached for the session.
+    /// </summary>
+    Task<string?> GetIconUrlAsync(PackageInfo package, CancellationToken cancellationToken = default);
+
     /// <summary>Drops cached catalogs so the next call sees fresh data (002 R1.3).</summary>
     void InvalidateCache();
 

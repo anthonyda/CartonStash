@@ -30,6 +30,19 @@ each list page in a two-column layout (adaptive via `VisualStateManager`).
 - Unmanaged packages: `DefaultInstallVersion == null` → `Partial` state with only `PackageInfo` data (R1.5).
 - Metadata calls may block briefly, so they run inside `Task.Run` on the service side and honour cancellation.
 
+## Package icons (R5, added 2026-10-29)
+
+- Data: `CatalogPackageMetadata.Icons` (`Url`, `FileType`, `Resolution`, `Theme`). Measured on the dev machine: the
+  winget source has `.ico` files on `cdn.winget.microsoft.com` for about a quarter to a half of packages (7-Zip, VS Code,
+  Firefox, PowerToys yes; Git, Chrome, VLC no). msstore packages returned none.
+- Cost: one metadata call per package (~17 ms; ~1.5 s for 89 managed installed apps), too slow to add to list loads.
+- `IPackageService.GetIconUrlAsync(PackageInfo)`: the service keeps the `PackageVersionInfo` of each package from the last
+  `SearchAsync` / `GetInstalledAsync` (COM objects stay inside Services, A2), reads `Icons` on a worker thread (at most 4 at a time),
+  and caches the URL per package ID for the session. Unknown package → null (no extra search).
+- `PackageRowViewModel.IconUri` is loaded by `EnsureIconAsync()`, which the `PackageRow` control calls when it gets a row.
+  `ListView` virtualization means only rows on screen ask (R5.2). The pane header uses the row's icon.
+- Display: `BitmapImage` (WIC decodes `.ico`), 32 px in rows, 48 px in the pane; a package glyph when there's no icon.
+
 ## Data flow
 
 Row selected → `DetailsVM.Load(pkg)` cancels the previous load → `GetDetailsAsync` → state → pane binds.

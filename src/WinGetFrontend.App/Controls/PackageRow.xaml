@@ -4,16 +4,31 @@
     x:Class="WinGetFrontend.App.Controls.PackageRow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:controls="using:WinGetFrontend.App.Controls">
+    xmlns:controls="using:WinGetFrontend.App.Controls"
+    xmlns:ui="using:WinGetFrontend.App">
 
     <Grid Padding="0,8" ColumnSpacing="16">
         <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="32" />
             <ColumnDefinition Width="*" />
             <ColumnDefinition Width="Auto" />
             <ColumnDefinition Width="200" />
         </Grid.ColumnDefinitions>
 
-        <StackPanel VerticalAlignment="Center">
+        <!-- 005 R5.1: WinGet's icon, or a package glyph -->
+        <Grid Width="32" Height="32" VerticalAlignment="Center">
+            <FontIcon
+                FontSize="22"
+                Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                Glyph="&#xE7B8;"
+                Visibility="{x:Bind ui:Ui.Collapsed(Row.HasIcon), Mode=OneWay}" />
+            <Image
+                AutomationProperties.AccessibilityView="Raw"
+                Source="{x:Bind ui:Ui.Icon(Row.IconUri, 32), Mode=OneWay}"
+                Stretch="Uniform" />
+        </Grid>
+
+        <StackPanel Grid.Column="1" VerticalAlignment="Center">
             <TextBlock
                 Style="{StaticResource BodyStrongTextBlockStyle}"
                 Text="{x:Bind Row.Name, Mode=OneWay}"
@@ -25,7 +40,7 @@
         </StackPanel>
 
         <StackPanel
-            Grid.Column="1"
+            Grid.Column="2"
             HorizontalAlignment="Right"
             VerticalAlignment="Center"
             Spacing="4">
@@ -65,6 +80,6 @@
                 Text="{x:Bind Row.Package.SourceText, Mode=OneWay}" />
         </StackPanel>
 
-        <controls:PackageActionsView Grid.Column="2" Row="{x:Bind Row, Mode=OneWay}" />
+        <controls:PackageActionsView Grid.Column="3" Row="{x:Bind Row, Mode=OneWay}" />
     </Grid>
 </UserControl>

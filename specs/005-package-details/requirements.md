@@ -27,11 +27,12 @@ what it does, its license and what changed, without leaving the app.
 | R2.2 | US2   | When release notes text or a release-notes URL exists, the pane shall show it (text collapsed after ~10 lines, with "Show more"). |
 | R3.1 | US3   | The pane shall offer the same Install / Update / Uninstall actions and progress as the row (spec 003 / 004 queue). |
 | R4.1 | –     | The pane shall close with Esc or a Close button, and focus shall return to the row that opened it. |
+| R5.1 | US1   | When WinGet provides an icon for a package, its row (Search, Installed, Updates) and the details pane shall show it; otherwise a generic package glyph. *(Added 2026-10-29 at the user's request.)* |
+| R5.2 | –     | Icons shall load after the list is shown, only for rows on screen, and never delay or block the list. Only http(s) icon URLs are used. |
 
 ## Out of scope
 
 - Installing a specific (older) version. The version list is information only in v1.
-- Package icons (WinGet metadata has `Icons`, but few manifests provide them). Possible later polish.
 - Screenshots, ratings, reviews: not in WinGet data.
 
 ## Open questions

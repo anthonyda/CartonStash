@@ -40,15 +40,21 @@
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <!-- R2.1 -->
                 <TextBox
                     AutomationProperties.Name="Filter installed packages"
                     PlaceholderText="Filter installed packages by name or ID"
                     Text="{x:Bind ViewModel.Filter, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                <!-- R2.4 -->
+                <CheckBox
+                    Grid.Column="1"
+                    Content="Show apps not managed by WinGet"
+                    IsChecked="{x:Bind ViewModel.ShowUnmanaged, Mode=TwoWay}" />
                 <!-- R2.2 -->
                 <TextBlock
-                    Grid.Column="1"
+                    Grid.Column="2"
                     VerticalAlignment="Center"
                     AutomationProperties.LiveSetting="Polite"
                     Foreground="{ThemeResource TextFillColorSecondaryBrush}"

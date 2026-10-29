@@ -37,6 +37,8 @@ internal static class DetailsBehavior
             }
         };
         page.KeyboardAccelerators.Add(escape);
+        // Otherwise WinUI shows an "Esc" tooltip when hovering anything on the page.
+        page.KeyboardAcceleratorPlacementMode = KeyboardAcceleratorPlacementMode.Hidden;
 
         details.PropertyChanged += (_, e) =>
         {

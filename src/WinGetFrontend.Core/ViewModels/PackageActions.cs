@@ -18,9 +18,26 @@ public enum RowActions
 /// The user-facing steps around each operation (confirmations, agreements), shared by rows, the details pane
 /// and the Updates page. The queue does the actual work.
 /// </summary>
-public sealed class PackageActions(PackageOperationQueue queue, IPackageInstaller installer, IDialogService dialogs)
+public sealed class PackageActions(PackageOperationQueue queue, IPackageInstaller installer, IDialogService dialogs, IPackageService packages)
 {
     public PackageOperationQueue Queue => queue;
+
+    /// <summary>The package's icon, for rows (005 R5). Never throws: no icon is fine.</summary>
+    public async Task<Uri?> GetIconAsync(PackageInfo package)
+    {
+        if (!package.IsManaged)
+        {
+            return null;
+        }
+        try
+        {
+            return PackageDetailsViewModel.SafeUri(await packages.GetIconUrlAsync(package));
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
 
     /// <summary>Install, after the user accepts the package's agreements if it has any (003 R1.2, R1.3).</summary>
     public async Task InstallAsync(PackageInfo package)
