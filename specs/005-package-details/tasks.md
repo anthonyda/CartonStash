@@ -1,6 +1,6 @@
 # 005 – Package details: Tasks
 
-**Status:** Draft
+**Status:** Approved
 **Design:** [design.md](design.md)
 
 - [ ] **T1.** `PackageDetails` model + `GetDetailsAsync` (metadata, versions sorted via `CompareToVersion`). *(R1.2, R2.1, R1.5)*

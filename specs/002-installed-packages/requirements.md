@@ -1,6 +1,6 @@
 # 002 – Installed packages: Requirements
 
-**Status:** Draft
+**Status:** Approved (2026-10-29)
 **Depends on:** 001
 
 ## Problem
@@ -39,4 +39,4 @@ Windows knows about (including apps WinGet didn't install) in a hard-to-scan tab
 
 ## Open questions
 
-- Show Microsoft Store / MSIX system components (e.g. "Microsoft Edge WebView2")? *Proposed: show all, as `winget list` does.*
+- Show Microsoft Store / MSIX system components? **Decided: show all, as `winget list` does.**

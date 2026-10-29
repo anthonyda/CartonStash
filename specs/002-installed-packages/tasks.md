@@ -1,6 +1,6 @@
 # 002 – Installed packages: Tasks
 
-**Status:** Draft
+**Status:** Approved
 **Design:** [design.md](design.md)
 
 - [ ] **T1.** `CatalogConnection` with cached remote-first / local-first composites + `Invalidate()`; `SearchAsync` uses it.

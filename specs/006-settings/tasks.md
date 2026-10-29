@@ -1,6 +1,6 @@
 # 006 – Settings: Tasks
 
-**Status:** Draft
+**Status:** Approved
 **Design:** [design.md](design.md)
 
 - [ ] **T1.** `AppSettings`, `ISettingsStore` / `JsonSettingsStore`, `ISettings` singleton. *(R1.2)*

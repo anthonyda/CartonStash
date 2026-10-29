@@ -1,6 +1,6 @@
 # 004 – Updates: Requirements
 
-**Status:** Draft
+**Status:** Approved (2026-10-29, R3 deferred)
 **Depends on:** 002, 003
 
 ## Problem
@@ -25,8 +25,8 @@ Keeping software current with `winget upgrade` means reading a table, then runni
 | R2.2 | US2   | The user shall be able to select rows with checkboxes and press **Update selected**. |
 | R2.3 | US2   | When the user presses **Update all**, the app shall show a confirmation listing the number of packages, then queue them (constitution P2). |
 | R2.4 | US2   | When an update finishes successfully, the package shall leave the Updates list after the refresh. |
-| R3.1 | US3   | When WinGet requires explicit targeting for a package (pinned, or a version scheme it can't compare), its row shall show "Manual update only" with the reason. |
-| R3.2 | US3   | "Update all" shall exclude "Manual update only" packages. They can still be updated individually. |
+| R3.1 | US3   | **Deferred, see Open questions.** ~~When WinGet requires explicit targeting for a package (pinned, or a version scheme it can't compare), its row shall show "Manual update only" with the reason.~~ |
+| R3.2 | US3   | **Deferred.** ~~"Update all" shall exclude "Manual update only" packages. They can still be updated individually.~~ |
 | R4.1 | US4   | The Updates navigation item shall show a count badge of available updates once the installed data is loaded. |
 | R5.1 | –     | If nothing needs updating, then the page shall show "Everything is up to date". |
 
@@ -38,8 +38,10 @@ Keeping software current with `winget upgrade` means reading a table, then runni
 
 ## Open questions
 
-- **Decision needed:** the COM API (1.29) does **not** expose pin state or "requires explicit upgrade"
-  (investigated, see design.md). Choose A (drop R3), B (CLI-parsing exception), or C (defer R3, ship as A).
-  Recommendation: C.
-- Observed on the dev machine: `Anaconda.Miniconda3` (py312 → py314) is reported by `winget upgrade` as
-  "require explicit targeting". This is our test case for R3.
+- **R3 (explicit targeting / pins) is deferred and stays open (decision 2026-10-29).** 004 ships without it:
+  "Update all" queues every package WinGet reports. WinGet itself refuses pinned / explicit-only packages, and the
+  per-package result says why (003 R5.2).
+  - Why it's blocked: the COM API 1.29 doesn't expose pins or `RequireExplicitUpgrade` (see design.md, T1).
+  - Option on the table: read-only CLI parsing (would need a constitution A2 exception).
+  - Finding from 2026-10-29: `winget pin list` alone doesn't cover `Anaconda.Miniconda3` (it has no pin). It shows up only
+    in the "require explicit targeting" section of `winget upgrade`. Any CLI approach would need to read both.

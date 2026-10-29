@@ -1,6 +1,6 @@
 # 005 – Package details: Requirements
 
-**Status:** Draft
+**Status:** Approved (2026-10-29)
 **Depends on:** 001, 002, 003
 
 ## Problem
@@ -36,4 +36,4 @@ what it does, its license and what changed, without leaving the app.
 
 ## Open questions
 
-- Pane on the right (master–detail) or a separate page? *Proposed: right-side pane on wide windows, full page below 900 px.*
+- Pane or page? **Decided: right-side pane on wide windows, full page below 900 px.**

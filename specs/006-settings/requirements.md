@@ -1,6 +1,6 @@
 # 006 – Settings: Requirements
 
-**Status:** Draft
+**Status:** Approved (2026-10-29)
 **Depends on:** 002, 003
 
 ## Problem
@@ -38,4 +38,4 @@ today. Users need one place to see and change them.
 
 ## Open questions
 
-- Store settings in `%LOCALAPPDATA%\WinGetFrontend\settings.json` now, and switch to `ApplicationData` once packaged (007)? *Proposed: yes, behind an interface.*
+- Settings storage? **Decided: JSON in `%LOCALAPPDATA%\WinGetFrontend\settings.json` behind `ISettingsStore`; `ApplicationData` comes with 007.**

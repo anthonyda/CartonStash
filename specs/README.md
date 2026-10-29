@@ -38,11 +38,11 @@ If implementation reveals the spec is wrong, **stop, update the spec first**, th
 | #   | Feature                                   | Status      |
 |-----|-------------------------------------------|-------------|
 | 001 | [Package search](001-package-search/)                  | Done |
-| 002 | [Installed packages list](002-installed-packages/)     | Draft: needs review (adds the navigation shell) |
-| 003 | [Install / uninstall with progress](003-install-uninstall/) | Draft: needs review |
-| 004 | [Available updates](004-updates/)                      | Draft: **decision needed** on R3 (pins not in COM API) |
-| 005 | [Package details pane](005-package-details/)           | Draft: needs review |
-| 006 | [Settings](006-settings/)                              | Draft: needs review |
-| 007 | [Packaging and release](007-packaging-release/)        | Draft: **decisions needed** (signing, name, hosting) |
+| 002 | [Installed packages list](002-installed-packages/)     | Approved |
+| 003 | [Install / uninstall with progress](003-install-uninstall/) | Approved |
+| 004 | [Available updates](004-updates/)                      | Approved (R3 pins deferred, open) |
+| 005 | [Package details pane](005-package-details/)           | Approved |
+| 006 | [Settings](006-settings/)                              | Approved |
+| 007 | [Packaging and release](007-packaging-release/)        | Draft: on hold, **decisions needed** (signing, name, hosting) |
 
 Suggested build order: 002 → 003 → 004 → 005 → 006 → 007 (006's scope setting slots into 003's installer when it lands).

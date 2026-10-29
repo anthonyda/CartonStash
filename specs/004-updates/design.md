@@ -1,6 +1,6 @@
 # 004 – Updates: Design
 
-**Status:** Draft
+**Status:** Approved (2026-10-29, R3 deferred)
 **Requirements:** [requirements.md](requirements.md)
 
 ## Overview
@@ -14,7 +14,6 @@ investigation task before the design is final.
 | Layer | Type | Responsibility | New / changed |
 |-------|------|----------------|---------------|
 | Core/Services | `InstalledPackagesStore` | Extracted from `InstalledViewModel`: owns the loaded installed list, `ReloadAsync`, `Changed` event. Shared by Installed and Updates (R1.2) | new (refactor of 002) |
-| Core/Models | `PackageInfo` | add `RequiresExplicitUpgrade`, `ExplicitUpgradeReason` | changed |
 | Core/Services | `IPackageInstaller.UpgradeAsync` | `UpgradePackageAsync` with `InstallOptions` (silent, scope from Settings) | new method |
 | Core/Services | `PackageOperationQueue` | `OperationKind.Upgrade`; `EnqueueMany` | changed |
 | Core/ViewModels | `UpdatesViewModel` | Filtered list, selection, Update / Update selected / Update all, count, empty state | new |
@@ -30,18 +29,13 @@ investigation task before the design is final.
   There are **no pin-related types or members**, and no `RequireExplicitUpgrade`. The only `Explicit` members are on
   *catalogs* (`IPackageCatalogInfo2.Explicit`, `I{Add,Edit}PackageCatalogOptions.Explicit`), meaning "source
   excluded from default searches". That's relevant to spec 006, not here.
-  **R3 cannot be met through the COM API.** Options for review (see requirements, Open questions):
-  - **A. Drop R3.** "Update all" queues every package WinGet reports. WinGet itself then refuses pinned ones, and
-    the per-package result explains why. Simplest and fully within the constitution.
-  - **B. Constitution exception:** read `winget pin list` output in one isolated, tested adapter to mark pinned
-    packages. Covers pins but not manifest `RequireExplicitUpgrade` (the likely Miniconda case).
-  - **C. Defer R3** until a WinGet release exposes this in the COM API. Ship 004 as option A in the meantime.
-  *Recommendation: C (= A now, revisit later).*
+  **R3 cannot be met through the COM API.** Decision 2026-10-29: **R3 deferred, question left open** (see requirements).
+  v1 behaves as option A: no "Manual update only" marking, and "Update all" queues every package with `IsUpdateAvailable`.
 
 ## Data flow
 
 `InstalledPackagesStore.Changed` → `UpdatesViewModel` rebuilds `Updates = all.Where(HasUpdate)` (sorted by name)
-→ `ShellViewModel.UpdatesCount`. Update all → confirm (n packages, excluding explicit ones) → `queue.EnqueueMany`
+→ `ShellViewModel.UpdatesCount`. Update all → confirm (n packages) → `queue.EnqueueMany`
 → each completion triggers a store reload (debounced to once per queue drain, so updating 20 packages doesn't reload 20 times).
 
 ## UI
@@ -49,7 +43,7 @@ investigation task before the design is final.
 ```
 Updates (3)                    [Update selected] [Update all]
 ☐ Git           2.56.0.3 → 2.57.0     winget     [Update]
-☐ Miniconda3    py312… → py314…  ⚠ Manual update only  [Update]
+☐ Miniconda3    py312… → py314…       winget     [Update]
 ☐ 7-Zip         24.08 → 25.01         winget     [Update]
 ```
 
@@ -63,10 +57,9 @@ Updates (3)                    [Update selected] [Update all]
 
 | Criteria | How |
 |----------|-----|
-| R1.1, R2.2–R2.4, R3.2, R4.1, R5.1 | Unit tests on `UpdatesViewModel` + `InstalledPackagesStore` with fakes |
+| R1.1, R2.2–R2.4, R4.1, R5.1 | Unit tests on `UpdatesViewModel` + `InstalledPackagesStore` with fakes |
 | R2.1 | Manual: update one outdated package |
-| R3.1 | Manual with `Anaconda.Miniconda3` (if T1 finds an API) |
 
 ## Risks and alternatives considered
 
-- R3 may be impossible through the COM API. Handled by the T1 investigation and a possible amendment before implementation.
+- Packages WinGet refuses to update in bulk (pins, explicit-only) fail individually in "Update all", with WinGet's reason shown (003 R5.2). Acceptable until R3 is revisited.

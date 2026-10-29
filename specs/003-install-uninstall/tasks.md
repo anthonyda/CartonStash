@@ -1,6 +1,6 @@
 # 003 – Install / uninstall with progress: Tasks
 
-**Status:** Draft
+**Status:** Approved
 **Design:** [design.md](design.md)
 
 - [ ] **T1.** Models: `PackageOperation`, `OperationPhase`, `OperationResult`, `OperationProgress`, `OperationOutcome`.

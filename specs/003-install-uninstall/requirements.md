@@ -1,6 +1,6 @@
 # 003 – Install / uninstall with progress: Requirements
 
-**Status:** Draft
+**Status:** Approved (2026-10-29)
 **Depends on:** 001, 002
 
 ## Problem
@@ -42,4 +42,4 @@ Users can find and list packages but still need a terminal to install or remove 
 
 ## Open questions
 
-- Show a Windows toast notification when the app is minimized? *Proposed: in-app only for v1.*
+- Windows toast when minimized? **Decided: in-app only for v1.**

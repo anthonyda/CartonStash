@@ -1,6 +1,6 @@
 # 005 – Package details: Design
 
-**Status:** Draft
+**Status:** Approved (2026-10-29)
 **Requirements:** [requirements.md](requirements.md)
 
 ## Overview
