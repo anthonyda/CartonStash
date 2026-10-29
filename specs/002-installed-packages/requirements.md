@@ -1,6 +1,6 @@
 # 002 – Installed packages: Requirements
 
-**Status:** Done (2026-10-29). Amendment R6 (one row per installed program) done 2026-10-30
+**Status:** Done (2026-10-29). Amendment R6 (one row per installed program) done 2026-10-30. Amendment R7 (version badge colors) done 2026-10-30
 **Depends on:** 001
 
 ## Problem
@@ -33,10 +33,13 @@ Windows knows about (including apps WinGet didn't install) in a hard-to-scan tab
 | R4.2 | US4   | Switching pages shall keep each page's state (query, filter, scroll) for the session. |
 | R5.1 | –     | If loading fails, then the app shall show a readable error with a Retry action. |
 | R6.1 | US1   | The Installed page shall show one row per installed program in WinGet's installed catalog, the same entries `winget list` shows, even when several programs share one WinGet package ID. |
-| R6.2 | US1   | Each row shall show the program's own installed name and version (as Windows records them), not the source package's name. |
+| R6.2 | US1   | Each row shall show the program's own installed name, not the source package's name. The version shall be WinGet's installed version for WinGet's own match (as `winget list` shows it, e.g. `> 1.8.10`), and the version Windows records for every other row. *(Amended 2026-10-30 during R7: raw MSIX package versions like `8000.994.2142.0` don't follow the product's numbering.)* |
 | R6.3 | US3   | A row shall count as managed by WinGet (source, available version, R3.1) when WinGet matched that program to a source package, or when the program's product code or package family name is listed in a source package's manifest. |
 | R6.4 | US3   | When several rows match the same package ID, only the row WinGet itself evaluated shall show "Update available" (R3.2); the others shall not claim an update. |
 | R6.5 | –     | Uninstall on a row (003) shall remove exactly that row's program, never another program sharing its package ID. |
+| R7.1 | US3   | The "Installed *version*" badge shall be colored by how the installed version compares with the source's available version, as decided by WinGet's own version comparer (never by comparing strings in the app): **same** → green; **older, update offered** → amber; **newer than the source** → blue; **different but WinGet offers no update or can't compare** (e.g. `Unknown`, ranges like `> 1.8.10`, explicit-upgrade packages) → neutral gray. |
+| R7.2 | US3   | Unmanaged rows (no available version) and rows linked only through manifest codes (R6.3) shall keep a neutral badge: their recorded version may use a different numbering than the source. *(Manifest part amended 2026-10-30 during implementation.)* |
+| R7.3 | –     | Each color shall come with a tooltip and an accessible name that says the state in words ("Installed 2.5.6, newer than winget's 2.5.5"), so the meaning never depends on color alone (constitution Q5). |
 | R6.6 | US2   | The count (R2.2) shall count programs (rows), e.g. "90 of 362 packages". |
 
 ## Amendment R6: why (2026-10-30)
@@ -52,6 +55,10 @@ both. WinGet's installed-only catalog returns both separately (362 entries vs. 3
 - Grouping, multi-column sorting, export of the list.
 
 ## Open questions
+
+- **R7 colors:** **Decided 2026-10-30:** green / amber / blue / gray as in R7.1, using the WinUI theme brushes (Success, Caution, Informational,
+  neutral) so they work in light, dark and high contrast. The existing "Update available" badge stays as is.
+- **R7 scope:** **Decided 2026-10-30:** rows everywhere (Search, Installed, Updates) and the details pane's "Installed version" line.
 
 - **R6: rename rows to the installed name (R6.2)?** **Decided 2026-10-30: yes, the full installed name**, to match `winget list`. Most names barely change;
   a few get more detail (e.g. "Mozilla Firefox (x64 en-US)"). Search results keep the source package name.

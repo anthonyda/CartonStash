@@ -68,6 +68,21 @@ Upgrade still goes through the WinGet ID and is only offered on the primary matc
 **Cost.** One more catalog connect and ~362 cross-process reads at load (plus manifest codes for ~90 managed packages).
 *T9 measured:* installed-only catalog 362 entries read in ~0.5 s; composite with codes ~2.2 s (incl. connect). Run in parallel. Still loaded once per session in the background (R1.3).
 
+## Amendment R7: version badge colors (approved 2026-10-30)
+
+- New enum `VersionStatus { Unknown, Same, Older, Newer }` on `PackageInfo` (default `Unknown`).
+- Computed in Core/Services when the list is read, with WinGet's comparer:
+  `DefaultInstallVersion.CompareToVersion(InstalledVersion.Version)` → `Greater` = the source is newer (installed is **Older**),
+  `Equal` = **Same**, `Lesser` = **Newer**, `Unknown` = **Unknown** (P1: WinGet decides).
+  Only WinGet's own match is compared, using WinGet's installed version (`InstalledVersion.Version` from the composite,
+  now carried in `MatchedPackage.InstalledVersion` and also shown on the row, R6.2). Manifest-matched rows stay `Unknown`:
+  T16 showed raw MSIX versions (`8000.994.2142.0`) compared with product versions (`1.8.10`) read as "newer", which is
+  meaningless.
+- Badge color (App): `Same` → success brush; `Older` **and** `HasUpdate` → caution brush; `Newer` → informational brush;
+  anything else (incl. `Older` without an offered update) → neutral. `PackageRowViewModel` exposes `VersionBadgeText`
+  ("Installed 2.5.6") and `VersionStatusText` ("newer than winget's 2.5.5") for the tooltip and accessible name.
+- Cost: one extra cross-process call per managed row at load (~120 here); measured during implementation.
+
 ## Data flow
 
 Navigate to Installed → first visit triggers `LoadCommand` → `GetInstalledAsync` → `_all` list →

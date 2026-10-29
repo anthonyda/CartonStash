@@ -1,6 +1,6 @@
 # 002 – Installed packages: Tasks
 
-**Status:** Done (R2.4 added and done 2026-10-29). Amendment R6 done 2026-10-30
+**Status:** Done (R2.4 added and done 2026-10-29). Amendment R6 done 2026-10-30. Amendment R7 done 2026-10-30 (high-contrast check pending, with 006)
 **Design:** [design.md](design.md)
 
 - [x] **T1.** `CatalogConnection` with cached remote-first / local-first composites + `Invalidate()`; `SearchAsync` uses it.
@@ -36,6 +36,13 @@
 - [x] **T14.** Count and UI check: "of N packages" counts rows; WSL shows two correct rows. *(R6.2, R6.6)*
   - Verify: manual (UIA + screenshot).
 
+### Amendment R7: version badge colors (approved 2026-10-30)
+
+- [x] **T15.** `VersionStatus` from WinGet's `CompareToVersion` at load (primary and manifest-matched rows). *(R7.1, R7.2)*
+  - Verify: `VersionBadgeTests.*`, `InstalledJoinTests.WinGets_match_shows_wingets_version_others_the_recorded_one`; integration `Version_status_comes_from_winget`.
+- [x] **T16.** Badge colors, tooltip and accessible name in rows and the details pane. *(R7.1, R7.3)*
+  - Verify: manual screenshots in dark and light (high contrast with the 006 check).
+
 ## Manual verification log
 
 | Criterion | Date | Result | Notes |
@@ -52,4 +59,8 @@
 | R6.3 | 2026-10-30 | Pass | 29 programs linked through manifest codes, all genuine: x86 copies of runtimes (.NET, VCLibs, UI.Xaml, DirectX), side-by-side WindowsAppRuntime / CUDA versions, WSL 3.0.4.0. Managed rows 90 → 119 |
 | R6.5 | 2026-10-30 | Pass | jqlang.jq installed from Search, then uninstalled from its Installed row via its installed entry; `winget list` no longer finds it |
 | R6 load time | 2026-10-30 | Pass | Installed list ready ~4 s after a cold app start (both catalogs in parallel, background) |
+| R7.1 | 2026-10-30 | Pass | Dark + light screenshots: green = same (App Installer, Fusion, Blender, Claude Code), blue = newer than winget (Chatterino 2.5.6 vs 2.5.5, Claude, DisplayWidget Center), amber = Miniconda (update offered) |
+| R7.2 | 2026-10-30 | Pass | UIA: WindowsAppRuntime.1.8 x86 / other copies and WSL 3.0.4.0 neutral ("winget has …"). Found during T16: comparing raw MSIX versions (8000.x) with product versions (1.8.10) gave a false "newer"; spec R6.2 / R7.2 amended, primary rows show WinGet's version again ("> 1.8.10") |
+| R7.3 | 2026-10-30 | Pass | UIA names: "Installed 2.5.6, newer than winget's 2.5.5", "… update to py314_26.9.4-0 available from winget", "… same as winget" |
+| R7 high contrast | – | **Pending** | Check with the 006 high-contrast pass |
 | R1.4 | 2026-10-29 | Pass (unit) | `IsLoading` covered by tests; not seen live because the list now preloads at startup (004 badge) and was ready in 0.35 s |

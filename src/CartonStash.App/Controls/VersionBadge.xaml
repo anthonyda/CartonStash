@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 002 R7: "Installed <version>" badge, colored by WinGet's comparison with the source's version. -->
+<UserControl
+    x:Class="CartonStash.App.Controls.VersionBadge"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <UserControl.Resources>
+        <!-- ThemeResource setters re-evaluate when the theme changes. -->
+        <Style x:Key="SameStyle" TargetType="Border">
+            <Setter Property="Background" Value="{ThemeResource SystemFillColorSuccessBackgroundBrush}" />
+            <Setter Property="BorderBrush" Value="{ThemeResource SystemFillColorSuccessBrush}" />
+        </Style>
+        <Style x:Key="UpdateOfferedStyle" TargetType="Border">
+            <Setter Property="Background" Value="{ThemeResource SystemFillColorCautionBackgroundBrush}" />
+            <Setter Property="BorderBrush" Value="{ThemeResource SystemFillColorCautionBrush}" />
+        </Style>
+        <Style x:Key="NewerStyle" TargetType="Border">
+            <Setter Property="Background" Value="{ThemeResource VersionNewerBackgroundBrush}" />
+            <Setter Property="BorderBrush" Value="{ThemeResource VersionNewerBorderBrush}" />
+        </Style>
+        <Style x:Key="NeutralStyle" TargetType="Border">
+            <Setter Property="Background" Value="{ThemeResource SubtleFillColorSecondaryBrush}" />
+            <Setter Property="BorderBrush" Value="{ThemeResource ControlStrokeColorDefaultBrush}" />
+        </Style>
+    </UserControl.Resources>
+
+    <Border
+        x:Name="Chip"
+        Padding="6,1"
+        BorderThickness="1"
+        CornerRadius="4"
+        Style="{StaticResource NeutralStyle}">
+        <TextBlock
+            x:Name="Label"
+            Style="{StaticResource CaptionTextBlockStyle}"
+            TextWrapping="NoWrap" />
+    </Border>
+</UserControl>

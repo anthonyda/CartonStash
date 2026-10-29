@@ -55,19 +55,8 @@
                 HorizontalAlignment="Right"
                 Orientation="Horizontal"
                 Spacing="8">
-                <!-- 001 R2.1 -->
-                <Border
-                    Padding="6,1"
-                    Background="{ThemeResource SystemFillColorSuccessBackgroundBrush}"
-                    BorderBrush="{ThemeResource SystemFillColorSuccessBrush}"
-                    BorderThickness="1"
-                    CornerRadius="4"
-                    Visibility="{x:Bind Row.Package.IsInstalled, Mode=OneWay}">
-                    <TextBlock Style="{StaticResource CaptionTextBlockStyle}" TextWrapping="NoWrap">
-                        <Run Text="Installed" />
-                        <Run Text="{x:Bind Row.Package.InstalledVersion, Mode=OneWay}" />
-                    </TextBlock>
-                </Border>
+                <!-- 001 R2.1, 002 R7 -->
+                <controls:VersionBadge Row="{x:Bind Row, Mode=OneWay}" Visibility="{x:Bind Row.Package.IsInstalled, Mode=OneWay}" />
                 <!-- 001 R2.2, 002 R3.2 -->
                 <Border
                     Padding="6,1"

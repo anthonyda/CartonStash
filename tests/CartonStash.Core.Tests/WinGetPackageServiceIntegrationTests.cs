@@ -1,3 +1,4 @@
+using CartonStash.Core.Models;
 using CartonStash.Core.Services;
 
 namespace CartonStash.Core.Tests;
@@ -56,6 +57,23 @@ public class WinGetPackageServiceIntegrationTests
         {
             Assert.Equal(wsl.Count, wsl.Select(p => p.InstalledVersion).Distinct().Count());
         }
+    }
+
+    [Fact]
+    public async Task Version_status_comes_from_winget() // 002 R7.1 (dev machine: Git current, Chatterino ahead of winget)
+    {
+        var installed = await _service.GetInstalledAsync();
+
+        var git = Assert.Single(installed, p => p.Id == "Git.Git");
+        if (git.InstalledVersion == git.AvailableVersion)
+        {
+            Assert.Equal(VersionStatus.Same, git.VersionStatus);
+        }
+        if (installed.SingleOrDefault(p => p.Id == "ChatterinoTeam.Chatterino") is { InstalledVersion: "2.5.6", AvailableVersion: "2.5.5" } chatterino)
+        {
+            Assert.Equal(VersionStatus.Newer, chatterino.VersionStatus);
+        }
+        Assert.All(installed.Where(p => !p.IsManaged), p => Assert.Equal(VersionStatus.Unknown, p.VersionStatus));
     }
 
     [Fact]

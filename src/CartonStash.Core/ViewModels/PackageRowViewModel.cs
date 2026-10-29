@@ -5,6 +5,16 @@ using CartonStash.Core.Models;
 
 namespace CartonStash.Core.ViewModels;
 
+/// <summary>The color of the "Installed" badge (002 R7.1).</summary>
+public enum VersionBadge
+{
+    /// <summary>Unmanaged, uncomparable, or different without an offered update.</summary>
+    Neutral,
+    Same,
+    UpdateOffered,
+    Newer,
+}
+
 /// <summary>
 /// One row in Search / Installed / Updates (and the details pane header): the package plus the state of its
 /// latest operation (003 R3.1). The owning page keeps <see cref="Operation"/> current.
@@ -32,6 +42,30 @@ public sealed partial class PackageRowViewModel : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsBusy), nameof(ShowInstall), nameof(ShowUpdate), nameof(ShowUninstall), nameof(ResultText), nameof(HasResult))]
     public partial PackageOperation? Operation { get; set; }
+
+    /// <summary>Badge color: WinGet's comparison, and amber only when WinGet also offers the update (R7.1, R7.2).</summary>
+    public VersionBadge VersionBadge => !Package.IsManaged || Package.AvailableVersion is null
+        ? VersionBadge.Neutral
+        : Package.VersionStatus switch
+        {
+            VersionStatus.Same => VersionBadge.Same,
+            VersionStatus.Older when Package.HasUpdate => VersionBadge.UpdateOffered,
+            VersionStatus.Newer => VersionBadge.Newer,
+            _ => VersionBadge.Neutral,
+        };
+
+    public string VersionBadgeText => $"Installed {Package.InstalledVersion}";
+
+    /// <summary>The badge's meaning in words, for the tooltip and screen readers (R7.3).</summary>
+    public string VersionStatusText => VersionBadge switch
+    {
+        VersionBadge.Same => $"Installed {Package.InstalledVersion}, same as {Package.Source}",
+        VersionBadge.UpdateOffered => $"Installed {Package.InstalledVersion}, update to {Package.AvailableVersion} available from {Package.Source}",
+        VersionBadge.Newer => $"Installed {Package.InstalledVersion}, newer than {Package.Source}'s {Package.AvailableVersion}",
+        _ when Package.IsManaged && Package.AvailableVersion is not null =>
+            $"Installed {Package.InstalledVersion}, {Package.Source} has {Package.AvailableVersion}",
+        _ => $"Installed {Package.InstalledVersion}",
+    };
 
     /// <summary>The package's icon from WinGet; null shows a generic glyph (005 R5.1).</summary>
     [ObservableProperty]

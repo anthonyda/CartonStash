@@ -56,7 +56,8 @@ public sealed class WinGetPackageService(CatalogConnection connection) : IPackag
         var entries = Task.Run(() => ReadInstalledEntriesAsync(cancellationToken), cancellationToken);
         var packages = Task.Run(() => ReadMatchedPackagesAsync(cancellationToken), cancellationToken);
         await Task.WhenAll(entries, packages);
-        return InstalledJoin.Join(entries.Result, packages.Result);
+        // The comparer makes cross-process calls: keep the join off the UI thread.
+        return await Task.Run(() => InstalledJoin.Join(entries.Result, packages.Result, CompareWithAvailable), cancellationToken);
     }
 
     private async Task<IReadOnlyList<InstalledEntry>> ReadInstalledEntriesAsync(CancellationToken cancellationToken)
@@ -94,12 +95,41 @@ public sealed class WinGetPackageService(CatalogConnection connection) : IPackag
                 package.Id,
                 package.Name,
                 package.InstalledVersion?.Id,
+                package.InstalledVersion?.Version,
                 available?.Version,
                 available?.PackageCatalog.Info.Name ?? "",
                 package.IsUpdateAvailable,
                 available is null ? [] : ReadCodes(available)));
         }
         return packages;
+    }
+
+    /// <summary>WinGet decides how an installed version compares with a package's available version (002 R7.1, P1).</summary>
+    private VersionStatus CompareWithAvailable(MatchedPackage package, string installedVersion) =>
+        _versions.TryGetValue(package.Id, out var available) ? Compare(available, installedVersion) : VersionStatus.Unknown;
+
+    internal static VersionStatus ToVersionStatus(CompareResult availableComparedToInstalled) => availableComparedToInstalled switch
+    {
+        CompareResult.Equal => VersionStatus.Same,
+        CompareResult.Greater => VersionStatus.Older, // the source is ahead: installed is older
+        CompareResult.Lesser => VersionStatus.Newer, // installed is ahead of the source
+        _ => VersionStatus.Unknown,
+    };
+
+    private static VersionStatus Compare(PackageVersionInfo available, string? installedVersion)
+    {
+        if (string.IsNullOrEmpty(installedVersion))
+        {
+            return VersionStatus.Unknown;
+        }
+        try
+        {
+            return ToVersionStatus(available.CompareToVersion(installedVersion));
+        }
+        catch (Exception ex) when (ex is ArgumentException or System.Runtime.InteropServices.COMException)
+        {
+            return VersionStatus.Unknown;
+        }
     }
 
     /// <summary>Product codes and package family names, read by index (W2).</summary>
@@ -298,7 +328,10 @@ public sealed class WinGetPackageService(CatalogConnection connection) : IPackag
             AvailableVersion: available?.Version,
             // No remote version = WinGet can't manage it (002 R3.1).
             Source: available?.PackageCatalog.Info.Name ?? "",
-            UpdateAvailable: package.IsUpdateAvailable);
+            UpdateAvailable: package.IsUpdateAvailable)
+        {
+            VersionStatus = available is null ? VersionStatus.Unknown : Compare(available, installed?.Version), // 002 R7.1
+        };
     }
 
     /// <summary>

@@ -12,7 +12,7 @@ public class InstalledJoinTests
     private static InstalledEntry Entry(string localId, string name, string version, params string[] codes) => new(localId, name, version, codes);
 
     private static MatchedPackage Package(string id, string? installedLocalId, string available, bool update = false, params string[] manifestCodes) =>
-        new(id, id + " (source name)", installedLocalId, available, "winget", update, manifestCodes);
+        new(id, id + " (source name)", installedLocalId, installedLocalId is null ? null : "winget's view", available, "winget", update, manifestCodes);
 
     // Exactly what the dev machine reports for WSL (T9).
     private static readonly InstalledEntry[] WslEntries =
@@ -22,7 +22,8 @@ public class InstalledJoinTests
     ];
 
     private static readonly MatchedPackage WslPackage =
-        Package("Microsoft.WSL", OldWsl, "2.7.14", update: false, "{020F8AC8-A788-4E39-8E9B-8FECFA843632}", "MicrosoftCorporationII.WindowsSubsystemForLinux_8wekyb3d8bbwe");
+        Package("Microsoft.WSL", OldWsl, "2.7.14", update: false, "{020F8AC8-A788-4E39-8E9B-8FECFA843632}", "MicrosoftCorporationII.WindowsSubsystemForLinux_8wekyb3d8bbwe")
+            with { InstalledVersion = "5.10.102.1" };
 
     [Fact]
     public void Two_programs_sharing_an_id_get_two_rows_with_their_own_versions() // R6.1, R6.2
@@ -99,6 +100,18 @@ public class InstalledJoinTests
         Assert.Equal("Contoso.Ghost", row.Id);
         Assert.Equal("Ghost", row.Name);
         Assert.True(row.IsPrimaryMatch);
+    }
+
+    [Fact]
+    public void WinGets_match_shows_wingets_version_others_the_recorded_one() // R6.2 (amended)
+    {
+        var runtime = Entry(@"MSIX\Microsoft.WindowsAppRuntime.1.8_8000.994.2142.0_x64", "WindowsAppRuntime.1.8", "8000.994.2142.0", "pfn_x64");
+        var runtimeX86 = Entry(@"MSIX\Microsoft.WindowsAppRuntime.1.8_8000.994.2142.0_x86", "WindowsAppRuntime.1.8", "8000.994.2142.0", "pfn_x86");
+        var rows = InstalledJoin.Join([runtime, runtimeX86],
+            [Package("Microsoft.WindowsAppRuntime.1.8", runtime.LocalId, "1.8.10", false, "pfn_x86") with { InstalledVersion = "> 1.8.10" }]);
+
+        Assert.Equal("> 1.8.10", rows.Single(r => r.IsPrimaryMatch).InstalledVersion);
+        Assert.Equal("8000.994.2142.0", rows.Single(r => !r.IsPrimaryMatch).InstalledVersion);
     }
 
     [Fact]

@@ -8,6 +8,21 @@
             <ResourceDictionary.MergedDictionaries>
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
             </ResourceDictionary.MergedDictionaries>
+            <!-- 002 R7: "newer than the source" badge. A fixed blue, because the system attention color is the user's accent. -->
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Light">
+                    <SolidColorBrush x:Key="VersionNewerBackgroundBrush" Color="#E5EFFC" />
+                    <SolidColorBrush x:Key="VersionNewerBorderBrush" Color="#2F6FC9" />
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Dark">
+                    <SolidColorBrush x:Key="VersionNewerBackgroundBrush" Color="#1D2B42" />
+                    <SolidColorBrush x:Key="VersionNewerBorderBrush" Color="#6EA8F7" />
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="HighContrast">
+                    <SolidColorBrush x:Key="VersionNewerBackgroundBrush" Color="{ThemeResource SystemColorWindowColor}" />
+                    <SolidColorBrush x:Key="VersionNewerBorderBrush" Color="{ThemeResource SystemColorHighlightColor}" />
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

@@ -78,7 +78,12 @@
 
                 <StackPanel Spacing="4" Visibility="{x:Bind ViewModel.Row.Package.IsInstalled, Mode=OneWay}">
                     <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}" Text="Installed version" />
-                    <TextBlock Text="{x:Bind ViewModel.Row.Package.InstalledVersion, Mode=OneWay}" />
+                    <!-- 002 R7 -->
+                    <controls:VersionBadge HorizontalAlignment="Left" Row="{x:Bind ViewModel.Row, Mode=OneWay}" />
+                    <TextBlock
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Text="{x:Bind ViewModel.Row.VersionStatusText, Mode=OneWay}"
+                        TextWrapping="Wrap" />
                 </StackPanel>
 
                 <!-- R1.2 -->

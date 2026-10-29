@@ -1,6 +1,17 @@
 namespace CartonStash.Core.Models;
 
 /// <summary>
+/// How the installed version compares with the source's available version, as WinGet's comparer decides (002 R7.1).
+/// </summary>
+public enum VersionStatus
+{
+    Unknown,
+    Same,
+    Older,
+    Newer,
+}
+
+/// <summary>
 /// A package as the UI sees it. Plain data, decoupled from the WinGet COM types
 /// so view models and tests never touch COM objects directly.
 /// </summary>
@@ -23,6 +34,9 @@ public sealed record PackageInfo(
     /// rows never claim WinGet's update verdict (002 R6.4).
     /// </summary>
     public bool IsPrimaryMatch { get; init; } = true;
+
+    /// <summary>Installed vs available, decided by WinGet (002 R7.1). Unknown for unmanaged or uncomparable versions.</summary>
+    public VersionStatus VersionStatus { get; init; }
 
     /// <summary>Identity of the row: several installed programs can share one WinGet ID (002 R6.5).</summary>
     public string Key => InstalledId ?? Id;
