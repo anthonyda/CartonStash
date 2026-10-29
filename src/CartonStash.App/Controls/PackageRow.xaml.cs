@@ -7,7 +7,7 @@ namespace CartonStash.App.Controls;
 public sealed partial class PackageRow : UserControl
 {
     public static readonly DependencyProperty RowProperty =
-        DependencyProperty.Register(nameof(Row), typeof(PackageRowViewModel), typeof(PackageRow), new PropertyMetadata(null, OnRowChanged));
+        DependencyProperty.Register(nameof(Row), typeof(PackageRowViewModel), typeof(PackageRow), new PropertyMetadata(null));
 
     public PackageRow()
     {
@@ -36,8 +36,4 @@ public sealed partial class PackageRow : UserControl
         Versions.HorizontalAlignment = Badges.HorizontalAlignment = SourceLabel.HorizontalAlignment =
             compact ? HorizontalAlignment.Left : HorizontalAlignment.Right;
     }
-
-    // The list only creates row controls for rows on screen, so icons load for those only (005 R5.2).
-    private static void OnRowChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) =>
-        _ = (e.NewValue as PackageRowViewModel)?.EnsureIconAsync();
 }

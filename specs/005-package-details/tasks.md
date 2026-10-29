@@ -27,4 +27,5 @@
 | Adaptive layout | 2026-10-29 | Pass | 1200 px: right column; 800 px: pane covers the list (opaque background, fixed during verification) |
 | R5.1, R5.2 | 2026-10-29 | Pass | Screenshots: Firefox, CPU-Z, CrystalDiskMark icons in rows; glyph for packages without one (Git, Mozilla.Firefox.MSIX); list shown before icons arrive |
 | Esc tooltip | 2026-10-29 | Pass | User report: hovering showed "Esc" everywhere. Page accelerator placement set to Hidden; user confirmed it is gone |
+| R5.1 (bug) | 2026-10-30 | Fixed | User report: Chatterino showed the VS Code icon, Fusion / Blender a setup icon. WinGet has no icon for any of the three; recycled rows kept old pictures. After fix: glyph for all three after heavy scrolling; VS Code keeps its icon; pane switches VS Code → Chatterino correctly |
 | R1.3 | – | **Pending** | Click a link and confirm the default browser opens (skipped so as not to open your browser) |

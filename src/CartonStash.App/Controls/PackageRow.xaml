@@ -24,21 +24,12 @@
         </Grid.RowDefinitions>
 
         <!-- 005 R5.1: WinGet's icon, or a package glyph -->
-        <Grid
+        <controls:PackageIcon
             Grid.RowSpan="2"
             Width="32"
             Height="32"
-            VerticalAlignment="Center">
-            <FontIcon
-                FontSize="22"
-                Foreground="{ThemeResource TextFillColorTertiaryBrush}"
-                Glyph="&#xE7B8;"
-                Visibility="{x:Bind ui:Ui.Collapsed(Row.HasIcon), Mode=OneWay}" />
-            <Image
-                AutomationProperties.AccessibilityView="Raw"
-                Source="{x:Bind ui:Ui.Icon(Row.IconUri, 32), Mode=OneWay}"
-                Stretch="Uniform" />
-        </Grid>
+            VerticalAlignment="Center"
+            Row="{x:Bind Row, Mode=OneWay}" />
 
         <StackPanel Grid.Column="1" VerticalAlignment="Center">
             <TextBlock

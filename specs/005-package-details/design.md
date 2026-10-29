@@ -42,6 +42,8 @@ each list page in a two-column layout (adaptive via `VisualStateManager`).
 - `PackageRowViewModel.IconUri` is loaded by `EnsureIconAsync()`, which the `PackageRow` control calls when it gets a row.
   `ListView` virtualization means only rows on screen ask (R5.2). The pane header uses the row's icon.
 - Display: `BitmapImage` (WIC decodes `.ico`), 32 px in rows, 48 px in the pane; a package glyph when there's no icon.
+  *Amended 2026-10-30 (bug fix):* a `PackageIcon` control sets the picture in code whenever its row changes. With an x:Bind
+  function, recycled list rows kept the previous package's icon when the new package had none (Chatterino showed VS Code's).
 
 ## Data flow
 

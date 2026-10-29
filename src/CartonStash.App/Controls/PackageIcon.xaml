@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 005 R5.1: WinGet's icon for a package, or a generic package glyph. Shared by rows and the details pane. -->
+<UserControl
+    x:Class="CartonStash.App.Controls.PackageIcon"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <Grid>
+        <FontIcon
+            x:Name="Glyph"
+            Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+            Glyph="&#xE7B8;" />
+        <Image
+            x:Name="Picture"
+            AutomationProperties.AccessibilityView="Raw"
+            Stretch="Uniform"
+            Visibility="Collapsed" />
+    </Grid>
+</UserControl>
