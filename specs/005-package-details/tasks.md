@@ -26,5 +26,5 @@
 | R4.1 | 2026-10-29 | Pass | UIA: Esc closes the pane; focus returns to ListItem "Wget" |
 | Adaptive layout | 2026-10-29 | Pass | 1200 px: right column; 800 px: pane covers the list (opaque background, fixed during verification) |
 | R5.1, R5.2 | 2026-10-29 | Pass | Screenshots: Firefox, CPU-Z, CrystalDiskMark icons in rows; glyph for packages without one (Git, Mozilla.Firefox.MSIX); list shown before icons arrive |
-| Esc tooltip | 2026-10-29 | Fixed, not confirmed | User report: hovering showed "Esc" everywhere. Page accelerator placement set to Hidden; could not reproduce hover on screen here |
+| Esc tooltip | 2026-10-29 | Pass | User report: hovering showed "Esc" everywhere. Page accelerator placement set to Hidden; user confirmed it is gone |
 | R1.3 | – | **Pending** | Click a link and confirm the default browser opens (skipped so as not to open your browser) |
