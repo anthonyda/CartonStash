@@ -1,6 +1,6 @@
 # 001 – Package search: Requirements
 
-**Status:** Approved (walking skeleton implemented; remaining criteria open, see tasks.md)
+**Status:** Done (2026-10-29)
 **Depends on:** none
 
 ## Problem

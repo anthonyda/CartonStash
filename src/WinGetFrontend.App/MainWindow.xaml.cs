@@ -18,7 +18,10 @@ public sealed partial class MainWindow : Window
     }
 
     // Instance method: x:Bind function bindings are invoked on the page instance.
-    private bool HasError(string? message) => !string.IsNullOrEmpty(message);
+    private bool HasText(string? text) => !string.IsNullOrEmpty(text);
+
+    // x:Bind doesn't convert bool → Visibility for function bindings.
+    private Visibility VisibleIfText(string? text) => HasText(text) ? Visibility.Visible : Visibility.Collapsed;
 
     private void QueryBox_KeyDown(object sender, KeyRoutedEventArgs e)
     {

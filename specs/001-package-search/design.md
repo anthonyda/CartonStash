@@ -27,7 +27,13 @@ installed catalog), so one call returns both the available and the installed ver
 3. `FindPackagesAsync` with `ResultLimit = 50` (R1.3) and one selector:
    `PackageMatchField.CatalogDefault` + `ContainsCaseInsensitive` (name / ID / moniker, R1.1).
 4. Per match: `CatalogPackage.DefaultInstallVersion` → available version + source;
-   `CatalogPackage.InstalledVersion` → installed version.
+   `CatalogPackage.InstalledVersion` → installed version;
+   `CatalogPackage.IsUpdateAvailable` → `PackageInfo.UpdateAvailable` (R2.2).
+   *Amended during implementation:* WinGet decides "update available" (constitution P1). Comparing version
+   strings ourselves gets `2.10` vs `2.9` and `Unknown` wrong.
+5. Status → message mapping (R3.4): `CatalogError` → "Couldn't reach the package sources…",
+   `SourceAgreementsNotAccepted` → "accept source agreements…", `BlockedByPolicy` → "blocked by policy…",
+   anything else → "WinGet reported *status*". The HRESULT stays on `WinGetException.HResult` for logs, not in the UI.
 
 Collections are read by index (constitution W2).
 
@@ -36,8 +42,10 @@ reconnecting on every search. Measure first.
 
 ## Data flow
 
-Enter / Search → `SearchCommand` (RelayCommand, `AllowConcurrentExecutions = false`) → cancel the previous
-run (R3.2) → `SearchAsync(query, ct)` → results replace `Results` → state becomes Results / Empty / Error.
+Enter / Search → `SearchCommand` (RelayCommand, `AllowConcurrentExecutions = true`; the view model keeps its own
+`CancellationTokenSource`) → cancel the previous run (R3.2) → `SearchAsync(query, ct)` → if this run was superseded,
+drop its results → otherwise results replace `Results` → state becomes Results / Empty / Error.
+`IsSearching` drives the progress bar (`SearchCommand.IsRunning` would flicker between overlapping runs).
 
 ## UI
 
@@ -61,7 +69,7 @@ run (R3.2) → `SearchAsync(query, ct)` → results replace `Results` → state 
 
 - Source unreachable / agreements not accepted → `WinGetException` → InfoBar message (R3.4).
 - Cancellation is silent: no error is shown.
-- Packages with version "Unknown" are shown as-is; `HasUpdate` is false unless both versions are known and different.
+- Packages with version "Unknown" are shown as-is; `HasUpdate` is `IsInstalled && UpdateAvailable` (WinGet's flag).
 
 ## Testing strategy
 

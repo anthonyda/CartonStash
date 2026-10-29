@@ -37,7 +37,7 @@ public sealed class WinGetPackageService : IPackageService
         var result = await catalog.FindPackagesAsync(options).AsTask(cancellationToken);
         if (result.Status != FindPackagesResultStatus.Ok)
         {
-            throw new WinGetException($"Search failed: {result.Status}", result.ExtendedErrorCode);
+            throw new WinGetException(DescribeFindFailure(result.Status), result.ExtendedErrorCode);
         }
 
         var matches = result.Matches;
@@ -69,11 +69,30 @@ public sealed class WinGetPackageService : IPackageService
         var connect = await composite.ConnectAsync().AsTask(cancellationToken);
         if (connect.Status != ConnectResultStatus.Ok)
         {
-            throw new WinGetException($"Could not connect to package sources: {connect.Status}", connect.ExtendedErrorCode);
+            throw new WinGetException(DescribeConnectFailure(connect.Status), connect.ExtendedErrorCode);
         }
 
         return connect.PackageCatalog;
     }
+
+    // User-facing messages (spec 001 R3.4). The HRESULT stays on WinGetException.HResult.
+    internal static string DescribeConnectFailure(ConnectResultStatus status) => status switch
+    {
+        ConnectResultStatus.CatalogError =>
+            "Couldn't reach the package sources. Check your internet connection and try again.",
+        ConnectResultStatus.SourceAgreementsNotAccepted =>
+            "A package source requires you to accept its agreement. Run 'winget search' once in a terminal to accept it, then try again.",
+        _ => $"Couldn't connect to the package sources (WinGet reported {status}).",
+    };
+
+    internal static string DescribeFindFailure(FindPackagesResultStatus status) => status switch
+    {
+        FindPackagesResultStatus.CatalogError =>
+            "Couldn't reach the package sources. Check your internet connection and try again.",
+        FindPackagesResultStatus.BlockedByPolicy =>
+            "Searching is blocked by a group policy on this PC.",
+        _ => $"The search failed (WinGet reported {status}).",
+    };
 
     private static PackageInfo ToPackageInfo(CatalogPackage package)
     {
@@ -85,7 +104,8 @@ public sealed class WinGetPackageService : IPackageService
             Name: package.Name,
             InstalledVersion: installed?.Version,
             AvailableVersion: available?.Version,
-            Source: available?.PackageCatalog.Info.Name ?? installed?.PackageCatalog.Info.Name ?? "");
+            Source: available?.PackageCatalog.Info.Name ?? installed?.PackageCatalog.Info.Name ?? "",
+            UpdateAvailable: package.IsUpdateAvailable);
     }
 }
 

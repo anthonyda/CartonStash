@@ -27,48 +27,103 @@
             </Grid.ColumnDefinitions>
             <TextBox
                 x:Name="QueryBox"
+                AutomationProperties.Name="Search packages"
+                KeyDown="QueryBox_KeyDown"
                 PlaceholderText="Name, ID or moniker (e.g. git, vscode, 7zip)"
-                Text="{x:Bind ViewModel.Query, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                KeyDown="QueryBox_KeyDown" />
+                TabIndex="0"
+                Text="{x:Bind ViewModel.Query, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
             <Button
                 Grid.Column="1"
                 Command="{x:Bind ViewModel.SearchCommand}"
                 Content="Search"
-                Style="{StaticResource AccentButtonStyle}" />
+                Style="{StaticResource AccentButtonStyle}"
+                TabIndex="1" />
         </Grid>
 
         <StackPanel Grid.Row="2" Spacing="8">
-            <ProgressBar IsIndeterminate="True" Visibility="{x:Bind ViewModel.SearchCommand.IsRunning, Mode=OneWay}" />
+            <ProgressBar
+                AutomationProperties.Name="Searching"
+                IsIndeterminate="True"
+                Visibility="{x:Bind ViewModel.IsSearching, Mode=OneWay}" />
             <InfoBar
-                Title="Something went wrong"
+                Title="Search failed"
                 IsClosable="False"
-                IsOpen="{x:Bind HasError(ViewModel.ErrorMessage), Mode=OneWay}"
+                IsOpen="{x:Bind HasText(ViewModel.ErrorMessage), Mode=OneWay}"
                 Message="{x:Bind ViewModel.ErrorMessage, Mode=OneWay}"
                 Severity="Error" />
         </StackPanel>
 
-        <ListView Grid.Row="3" ItemsSource="{x:Bind ViewModel.Results}" SelectionMode="None">
-            <ListView.ItemTemplate>
-                <DataTemplate x:DataType="models:PackageInfo">
-                    <Grid Padding="0,8" ColumnSpacing="16">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <StackPanel>
-                            <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}" Text="{x:Bind Name}" />
-                            <TextBlock Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="{x:Bind Id}" />
-                        </StackPanel>
-                        <StackPanel Grid.Column="1" HorizontalAlignment="Right">
-                            <TextBlock HorizontalAlignment="Right" Text="{x:Bind AvailableVersion}" />
-                            <TextBlock
+        <Grid Grid.Row="3">
+            <ListView
+                AutomationProperties.Name="Search results"
+                ItemsSource="{x:Bind ViewModel.Results}"
+                SelectionMode="None"
+                TabIndex="2">
+                <ListView.ItemTemplate>
+                    <DataTemplate x:DataType="models:PackageInfo">
+                        <Grid
+                            Padding="0,8"
+                            AutomationProperties.Name="{x:Bind Name}"
+                            ColumnSpacing="16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}" Text="{x:Bind Name}" />
+                                <TextBlock Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="{x:Bind Id}" />
+                            </StackPanel>
+                            <StackPanel
+                                Grid.Column="1"
                                 HorizontalAlignment="Right"
-                                Foreground="{ThemeResource TextFillColorTertiaryBrush}"
-                                Text="{x:Bind Source}" />
-                        </StackPanel>
-                    </Grid>
-                </DataTemplate>
-            </ListView.ItemTemplate>
-        </ListView>
+                                Spacing="4">
+                                <StackPanel
+                                    HorizontalAlignment="Right"
+                                    Orientation="Horizontal"
+                                    Spacing="8">
+                                    <!-- R2.1 -->
+                                    <Border
+                                        Padding="6,1"
+                                        Background="{ThemeResource SystemFillColorSuccessBackgroundBrush}"
+                                        BorderBrush="{ThemeResource SystemFillColorSuccessBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="4"
+                                        Visibility="{x:Bind IsInstalled}">
+                                        <TextBlock Style="{StaticResource CaptionTextBlockStyle}">
+                                            <Run Text="Installed" />
+                                            <Run Text="{x:Bind InstalledVersion}" />
+                                        </TextBlock>
+                                    </Border>
+                                    <!-- R2.2 -->
+                                    <Border
+                                        Padding="6,1"
+                                        Background="{ThemeResource SystemFillColorAttentionBackgroundBrush}"
+                                        BorderBrush="{ThemeResource SystemFillColorAttentionBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="4"
+                                        Visibility="{x:Bind HasUpdate}">
+                                        <TextBlock Style="{StaticResource CaptionTextBlockStyle}" Text="Update available" />
+                                    </Border>
+                                    <TextBlock HorizontalAlignment="Right" Text="{x:Bind AvailableVersion}" />
+                                </StackPanel>
+                                <TextBlock
+                                    HorizontalAlignment="Right"
+                                    Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                                    Text="{x:Bind Source}" />
+                            </StackPanel>
+                        </Grid>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
+
+            <!-- R3.3 -->
+            <TextBlock
+                Margin="0,48,0,0"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Top"
+                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                Text="{x:Bind ViewModel.EmptyMessage, Mode=OneWay}"
+                Visibility="{x:Bind VisibleIfText(ViewModel.EmptyMessage), Mode=OneWay}" />
+        </Grid>
     </Grid>
 </Window>

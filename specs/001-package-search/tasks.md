@@ -1,6 +1,6 @@
 # 001 – Package search: Tasks
 
-**Status:** In progress
+**Status:** Done
 **Design:** [design.md](design.md)
 
 Tick a task only when its verification passes. Keep tasks small enough for one commit.
@@ -18,19 +18,22 @@ Tick a task only when its verification passes. Keep tasks small enough for one c
 
 ## Remaining
 
-- [ ] **T5.** Unit tests for `PackageInfo.IsInstalled` / `HasUpdate`, including the "Unknown" version case. *(R2.1, R2.2)*
-  - Verify: new `PackageInfoTests`.
-- [ ] **T6.** Show installed version + "Installed" / "Update available" badges in the result row. *(R2.1, R2.2)*
-  - Verify: manual, search `git` with Git installed.
-- [ ] **T7.** Cancel the in-flight search when a new one starts. Only the latest results are shown. *(R3.2)*
-  - Verify: unit test with a fake service that delays the first call.
-- [ ] **T8.** Empty state "No packages found for '*query*'" (view model `IsEmpty` + text). *(R3.3)*
-  - Verify: unit test + manual.
-- [ ] **T9.** Keep the query after a failure; InfoBar shows a readable message, not the raw HRESULT. *(R3.4)*
-  - Verify: unit test (query unchanged after error).
-- [ ] **T10.** Accessible names on the search box and results list; check Tab order. *(R3.5)*
-  - Verify: manual, Narrator + keyboard only.
-- [ ] **T11.** Mark the spec `Done` once all criteria are verified.
+- [x] **T5.** `PackageInfo.UpdateAvailable` from WinGet's `IsUpdateAvailable` + unit tests for `IsInstalled` / `HasUpdate`,
+  including the "Unknown" version case. *(R2.1, R2.2)*
+  - Verify: `PackageInfoTests.*`.
+- [x] **T6.** Show installed version + "Installed" / "Update available" badges in the result row. *(R2.1, R2.2)*
+  - Verify: manual (UI Automation), see log.
+- [x] **T7.** Cancel the in-flight search when a new one starts. Only the latest results are shown. *(R3.2)*
+  - Verify: `SearchViewModelTests.New_search_supersedes_running_one`.
+- [x] **T8.** Empty state "No packages found for '*query*'" (view model `EmptyMessage`). *(R3.3)*
+  - Verify: `SearchViewModelTests.No_matches_shows_empty_message` + manual, see log.
+- [x] **T9.** Keep the query after a failure; InfoBar shows a readable message, not the raw HRESULT. *(R3.4)*
+  - Verify: `SearchViewModelTests.WinGet_failure_shows_its_message_and_keeps_query`, `Unexpected_failure_gets_readable_prefix`,
+    `New_search_clears_previous_error`, `WinGetErrorMessageTests.*`.
+- [x] **T10.** Accessible names on the search box, results list, rows and progress bar; explicit TabIndex order
+  (box → button → results). *(R3.5)*
+  - Verify: names via UI Automation + human keyboard/Narrator check (see log).
+- [x] **T11.** Mark the spec `Done` once all criteria are verified.
 
 ## Manual verification log
 
@@ -38,3 +41,9 @@ Tick a task only when its verification passes. Keep tasks small enough for one c
 |-----------|------|--------|-------|
 | R1.1 | 2026-10-29 | Pass | Live search "Git.Git" → `Git.Git 2.56.0.3 (installed 2.56.0.3) winget` |
 | T4   | 2026-10-29 | Pass | App starts, window "WinGet Frontend" shown |
+| R1.4, R2.1 | 2026-10-29 | Pass | UIA: search "Git.Git" → row `Git · Git.Git · Installed 2.56.0.3 · 2.56.0.3 · winget` |
+| R2.2 | 2026-10-29 | Pass | UIA: search "Anaconda.Miniconda3" → `Installed py312_24.11.1-0 · Update available · py314_26.9.4-0` |
+| R3.3 | 2026-10-29 | Pass | UIA: search "zzqqxxnotapackage" → "No packages found for 'zzqqxxnotapackage'" |
+| R3.5 (names) | 2026-10-29 | Pass | UIA: Edit "Search packages", List "Search results" found by name |
+| R3.1 | 2026-10-29 | Pass | Human: progress bar visible during search (user confirmed) |
+| R3.5 (keyboard) | 2026-10-29 | Pass | Human: Tab order box → Search → results; Narrator reads names (user confirmed) |
