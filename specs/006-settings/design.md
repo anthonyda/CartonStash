@@ -1,6 +1,6 @@
 # 006 – Settings: Design
 
-**Status:** Approved (2026-10-29)
+**Status:** Approved (2026-10-29), amended during implementation
 **Requirements:** [requirements.md](requirements.md)
 
 ## Overview
@@ -17,7 +17,7 @@ root element and updating the title-bar button colours.
 | Core/Models | `SourceInfo` | Name, Type, Argument (URL), TrustLevel, Explicit, LastUpdated, AgreementsPending | new |
 | Core/Services | `ISettingsStore` + `JsonSettingsStore` | Load / save `%LOCALAPPDATA%\WinGetFrontend\settings.json`; tolerant of missing or corrupt files (fall back to defaults, keep a `.bak`) | new |
 | Core/Services | `ISettings` (singleton) | Current settings + `Changed` event; used by the 003 installer for scope (R2.1) | new |
-| Core/Services | `IPackageService` | `GetSourcesAsync`, `RefreshSourcesAsync(IProgress)`, `GetWinGetVersion()`, `AcceptSourceAgreements(name)` | new methods |
+| Core/Services | `IPackageService` | `GetSourcesAsync`, `RefreshSourceAsync(name)` (*amended:* one source per call; the view model loops and reports "n of m"), `GetWinGetVersion()`, `AcceptSourceAgreements(name)` | new methods |
 | Core/ViewModels | `SettingsViewModel` | Theme, scope, sources, refresh command, versions, diagnostic text | new |
 | App | `SettingsPage` | `SettingsCard`-style layout (from WinUI Gallery patterns), `NavigationView` settings item | new |
 | App | `ThemeService` | Applies `ElementTheme` + title-bar colours (R1.1) | new |
@@ -31,6 +31,8 @@ root element and updating the title-bar button colours.
   sequentially, with progress "*n* of *m*". Afterwards `CatalogConnection.Invalidate()`.
 - Agreements (R3.3): `PackageCatalogReference.SourceAgreements`. Accepting sets `AcceptSourceAgreements = true`
   on the references used by `CatalogConnection` for that session. This replaces 001's advice to run `winget search` in a terminal.
+  *Amended:* the COM API doesn't say whether a source's agreements were already accepted, so every source that has
+  agreements shows an **Agreements** button (Accept / Decline). The connect error now points to Settings → Sources.
 - Versions (R4.1): `PackageManager.Version` (`IPackageManager7`). App version comes from the assembly informational version.
 
 ## Data flow
@@ -53,7 +55,8 @@ Settings
 
 ## Error handling and edge cases
 
-- Corrupt settings file → defaults + a one-time InfoBar "Settings were reset".
+- Corrupt settings file (bad JSON or unknown enum values) → defaults + `.bak` copy + a one-time InfoBar "Settings were reset".
+- Saves write a temp file and then move it into place, so a crash mid-save can't leave a half-written file.
 - Source refresh failure → per-source error line, others continue.
 - Scope "User" with a package that only has machine installers → WinGet returns `NoApplicableInstallers` →
   the 003 message suggests changing the scope in Settings.

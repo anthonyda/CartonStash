@@ -1,17 +1,28 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using WinGetFrontend.Core.Models;
 using WinGetFrontend.Core.Services;
 
 namespace WinGetFrontend.Core.ViewModels;
 
-/// <summary>Search screen. Behaviour is defined in specs/001-package-search.</summary>
-public sealed partial class SearchViewModel(IPackageService packages) : ObservableObject
+/// <summary>Search screen. Behaviour is defined in specs/001-package-search; rows offer Install (003 R1.1).</summary>
+public sealed partial class SearchViewModel : ObservableObject
 {
+    private readonly IPackageService _packages;
+    private readonly PackageActions _actions;
     private CancellationTokenSource? _currentSearch;
 
-    public ObservableCollection<PackageInfo> Results { get; } = [];
+    public SearchViewModel(IPackageService packages, PackageActions actions)
+    {
+        _packages = packages;
+        _actions = actions;
+        Details = new PackageDetailsViewModel(packages);
+        RowOperationTracker.Track(actions, () => Results);
+    }
+
+    public ObservableCollection<PackageRowViewModel> Results { get; } = [];
+
+    public PackageDetailsViewModel Details { get; }
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(SearchCommand))]
@@ -45,7 +56,7 @@ public sealed partial class SearchViewModel(IPackageService packages) : Observab
 
         try
         {
-            var found = await packages.SearchAsync(query, cancellationToken: search.Token);
+            var found = await _packages.SearchAsync(query, cancellationToken: search.Token);
             if (search.IsCancellationRequested)
             {
                 return;
@@ -53,7 +64,7 @@ public sealed partial class SearchViewModel(IPackageService packages) : Observab
 
             foreach (var package in found)
             {
-                Results.Add(package);
+                Results.Add(new PackageRowViewModel(package, _actions, RowActions.Install));
             }
             if (Results.Count == 0)
             {

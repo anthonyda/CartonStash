@@ -1,6 +1,6 @@
 # 003 – Install / uninstall with progress: Design
 
-**Status:** Approved (2026-10-29)
+**Status:** Approved (2026-10-29), amended during implementation
 **Requirements:** [requirements.md](requirements.md)
 
 ## Overview
@@ -15,13 +15,14 @@ to the same queue. View models observe the queue; they never call WinGet directl
 |-------|------|----------------|---------------|
 | Core/Models | `PackageOperation` (observable) | `Kind` (Install/Uninstall/Upgrade), `Package`, `Phase`, `Percent`, `Result`, `Message`, `CanCancel` | new |
 | Core/Models | `OperationPhase`, `OperationResult` | Enums: Queued, Downloading, Running, Finishing, Done · Succeeded, Failed, Cancelled, SucceededRestartRequired | new |
-| Core/Services | `IPackageInstaller` | `InstallAsync` / `UninstallAsync(PackageInfo, IProgress<OperationProgress>, ct)` → `OperationOutcome`; `GetAgreementsAsync(PackageInfo)` | new |
+| Core/Services | `IPackageInstaller` | `RunAsync(kind, PackageInfo, acceptAgreements, IProgress<OperationProgress>, ct)` → `OperationOutcome`; `GetAgreementsAsync(PackageInfo)`. *Amended:* one method for all kinds, so the queue doesn't switch on kind | new |
 | Core/Services | `WinGetPackageInstaller` | COM implementation (below) | new |
 | Core/Services | `PackageOperationQueue` | FIFO + single worker, dedupe by package ID (R4.2), `Enqueue`, `Cancel`, `Retry`, `Operations`, `Completed` event, `HasPendingWork` | new |
 | Core/ViewModels | `ActivityViewModel` | Binds `Operations`; clear finished | new |
-| Core/ViewModels | Search / Installed VMs | `InstallCommand` / `UninstallCommand(PackageInfo)`; per-row state looked up from the queue | changed |
+| Core/ViewModels | `PackageActions` | Confirm uninstall, show agreements, then enqueue. Shared by rows, details pane, Updates. *Amended:* new class | new |
+| Core/ViewModels | `PackageRowViewModel` | Row = `PackageInfo` + its latest `PackageOperation`; Install / Uninstall / Update commands and visibility. *Amended:* rows are view models, kept current from the queue's `Enqueued` event | new |
 | App | `PackageRow` | Action button area: Install / Uninstall / in-progress ring + Cancel | changed |
-| App | Activity panel | `NavigationView` footer item "Activity (n)" opens a pane listing operations | new |
+| App | Activity panel | `NavigationView` footer item "Activity (n)" opens a right-side overlay `SplitView` pane listing operations. Selecting the item (click, keyboard or UIA) opens it and keeps the current page selected | new |
 | App | `IDialogService` | Confirm uninstall (R2.2), show agreements (R1.3), confirm close (R6.2) | new |
 
 ## WinGet API usage
@@ -58,6 +59,8 @@ progress updates the `PackageOperation` on the UI thread (via `SynchronizationCo
 ## Error handling and edge cases
 
 - The same package already queued → command disabled, row shows its state (R4.2).
+- Hash mismatch (`DownloadError` with `0x8A150011`): seen live when a download host served an HTML page. Mapped to its own
+  message ("doesn't match the package's checksum") instead of blaming the connection.
 - Installer hangs: no timeout in v1. Cancel is unavailable once the installer is running, as WinGet documents. Noted as a risk.
 - The app crashes mid-operation: WinGet's server keeps running the installer. On next start the Installed list shows the truth (P1).
 

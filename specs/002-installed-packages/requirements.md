@@ -1,6 +1,6 @@
 # 002 – Installed packages: Requirements
 
-**Status:** Approved (2026-10-29)
+**Status:** Done (2026-10-29)
 **Depends on:** 001
 
 ## Problem

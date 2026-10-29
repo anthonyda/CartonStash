@@ -13,7 +13,7 @@ investigation task before the design is final.
 
 | Layer | Type | Responsibility | New / changed |
 |-------|------|----------------|---------------|
-| Core/Services | `InstalledPackagesStore` | Extracted from `InstalledViewModel`: owns the loaded installed list, `ReloadAsync`, `Changed` event. Shared by Installed and Updates (R1.2) | new (refactor of 002) |
+| Core/Services | `InstalledPackagesStore` | Owns the loaded installed list, `ReloadAsync`, change notifications. Shared by Installed and Updates (R1.2). *Amended:* built directly in 002 | from 002 |
 | Core/Services | `IPackageInstaller.UpgradeAsync` | `UpgradePackageAsync` with `InstallOptions` (silent, scope from Settings) | new method |
 | Core/Services | `PackageOperationQueue` | `OperationKind.Upgrade`; `EnqueueMany` | changed |
 | Core/ViewModels | `UpdatesViewModel` | Filtered list, selection, Update / Update selected / Update all, count, empty state | new |

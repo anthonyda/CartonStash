@@ -1,6 +1,6 @@
 # 002 – Installed packages: Design
 
-**Status:** Approved (2026-10-29)
+**Status:** Approved (2026-10-29), amended during implementation
 **Requirements:** [requirements.md](requirements.md)
 
 ## Overview
@@ -16,25 +16,29 @@ and the **Installed** page. The service gains `GetInstalledAsync`. WinGet connec
 | Core/Services | `CatalogConnection` (internal) | Lazily connects and caches two composite catalogs: *remote-first* (search) and *local-first* (installed). `Invalidate()` after operations. Thread-safe (`SemaphoreSlim`). | new |
 | Core/Services | `IPackageService.GetInstalledAsync(ct)` | All installed packages as `PackageInfo` | new method |
 | Core/Models | `PackageInfo` | `Source == ""` means not managed by WinGet (R3.1); add `IsManaged` | changed |
-| Core/ViewModels | `InstalledViewModel` | Load once, `RefreshCommand`, `Filter`, `Visible` (filtered + sorted view), counts, error + retry | new |
+| Core/Services | `InstalledPackagesStore` | Owns the loaded list: load once, reload, error. Shared with 004. *Amended:* introduced here instead of being extracted in 004 T2 | new |
+| Core/ViewModels | `InstalledViewModel` | `RefreshCommand`, `Filter`, `Visible` (filtered + sorted view), counts, error + retry, over the store | new |
 | Core/ViewModels | `ShellViewModel` | Navigation items, current page | new |
 | App | `MainWindow` → `NavigationView` + `Frame`; `SearchPage`, `InstalledPage` | Pages are cached (`NavigationCacheMode.Required`) for R4.2 | changed / new |
-| App | `INavigationService` | Maps page keys → `Page` types | new |
+| App | Page map in `MainWindow` | Maps nav keys → `Page` types. *Amended:* a dictionary; a separate service wasn't worth it | new |
 
 ## WinGet API usage
 
-- Local-first composite: `CreateCompositePackageCatalogOptions` with all remote catalogs **plus**
-  `GetLocalPackageCatalog(LocalPackageCatalog.InstalledPackages)`, and
+- Local-first composite: `CreateCompositePackageCatalogOptions` with all remote catalogs and
   `CompositeSearchBehavior = LocalCatalogs`. Remote correlation fills `DefaultInstallVersion` and `IsUpdateAvailable`.
+  *Amended during implementation:* a composite always includes the installed catalog. Adding
+  `GetLocalPackageCatalog(InstalledPackages)` explicitly makes `FindPackagesAsync` fail with `InvalidOptions`.
 - `FindPackagesAsync(new FindPackagesOptions())` with **no selectors** returns all installed packages.
-- Source: `DefaultInstallVersion?.PackageCatalog.Info.Name`. If null, the package is unmanaged (R3.1).
+- Source: `DefaultInstallVersion?.PackageCatalog.Info.Name`. If null, the package is unmanaged (R3.1). Search uses the same mapping.
 - Read collections by index (W2). Status → message mapping is reused from 001.
 
 ## Data flow
 
 Navigate to Installed → first visit triggers `LoadCommand` → `GetInstalledAsync` → `_all` list →
 `ApplyFilter()` rebuilds `Visible` (sorted by name, R2.3) → counts. Filter changes call `ApplyFilter()` only (R2.1).
-`IPackageOperations.Completed` (spec 003) → `CatalogConnection.Invalidate()` + reload (R1.3).
+Queue `Drained` (spec 003), if any operation succeeded → `Invalidate()` + one reload (R1.3).
+*Amended:* the store also starts loading at app start (in the background) so the 004 Updates badge can appear.
+It is still the session's single load.
 
 ## UI
 

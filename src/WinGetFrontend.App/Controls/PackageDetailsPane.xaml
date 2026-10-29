@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Package details (spec 005). Hosted by each list page; adaptive layout is the page's job. -->
+<UserControl
+    x:Class="WinGetFrontend.App.Controls.PackageDetailsPane"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:WinGetFrontend.App.Controls"
+    xmlns:ui="using:WinGetFrontend.App">
+
+    <Grid
+        Background="{ThemeResource SolidBackgroundFillColorSecondaryBrush}"
+        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+        BorderThickness="1,0,0,0">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Header: name, publisher, close (R4.1) -->
+        <Grid Padding="20,16,12,8" ColumnSpacing="8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel>
+                <TextBlock
+                    AutomationProperties.HeadingLevel="Level2"
+                    Style="{StaticResource SubtitleTextBlockStyle}"
+                    Text="{x:Bind ViewModel.Row.Name, Mode=OneWay}"
+                    TextWrapping="Wrap" />
+                <TextBlock
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                    Text="{x:Bind ViewModel.Details.Publisher, Mode=OneWay}"
+                    Visibility="{x:Bind ui:Ui.VisibleIf(ViewModel.Details.Publisher), Mode=OneWay}" />
+                <TextBlock
+                    Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                    IsTextSelectionEnabled="True"
+                    Text="{x:Bind ViewModel.Row.Id, Mode=OneWay}" />
+            </StackPanel>
+            <Button
+                Grid.Column="1"
+                VerticalAlignment="Top"
+                AutomationProperties.Name="Close details"
+                Command="{x:Bind ViewModel.CloseCommand, Mode=OneWay}"
+                ToolTipService.ToolTip="Close (Esc)">
+                <FontIcon FontSize="12" Glyph="&#xE711;" />
+            </Button>
+        </Grid>
+
+        <ScrollViewer Grid.Row="1" Padding="20,0,20,20">
+            <StackPanel Spacing="16">
+                <!-- R3.1: same actions and progress as the row -->
+                <controls:PackageActionsView HorizontalAlignment="Left" Row="{x:Bind ViewModel.Row, Mode=OneWay}" />
+
+                <ProgressBar
+                    AutomationProperties.Name="Loading details"
+                    IsIndeterminate="True"
+                    Visibility="{x:Bind ViewModel.IsLoading, Mode=OneWay}" />
+
+                <!-- R1.5 -->
+                <TextBlock
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                    Text="{x:Bind ViewModel.PartialNote, Mode=OneWay}"
+                    TextWrapping="Wrap"
+                    Visibility="{x:Bind ui:Ui.VisibleIf(ViewModel.PartialNote), Mode=OneWay}" />
+                <InfoBar
+                    IsClosable="False"
+                    IsOpen="{x:Bind ui:Ui.HasText(ViewModel.ErrorMessage), Mode=OneWay}"
+                    Message="{x:Bind ViewModel.ErrorMessage, Mode=OneWay}"
+                    Severity="Warning" />
+
+                <StackPanel Spacing="4" Visibility="{x:Bind ViewModel.Row.Package.IsInstalled, Mode=OneWay}">
+                    <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}" Text="Installed version" />
+                    <TextBlock Text="{x:Bind ViewModel.Row.Package.InstalledVersion, Mode=OneWay}" />
+                </StackPanel>
+
+                <!-- R1.2 -->
+                <TextBlock
+                    Style="{StaticResource BodyStrongTextBlockStyle}"
+                    Text="{x:Bind ViewModel.Details.ShortDescription, Mode=OneWay}"
+                    TextWrapping="Wrap"
+                    Visibility="{x:Bind ui:Ui.VisibleIf(ViewModel.Details.ShortDescription), Mode=OneWay}" />
+                <TextBlock
+                    IsTextSelectionEnabled="True"
+                    Text="{x:Bind ViewModel.Details.Description, Mode=OneWay}"
+                    TextWrapping="Wrap"
+                    Visibility="{x:Bind ui:Ui.VisibleIf(ViewModel.Details.Description), Mode=OneWay}" />
+
+                <StackPanel Spacing="4" Visibility="{x:Bind ui:Ui.VisibleIf(ViewModel.Details.License), Mode=OneWay}">
+                    <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}" Text="License" />
+                    <TextBlock IsTextSelectionEnabled="True" Text="{x:Bind ViewModel.Details.License, Mode=OneWay}" TextWrapping="Wrap" />
+                    <HyperlinkButton
+                        Padding="0"
+                        AutomationProperties.Name="License (opens browser)"
+                        Click="Link_Click"
+                        Content="Read the license"
+                        Tag="{x:Bind ViewModel.LicenseUri, Mode=OneWay}"
+                        Visibility="{x:Bind ui:Ui.VisibleIf(ViewModel.LicenseUri), Mode=OneWay}" />
+                </StackPanel>
+
+                <!-- R1.3: links open the default browser -->
+                <StackPanel Spacing="4">
+                    <HyperlinkButton
+                        Padding="0"
+                        AutomationProperties.Name="Homepage (opens browser)"
+                        Click="Link_Click"
+                        Content="Homepage"
+                        Tag="{x:Bind ViewModel.HomepageUri, Mode=OneWay}"
+                        Visibility="{x:Bind ui:Ui.VisibleIf(ViewModel.HomepageUri), Mode=OneWay}" />
+                    <HyperlinkButton
+                        Padding="0"
+                        AutomationProperties.Name="Publisher website (opens browser)"
+                        Click="Link_Click"
+                        Content="Publisher website"
+                        Tag="{x:Bind ViewModel.PublisherUri, Mode=OneWay}"
+                        Visibility="{x:Bind ui:Ui.VisibleIf(ViewModel.PublisherUri), Mode=OneWay}" />
+                    <HyperlinkButton
+                        Padding="0"
+                        AutomationProperties.Name="Support (opens browser)"
+                        Click="Link_Click"
+                        Content="Support"
+                        Tag="{x:Bind ViewModel.SupportUri, Mode=OneWay}"
+                        Visibility="{x:Bind ui:Ui.VisibleIf(ViewModel.SupportUri), Mode=OneWay}" />
+                    <HyperlinkButton
+                        Padding="0"
+                        AutomationProperties.Name="Privacy policy (opens browser)"
+                        Click="Link_Click"
+                        Content="Privacy policy"
+                        Tag="{x:Bind ViewModel.PrivacyUri, Mode=OneWay}"
+                        Visibility="{x:Bind ui:Ui.VisibleIf(ViewModel.PrivacyUri), Mode=OneWay}" />
+                </StackPanel>
+
+                <StackPanel Spacing="4" Visibility="{x:Bind ui:Ui.VisibleIf(ViewModel.TagsText), Mode=OneWay}">
+                    <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}" Text="Tags" />
+                    <TextBlock Text="{x:Bind ViewModel.TagsText, Mode=OneWay}" TextWrapping="Wrap" />
+                </StackPanel>
+
+                <!-- R2.2 -->
+                <StackPanel Spacing="4" Visibility="{x:Bind ViewModel.HasReleaseNotes, Mode=OneWay}">
+                    <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}" Text="Release notes" />
+                    <TextBlock
+                        IsTextSelectionEnabled="True"
+                        MaxLines="{x:Bind ViewModel.ReleaseNotesMaxLines, Mode=OneWay}"
+                        Text="{x:Bind ViewModel.Details.ReleaseNotes, Mode=OneWay}"
+                        TextTrimming="CharacterEllipsis"
+                        TextWrapping="Wrap" />
+                    <HyperlinkButton
+                        Padding="0"
+                        Command="{x:Bind ViewModel.ToggleReleaseNotesCommand, Mode=OneWay}"
+                        Content="{x:Bind ui:Ui.Choose(ViewModel.ShowAllReleaseNotes, 'Show less', 'Show more'), Mode=OneWay}"
+                        Visibility="{x:Bind ViewModel.ReleaseNotesIsLong, Mode=OneWay}" />
+                </StackPanel>
+                <HyperlinkButton
+                    Padding="0"
+                    AutomationProperties.Name="Release notes (opens browser)"
+                    Click="Link_Click"
+                    Content="Release notes online"
+                    Tag="{x:Bind ViewModel.ReleaseNotesUri, Mode=OneWay}"
+                    Visibility="{x:Bind ui:Ui.VisibleIf(ViewModel.ReleaseNotesUri), Mode=OneWay}" />
+
+                <!-- R2.1 -->
+                <StackPanel Spacing="4" Visibility="{x:Bind ui:Ui.VisibleIf(ViewModel.VersionsText), Mode=OneWay}">
+                    <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}" Text="Available versions" />
+                    <TextBlock Text="{x:Bind ViewModel.VersionsText, Mode=OneWay}" TextWrapping="Wrap" />
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

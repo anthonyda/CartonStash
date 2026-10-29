@@ -1,6 +1,6 @@
 # 005 – Package details: Design
 
-**Status:** Approved (2026-10-29)
+**Status:** Approved (2026-10-29), amended during implementation
 **Requirements:** [requirements.md](requirements.md)
 
 ## Overview
@@ -24,8 +24,9 @@ each list page in a two-column layout (adaptive via `VisualStateManager`).
 - `CatalogPackage.DefaultInstallVersion.GetCatalogPackageMetadata()` (`IPackageVersionInfo4`) →
   `Publisher`, `ShortDescription`, `Description`, `License`, `LicenseUrl`, `Tags`, `PackageUrl`, `PublisherUrl`,
   `PublisherSupportUrl`, `PrivacyUrl`, `ReleaseNotes`, `ReleaseNotesUrl`.
-- `CatalogPackage.AvailableVersions` (`PackageVersionId.Version`), read by index (W2). Sorted newest-first using
-  `IPackageVersionInfo2.CompareToVersion` (WinGet decides ordering, P1). Fallback: WinGet's own order.
+- `CatalogPackage.AvailableVersions` (`PackageVersionId.Version`), read by index (W2), kept in WinGet's own order.
+  *Amended:* instead of sorting with one cross-process `CompareToVersion` call per comparison, one call checks the
+  direction (default version vs. first entry) and reverses the list if needed. Live: Git, Wget and 7-Zip come newest first.
 - Unmanaged packages: `DefaultInstallVersion == null` → `Partial` state with only `PackageInfo` data (R1.5).
 - Metadata calls may block briefly, so they run inside `Task.Run` on the service side and honour cancellation.
 

@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="WinGetFrontend.App.Views.InstalledPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:WinGetFrontend.App.Controls"
+    xmlns:ui="using:WinGetFrontend.App"
+    xmlns:vm="using:WinGetFrontend.Core.ViewModels"
+    NavigationCacheMode="Required">
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+
+        <Grid Padding="24,16,24,0" RowSpacing="12">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <Grid>
+                <TextBlock
+                    AutomationProperties.HeadingLevel="Level1"
+                    Style="{StaticResource TitleTextBlockStyle}"
+                    Text="Installed" />
+                <!-- R1.3 -->
+                <Button HorizontalAlignment="Right" Command="{x:Bind ViewModel.RefreshCommand}">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon FontSize="14" Glyph="&#xE72C;" />
+                        <TextBlock Text="Refresh" />
+                    </StackPanel>
+                </Button>
+            </Grid>
+
+            <Grid Grid.Row="1" ColumnSpacing="12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <!-- R2.1 -->
+                <TextBox
+                    AutomationProperties.Name="Filter installed packages"
+                    PlaceholderText="Filter installed packages by name or ID"
+                    Text="{x:Bind ViewModel.Filter, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                <!-- R2.2 -->
+                <TextBlock
+                    Grid.Column="1"
+                    VerticalAlignment="Center"
+                    AutomationProperties.LiveSetting="Polite"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                    Text="{x:Bind ViewModel.CountText, Mode=OneWay}" />
+            </Grid>
+
+            <StackPanel Grid.Row="2" Spacing="8">
+                <!-- R1.4 -->
+                <ProgressBar
+                    AutomationProperties.Name="Loading installed packages"
+                    IsIndeterminate="True"
+                    Visibility="{x:Bind ViewModel.IsLoading, Mode=OneWay}" />
+                <!-- R5.1 -->
+                <InfoBar
+                    Title="Couldn't load installed packages"
+                    IsClosable="False"
+                    IsOpen="{x:Bind ui:Ui.HasText(ViewModel.ErrorMessage), Mode=OneWay}"
+                    Message="{x:Bind ViewModel.ErrorMessage, Mode=OneWay}"
+                    Severity="Error">
+                    <InfoBar.ActionButton>
+                        <Button Command="{x:Bind ViewModel.RefreshCommand}" Content="Retry" />
+                    </InfoBar.ActionButton>
+                </InfoBar>
+            </StackPanel>
+
+            <ListView
+                x:Name="PackagesList"
+                Grid.Row="3"
+                AutomationProperties.Name="Installed packages"
+                ItemsSource="{x:Bind ViewModel.Visible}"
+                SelectionMode="None">
+                <ListView.ItemTemplate>
+                    <DataTemplate x:DataType="vm:PackageRowViewModel">
+                        <controls:PackageRow AutomationProperties.Name="{x:Bind Name}" Row="{x:Bind}" />
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
+        </Grid>
+
+        <controls:PackageDetailsPane
+            x:Name="DetailsPane"
+            Grid.Column="1"
+            Width="380"
+            ViewModel="{x:Bind ViewModel.Details}"
+            Visibility="{x:Bind ViewModel.Details.IsOpen, Mode=OneWay}" />
+
+        <VisualStateManager.VisualStateGroups>
+            <VisualStateGroup>
+                <VisualState x:Name="Wide">
+                    <VisualState.StateTriggers>
+                        <AdaptiveTrigger MinWindowWidth="900" />
+                    </VisualState.StateTriggers>
+                </VisualState>
+                <VisualState x:Name="Narrow">
+                    <VisualState.StateTriggers>
+                        <AdaptiveTrigger MinWindowWidth="0" />
+                    </VisualState.StateTriggers>
+                    <VisualState.Setters>
+                        <Setter Target="DetailsPane.(Grid.Column)" Value="0" />
+                        <Setter Target="DetailsPane.(Grid.ColumnSpan)" Value="2" />
+                        <Setter Target="DetailsPane.Width" Value="NaN" />
+                    </VisualState.Setters>
+                </VisualState>
+            </VisualStateGroup>
+        </VisualStateManager.VisualStateGroups>
+    </Grid>
+</Page>
