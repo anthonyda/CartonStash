@@ -480,3 +480,11 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# Keys and credentials (spec 007 R5.11)
+*.pfx.*
+*.p12
+*.pem
+*.key
+*.snk
+.env.*
