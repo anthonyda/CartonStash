@@ -52,6 +52,17 @@ public class WinGetErrorMessageTests
         Assert.Equal(expected, WinGetPackageInstaller.UninstallsInstalledEntry(kind, package));
     }
 
+    [Theory] // 003 R1.2: the row's source, never the same ID from another one
+    [InlineData("winget", "winget", true)]
+    [InlineData("winget", "other", false)]
+    [InlineData("winget", null, false)]
+    [InlineData("", "other", true)]
+    [InlineData(null, "other", true)]
+    public void Only_the_requested_source_counts(string? requested, string? actual, bool expected)
+    {
+        Assert.Equal(expected, CatalogConnection.IsFromSource(requested, actual));
+    }
+
     [Fact] // 003 R5.3
     public void Restart_required_is_a_success_that_says_so()
     {

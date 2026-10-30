@@ -59,6 +59,8 @@ progress updates the `PackageOperation` on the UI thread (via `SynchronizationCo
 ## Error handling and edge cases
 
 - The same package already queued → command disabled, row shows its state (R4.2).
+- Package gone from the row's source (removed, or sources changed since the list loaded) → the operation fails with "WinGet can
+  no longer find the package", even if another source has the same ID. The app never swaps in a source the user didn't choose (R1.2).
 - Hash mismatch (`DownloadError` with `0x8A150011`): seen live when a download host served an HTML page. Mapped to its own
   message ("doesn't match the package's checksum") instead of blaming the connection.
 - Installer hangs: no timeout in v1. Cancel is unavailable once the installer is running, as WinGet documents. Noted as a risk.

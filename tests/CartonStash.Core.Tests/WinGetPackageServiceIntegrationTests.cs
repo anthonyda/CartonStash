@@ -77,6 +77,27 @@ public class WinGetPackageServiceIntegrationTests
     }
 
     [Fact]
+    public async Task Installed_package_is_found_in_its_own_source() // 003 R1.2: update and details look it up this way
+    {
+        var connection = new CatalogConnection();
+        var installed = await new WinGetPackageService(connection).GetInstalledAsync();
+        var git = Assert.Single(installed, p => p.Id == "Git.Git");
+
+        var found = await connection.FindByIdAsync(git.Id, git.Source, localFirst: true, CancellationToken.None);
+
+        Assert.Equal(git.Source, found.DefaultInstallVersion.PackageCatalog.Info.Name);
+    }
+
+    [Fact]
+    public async Task Package_is_not_found_in_a_source_that_does_not_have_it() // 003 R1.2: no fallback to another source
+    {
+        var connection = new CatalogConnection();
+
+        await Assert.ThrowsAsync<WinGetException>(
+            () => connection.FindByIdAsync("Git.Git", "no-such-source", localFirst: false, CancellationToken.None));
+    }
+
+    [Fact]
     public async Task Cached_catalog_is_reused_and_invalidate_reconnects() // 002 T1
     {
         var first = await _service.SearchAsync("Git.Git");

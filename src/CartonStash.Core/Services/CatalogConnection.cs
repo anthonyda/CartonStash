@@ -136,7 +136,6 @@ public sealed class CatalogConnection
         return connect.PackageCatalog;
     }
 
-    /// <summary>Finds one package by exact ID, optionally restricted to a source (003: COM objects never leave Services).</summary>
     /// <summary>Finds one installed program by its installed entry ID (<c>ARP\...</c>, <c>MSIX\...</c>) (002 R6.5).</summary>
     internal async Task<CatalogPackage> FindInstalledEntryAsync(string installedId, CancellationToken cancellationToken)
     {
@@ -159,6 +158,10 @@ public sealed class CatalogConnection
             : throw new WinGetException("This program is no longer installed. Refresh the list and try again.", null);
     }
 
+    /// <summary>
+    /// Finds one package by exact ID (003: COM objects never leave Services). With a source, only that source counts: the
+    /// user chose the package from it, so the same ID in another source is not a substitute (003 R1.2).
+    /// </summary>
     internal async Task<CatalogPackage> FindByIdAsync(string id, string? source, bool localFirst, CancellationToken cancellationToken)
     {
         var catalog = localFirst ? await GetLocalFirstAsync(cancellationToken) : await GetRemoteFirstAsync(cancellationToken);
@@ -177,16 +180,17 @@ public sealed class CatalogConnection
         }
 
         var matches = result.Matches;
-        CatalogPackage? first = null;
         for (var i = 0; i < matches.Count; i++)
         {
             var package = matches[i].CatalogPackage;
-            first ??= package;
-            if (string.IsNullOrEmpty(source) || package.DefaultInstallVersion?.PackageCatalog.Info.Name == source)
+            if (IsFromSource(source, package.DefaultInstallVersion?.PackageCatalog.Info.Name))
             {
                 return package;
             }
         }
-        return first ?? throw new WinGetException($"WinGet can no longer find the package '{id}'. Refresh and try again.", null);
+        throw new WinGetException($"WinGet can no longer find the package '{id}'. Refresh and try again.", null);
     }
+
+    internal static bool IsFromSource(string? requested, string? actual) =>
+        string.IsNullOrEmpty(requested) || actual == requested;
 }
