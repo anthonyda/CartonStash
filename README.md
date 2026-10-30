@@ -99,9 +99,13 @@ CommunityToolkit.Mvvm and xUnit.
 
 ## How it's built: spec-driven development
 
-CartonStash isn't improvised feature by feature. It follows **spec-driven development (SDD)**: nothing is coded until it
-has been written down, reviewed and approved, and nothing counts as done until it has been verified against that spec.
+CartonStash is built with AI: [Claude](https://www.anthropic.com/claude), Anthropic's AI model, writes most of the code and
+specs. It isn't improvised feature by feature, though. It follows **spec-driven development (SDD)**: nothing is coded
+until it has been written down, reviewed and approved, and nothing counts as done until it has been verified against
+that spec.
 
+- **A human decides.** The maintainer reviews and approves every requirement and design, makes the product decisions,
+  and approves each release. Claude proposes, implements and verifies; it doesn't decide what ships.
 - **Specs first.** Each feature has its own folder in [`specs/`](specs/README.md) with numbered requirements written as
   testable acceptance criteria, a design, and an ordered task list. Implementation starts only once both the
   requirements and the design are approved.
