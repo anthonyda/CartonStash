@@ -28,7 +28,7 @@ Tick a task only when its verification passes. Keep tasks small enough for one c
 
 - [ ] **T11.** Privacy line in the log dialog. *(R2.7)*
   - Verify: manual: open a log, the line is visible and readable in light, dark and high contrast.
-  - Code done and builds. Seeing it needs a finished operation on screen, so the visual check is pending.
+  - Dark theme checked on a real Firefox install (see log). Light and high contrast still to check.
 
 ## Manual verification log
 
@@ -37,11 +37,13 @@ Tick a task only when its verification passes. Keep tasks small enough for one c
 | R1.1–R1.5 | 2026-10-30 | Pass | Screenshot (dark): separate cards with icon, name, time, action, state icon + words, message; failed Wget card stands out in red; finished ones below active |
 | R1.6 | 2026-10-30 | Pass | UIA names: "Log for Install Wget", "Retry Install Wget" |
 | R2.1–R2.3, R2.6 | 2026-10-30 | Pass | Log dialog on a real LocalSend install (25 KB Inno log below the summary) and its uninstall (summary + "The installer didn't write a log."); plain text, read-only |
-| R2.4 | 2026-10-30 | Pass (partly) | Copy and Open folder buttons present and tested by code review only; not clicked in the automated pass |
+| R2.4 | 2026-10-30 | Pass | Clicked with UI Automation on a real Firefox install: Copy put the log text on the clipboard, identical to the dialog apart from line endings; Open folder opened `%LOCALAPPDATA%\CartonStash\logs`; the dialog stayed open after both |
 | R3.1–R3.3, R3.6 | 2026-10-30 | Pass | UIA: pin keeps the pane beside the page, page resizes, clicks elsewhere keep it open, close button hidden; unpin closes it; overlay as before |
 | R3.4 | 2026-10-30 | Pass | Restart: pane open and pinned; `ActivityPinned` in settings.json |
 | R3.5 | 2026-10-30 | Pass | At 900 px the pane drops to a closed overlay, pin kept; back at 1300 px it reopens |
 | MSIX (T8) | 2026-10-30 | Pass | 1.0.1 test MSIX: LocalSend install wrote its 25 KB log to the package `LocalState\logs`, shown in the Log dialog |
 | Log dialog width | 2026-10-30 | Note | Stays at the default dialog width; long lines scroll sideways. Fine for now |
-| R2.7 | – | **Pending** | Open a log and check the privacy line in light, dark and high contrast |
+| R2.7 (dark) | 2026-10-30 | Pass | Real Firefox install: the line is visible above the log, readable on a screenshot, and doesn't scroll away |
+| R2.7 (light, high contrast) | – | **Pending** | Open a log and check the privacy line |
+| R2.5 (log file) | 2026-10-30 | **Open** | The Firefox install wrote no log file: nothing on disk, while the uninstall right after it did. WinGet's record shows no log path went to the installer (`/S /PreventRebootRequired=true`), so the file should have held our summary. The operation and the dialog were unaffected (the dialog falls back to the summary). Cause not found |
 | R1.7 high contrast | – | **Pending** | With the 006 high-contrast pass |

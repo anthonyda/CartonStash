@@ -32,6 +32,7 @@
 | R5.2 | 2026-10-29 | Pass | JernejSimoncic.Wget failed live (host served HTML, hash mismatch): row "Failed", Activity entry with the reason and Retry. Message improved afterwards (see design) |
 | Activity pane | 2026-10-29 | Pass | Lists "Uninstall jq · Uninstalled" and "Install jq · Installed" with messages; opens via mouse, keyboard and UIA select |
 | R1.2 (source) | 2026-10-30 | Pass | Read-only probe of the 90 managed IDs on the dev PC: 89 found in their own source, none in another. The fallback never fired, so removing it changes nothing here. `Microsoft.PowerShell` returned no local-first match before and after the fix (separate bug) |
+| R1.2, R2.2, R5.1 | 2026-10-30 | Pass | Mozilla.Firefox through the app: install took 19 s to Program Files with the app unelevated; the uninstall confirmation named the package. "Uninstalled" appeared after 4 s while Firefox's own uninstaller finished in the background, and the files were gone about 30 s later |
 | R3.2 (live) | – | Not run | Covered by `PackageOperationQueueTests.Cancel_*`; jq downloads too fast to cancel by hand |
 | R1.3 (live) | – | Not run | Covered by `PackageActionsTests.Install_with_agreements_*`; needs a package with agreements (e.g. an msstore app) |
 | R6.1 | – | **Pending** | Needs a machine-scope installer and a human at the UAC prompt |
