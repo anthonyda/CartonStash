@@ -97,8 +97,25 @@ Keep the repository at a short path (for example `C:\dev\CartonStash`): long pat
 **Built with** C# and .NET 10, WinUI 3 (Windows App SDK), the WinGet COM API (`Microsoft.WindowsPackageManager.ComInterop`),
 CommunityToolkit.Mvvm and xUnit.
 
-## How the project works
+## How it's built: spec-driven development
 
-Every feature is specified before it's built: requirements, design and tasks live in [`specs/`](specs/README.md), and
-project-wide rules in the [constitution](specs/constitution.md). Ideas and bugs are welcome as
-[issues](https://github.com/anthonyda/CartonStash/issues).
+CartonStash isn't improvised feature by feature. It follows **spec-driven development (SDD)**: nothing is coded until it
+has been written down, reviewed and approved, and nothing counts as done until it has been verified against that spec.
+
+- **Specs first.** Each feature has its own folder in [`specs/`](specs/README.md) with numbered requirements written as
+  testable acceptance criteria, a design, and an ordered task list. Implementation starts only once both the
+  requirements and the design are approved.
+- **Rules that don't bend.** A [constitution](specs/constitution.md) sets the non-negotiables: WinGet is the single
+  source of truth, nothing is installed or removed without an explicit user action, the app never runs as administrator,
+  and only one layer of the code talks to WinGet.
+- **Traceable and tested.** Requirement IDs (e.g. `R6.5`) are carried into test names and code comments, so every
+  behaviour can be traced back to the requirement it fulfils. More than 150 automated tests cover the logic, including
+  integration tests against a real WinGet.
+- **Verified, not assumed.** Each spec keeps a dated verification log of what was checked in the running app and how.
+  When testing shows the spec itself was wrong, the spec is corrected first and the change is recorded, so the
+  documentation and the code never drift apart.
+- **Checked on every change.** Every push is built and tested by [CI](https://github.com/anthonyda/CartonStash/actions/workflows/ci.yml);
+  releases are produced by the same script every time, signed, and published with SHA-256 checksums.
+
+Ideas and bug reports are welcome as [issues](https://github.com/anthonyda/CartonStash/issues). New features start the
+same way: as a spec.
