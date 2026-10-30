@@ -1,6 +1,6 @@
 # 009 – Activity pane: Requirements
 
-**Status:** Done (2026-10-30)
+**Status:** Done (2026-10-30). Amendment R2.7 (log privacy note) approved 2026-10-30
 **Depends on:** 003 (operation queue, Activity pane), 006 (settings)
 **Issues:** [#2](https://github.com/anthonyda/CartonStash/issues/2) (operation logs), [#3](https://github.com/anthonyda/CartonStash/issues/3) (pin the pane), [#4](https://github.com/anthonyda/CartonStash/issues/4) (redesign)
 
@@ -33,6 +33,7 @@ user clicks elsewhere, so it can't be watched while using the app.
 | R2.4 | US2   | The log dialog shall offer **Copy** (the whole log as text) and **Open folder** (the app's log folder). |
 | R2.5 | US2   | The app shall keep logs across restarts for at most the 50 newest operations, deleting older ones at startup. Log failures shall never fail an operation. |
 | R2.6 | –     | Log text shall be shown as plain text, never interpreted. |
+| R2.7 | US2   | The log dialog shall say that logs can contain the user's name, PC name and file paths, and should be checked before sharing. *(Security review, 2026-10-30: Copy exists for bug reports, and those are public.)* |
 | R3.1 | US3   | The pane header shall offer a **Pin** toggle with an accessible name and tooltip. |
 | R3.2 | US3   | While pinned, the pane shall stay open beside the page, the page shall resize next to it, and clicking elsewhere shall not close it. |
 | R3.3 | US3   | While unpinned, the pane shall behave as today (overlay, closes on click outside). |

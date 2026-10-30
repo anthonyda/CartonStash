@@ -1,6 +1,6 @@
 # 009 – Activity pane: Design
 
-**Status:** Approved (2026-10-30)
+**Status:** Approved (2026-10-30). Amendment R2.7 approved 2026-10-30
 **Requirements:** [requirements.md](requirements.md)
 
 ## Overview
@@ -79,6 +79,11 @@ Enqueue → queue stamps `StartedAt` when the worker takes it, gets a log path �
 - Clear finished removes cards, not log files.
 - The WinGet server refuses the log path: seen as an operation failure would be wrong, so T1 checks this; if it happens only on some types, the log path is left out for them.
 - A finished operation retried: the card returns to active, with new times and a new log.
+
+## Amendment R2.7: log privacy note (approved 2026-10-30)
+
+- `DialogService.ShowLogAsync` shows one line above the log: "Logs can include your user name, PC name and file paths. Check before sharing."
+- It stays visible while scrolling, and Copy still copies the log as it is.
 
 ## Testing strategy
 

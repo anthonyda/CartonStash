@@ -24,6 +24,12 @@ Tick a task only when its verification passes. Keep tasks small enough for one c
 - [x] **T8.** Same checks on an installed MSIX.
 - [x] **T9.** Mark `Done`.
 
+### Amendment R2.7: log privacy note (approved 2026-10-30)
+
+- [ ] **T11.** Privacy line in the log dialog. *(R2.7)*
+  - Verify: manual: open a log, the line is visible and readable in light, dark and high contrast.
+  - Code done and builds. Seeing it needs a finished operation on screen, so the visual check is pending.
+
 ## Manual verification log
 
 | Criterion | Date | Result | Notes |
@@ -37,4 +43,5 @@ Tick a task only when its verification passes. Keep tasks small enough for one c
 | R3.5 | 2026-10-30 | Pass | At 900 px the pane drops to a closed overlay, pin kept; back at 1300 px it reopens |
 | MSIX (T8) | 2026-10-30 | Pass | 1.0.1 test MSIX: LocalSend install wrote its 25 KB log to the package `LocalState\logs`, shown in the Log dialog |
 | Log dialog width | 2026-10-30 | Note | Stays at the default dialog width; long lines scroll sideways. Fine for now |
+| R2.7 | – | **Pending** | Open a log and check the privacy line in light, dark and high contrast |
 | R1.7 high contrast | – | **Pending** | With the 006 high-contrast pass |
