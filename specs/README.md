@@ -39,7 +39,7 @@ If implementation reveals the spec is wrong, **stop, update the spec first**, th
 |-----|-------------------------------------------|-------------|
 | 001 | [Package search](001-package-search/)                  | Done |
 | 002 | [Installed packages list](002-installed-packages/)     | Done; amendment R6 done; amendment R7 done; amendment R8 (status filter chips) done |
-| 003 | [Install / uninstall with progress](003-install-uninstall/) | In progress: code done; UAC check (R6.1) pending |
+| 003 | [Install / uninstall with progress](003-install-uninstall/) | Done |
 | 004 | [Available updates](004-updates/)                      | In progress: code done; live update (R2.1) pending; R3 pins deferred, open |
 | 005 | [Package details pane](005-package-details/)           | In progress: code done; link-opens-browser check (R1.3) pending; amendment R6 (https icons) done |
 | 006 | [Settings](006-settings/)                              | In progress: code done; high-contrast check pending; amendment R5 (start page) approved; amendment R4.3 (safe diagnostics) done |
