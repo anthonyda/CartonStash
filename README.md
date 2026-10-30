@@ -144,3 +144,7 @@ that spec.
 
 Ideas and bug reports are welcome as [issues](https://github.com/anthonyda/CartonStash/issues). New features start the
 same way: as a spec.
+
+## License
+
+CartonStash is released under the [MIT License](LICENSE).
