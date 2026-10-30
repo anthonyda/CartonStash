@@ -145,10 +145,16 @@ public sealed partial class SettingsViewModel : ObservableObject
         foreach (var s in Sources)
         {
             text.AppendLine(CultureInfo.InvariantCulture,
-                $"  {s.Name} | {s.Type} | {s.Argument} | {s.TrustText}{(s.IsExplicit ? " | explicit" : "")} | {s.LastUpdatedText}");
+                $"  {s.Name} | {s.Type} | {SafeSourceAddress(s.Argument)} | {s.TrustText}{(s.IsExplicit ? " | explicit" : "")} | {s.LastUpdatedText}");
         }
         return text.ToString();
     }
+
+    /// <summary>A source's address fit for a public bug report: no credentials, tokens or personal paths (R4.3).</summary>
+    internal static string SafeSourceAddress(string address) =>
+        Uri.TryCreate(address, UriKind.Absolute, out var uri) && (uri.Scheme == Uri.UriSchemeHttps || uri.Scheme == Uri.UriSchemeHttp)
+            ? uri.GetComponents(UriComponents.SchemeAndServer | UriComponents.Path, UriFormat.UriEscaped)
+            : "(local source)";
 
     partial void OnThemeIndexChanged(int value)
     {

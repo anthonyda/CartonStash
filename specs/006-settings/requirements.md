@@ -1,6 +1,6 @@
 # 006 – Settings: Requirements
 
-**Status:** Approved (2026-10-29). Amendment R5 (start page) approved 2026-10-30
+**Status:** Approved (2026-10-29). Amendment R5 (start page) approved 2026-10-30. Amendment R4.3 (safe diagnostics) approved 2026-10-30
 **Depends on:** 002, 003
 
 ## Problem
@@ -29,6 +29,7 @@ today. Users need one place to see and change them.
 | R3.3 | US3   | If a source requires accepting an agreement, then the app shall show the agreement text with Accept / Decline before using that source. |
 | R4.1 | US4   | The Settings page shall show the app version and the WinGet (App Installer) version. |
 | R4.2 | US4   | The Settings page shall show a "Copy diagnostic info" button that copies versions, OS build and source list as plain text. |
+| R4.3 | US4   | The copied diagnostic text shall not carry secrets or personal paths from a source's address: web URLs shall keep only scheme, host, port and path, and anything else shall appear as `(local source)`. *(Security review, 2026-10-30: the README invites public bug reports, and a private source's URL can hold a token.)* |
 | R5.1 | US5   | The Settings page shall offer a **Start page** setting with the choices Search, Installed and Updates. The default is Search. |
 | R5.2 | US5   | When the app starts, it shall open the chosen start page and show it as selected in the navigation. |
 | R5.3 | US5   | Changing the start page shall take effect the next time the app starts; it shall not navigate away from Settings. |

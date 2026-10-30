@@ -220,6 +220,33 @@ public sealed class SettingsTests : IDisposable
         Assert.Contains("WinGet 1.29.380", vm.VersionText);
     }
 
+    [Theory] // R4.3
+    [InlineData("https://cdn.winget.microsoft.com/cache", "https://cdn.winget.microsoft.com/cache")]
+    [InlineData("https://user:secret@private.example.com:8443/api?token=abc#part", "https://private.example.com:8443/api")]
+    [InlineData(@"C:\Users\someone\my-source", "(local source)")]
+    [InlineData(@"\\server\share\source", "(local source)")]
+    [InlineData("not a url", "(local source)")]
+    public void Diagnostics_remove_secrets_from_source_addresses(string address, string expected)
+    {
+        Assert.Equal(expected, SettingsViewModel.SafeSourceAddress(address));
+    }
+
+    [Fact]
+    public async Task Copied_diagnostics_hold_no_source_secrets() // R4.3
+    {
+        var packages = new FakePackageService();
+        packages.Sources.Add(Source("private") with { Argument = "https://user:hunter2@private.example.com/api?token=abc" });
+        var clipboard = new FakeClipboard();
+        var vm = new SettingsViewModel(new FakeSettings(), packages, new FakeDialogs(), clipboard);
+        await vm.LoadCommand.ExecuteAsync(null);
+
+        vm.CopyDiagnosticsCommand.Execute(null);
+
+        Assert.Contains("https://private.example.com/api", clipboard.Text);
+        Assert.DoesNotContain("hunter2", clipboard.Text);
+        Assert.DoesNotContain("token", clipboard.Text);
+    }
+
     private static SourceInfo Source(string name, params Agreement[] agreements) =>
         new(name, "Microsoft.PreIndexed.Package", "https://cdn.winget.microsoft.com/cache", true, false, DateTimeOffset.Now, agreements);
 }
