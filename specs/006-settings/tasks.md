@@ -24,6 +24,11 @@
 - [x] **T9.** `MainWindow` opens and selects the saved start page at launch. *(R5.2)*
   - Verify: manual (UIA): set Updates, restart → Updates page shown and selected; reset to Search afterwards.
 
+### Amendment R4.3: safe diagnostics (approved 2026-10-30)
+
+- [x] **T10.** `SafeSourceAddress` and use it in `BuildDiagnosticText`. *(R4.3)*
+  - Verify: `SettingsTests.Diagnostics_remove_secrets_from_source_addresses` (token in the query, user:password in the URL, local path).
+
 ## Manual verification log
 
 | Criterion | Date | Result | Notes |
@@ -38,4 +43,5 @@
 | R5.1, R5.3 | 2026-10-30 | Pass | UIA: Settings → Start page → Updates; app stays on Settings; `settings.json` has `"StartPage": "Updates"` |
 | R5.2 | 2026-10-30 | Pass | Restart → Updates page shown, Updates selected in navigation (screenshot). Reset to Search afterwards |
 | R5.4 | 2026-10-30 | Pass (unit) | `SettingsTests.File_from_before_start_page_opens_on_search_without_a_reset`; live file from before R5 also loaded without a notice |
+| R4.3 | 2026-10-30 | Pass | `Diagnostics_remove_secrets_from_source_addresses` covers a token, user:password and local paths; `Copied_diagnostics_hold_no_source_secrets` goes through the Copy command |
 | R1.1 (high contrast) | – | **Pending** | Check the app with a Windows contrast theme on (constitution Q5) |

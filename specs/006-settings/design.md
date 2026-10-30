@@ -1,6 +1,6 @@
 # 006 – Settings: Design
 
-**Status:** Approved (2026-10-29), amended during implementation
+**Status:** Approved (2026-10-29), amended during implementation. Amendment R4.3 approved 2026-10-30
 **Requirements:** [requirements.md](requirements.md)
 
 ## Overview
@@ -74,6 +74,12 @@ Settings
 - Source refresh failure → per-source error line, others continue.
 - Scope "User" with a package that only has machine installers → WinGet returns `NoApplicableInstallers` →
   the 003 message suggests changing the scope in Settings.
+
+## Amendment R4.3: safe diagnostics (approved 2026-10-30)
+
+- `SettingsViewModel.BuildDiagnosticText` prints a cleaned address from a new pure helper, `SafeSourceAddress(string)`.
+- Web URLs drop user name, password, query and fragment. Anything that isn't an http(s) URL becomes `(local source)`, because local paths can hold the user name.
+- Only the copied text changes. The Settings page still shows the full address to the user.
 
 ## Testing strategy
 
