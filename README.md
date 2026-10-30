@@ -100,6 +100,10 @@ is planned in [#1](https://github.com/anthonyda/CartonStash/issues/1).
 **Where are my settings?**
 `%LOCALAPPDATA%\CartonStash\settings.json` for the portable app; the MSIX keeps them in its own app-data folder.
 
+**What does CartonStash connect to?**
+WinGet does the searching and downloading. CartonStash itself only loads package icons, over https, from the addresses in
+package manifests, so those hosts can see your IP address. It has no telemetry of its own.
+
 ## Build from source
 
 Requirements: Windows 10/11, the [.NET 10 SDK](https://dotnet.microsoft.com/download), App Installer (WinGet) 1.29+.

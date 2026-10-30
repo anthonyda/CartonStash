@@ -15,6 +15,12 @@
   - Verify: `PackageRowIconTests.*` + manual, see log.
 - [ ] **T5.** Mark `Done`.
 
+### Amendment R6: https icons (approved 2026-10-30)
+
+- [x] **T12.** https-only icons in `PickIcon` and `GetIconAsync`. *(R6.1)*
+  - Verify: `PackageRowIconTests.Http_icon_shows_the_glyph`; `Real_package_icons_are_https` against the real catalog.
+- [x] **T13.** README note on where icons load from. *(R6.2)*
+
 ## Manual verification log
 
 | Criterion | Date | Result | Notes |
@@ -29,4 +35,5 @@
 | Esc tooltip | 2026-10-29 | Pass | User report: hovering showed "Esc" everywhere. Page accelerator placement set to Hidden; user confirmed it is gone |
 | R5.1 (bug) | 2026-10-30 | Fixed | User report: Chatterino showed the VS Code icon, Fusion / Blender a setup icon. WinGet has no icon for any of the three; recycled rows kept old pictures. After fix: glyph for all three after heavy scrolling; VS Code keeps its icon; pane switches VS Code → Chatterino correctly |
 | R1.2 (bug) | 2026-10-30 | Fixed | Details failed with "WinGet can no longer find the package" for `Microsoft.PowerShell`: installed and linked to `winget` in the list, but a local-first search by ID returned nothing. `Details_work_for_every_managed_installed_package` now opens details for every managed package on the dev PC |
+| R6.1, R6.2 | 2026-10-30 | Pass | An http icon shows the glyph; Firefox's real icon is https, so no WinGet icons are lost. README FAQ says where icons load from. A search of the source found no other network use and no telemetry |
 | R1.3 | – | **Pending** | Click a link and confirm the default browser opens (skipped so as not to open your browser) |

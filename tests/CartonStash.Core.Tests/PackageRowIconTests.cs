@@ -33,6 +33,19 @@ public class PackageRowIconTests
     }
 
     [Fact]
+    public async Task Http_icon_shows_the_glyph() // R6.1
+    {
+        var app = new TestApp();
+        app.Packages.IconUrls["Plain"] = "http://example.com/icon.png";
+        var row = new PackageRowViewModel(Pkg.Remote("Plain"), app.Actions, RowActions.Install);
+
+        await row.EnsureIconAsync();
+
+        Assert.Null(row.IconUri);
+        Assert.False(row.HasIcon);
+    }
+
+    [Fact]
     public async Task Unmanaged_packages_are_not_asked_and_non_web_urls_are_ignored() // R5.2
     {
         var app = new TestApp();
