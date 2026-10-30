@@ -45,8 +45,13 @@ against a packaged build (manual, documented in tasks). Keep W1 (winmd next to t
 *Decided:* a zip of the self-contained app folder. A single-file `.exe` was tried (see requirements, Decisions) and crashes in WinUI.
 
 
-`dotnet publish -c Release -r win-x64 --self-contained -p:WindowsAppSDKSelfContained=true -p:WindowsPackageType=None`
+`dotnet publish -c Release -r win-x64 --self-contained -p:EnableMsixTooling=true`
 → zip. Includes the WinGet `.winmd` / factory DLL (W1). Settings use JSON (006).
+
+`EnableMsixTooling` makes publish include `CartonStash.pri`, which holds the compiled XAML. Without it the app crashes at
+start (`0xc000027b` in `Microsoft.UI.Xaml.dll`), so `Publish-Release.ps1` fails if the file is missing (R1.6). "Starts" means
+the window opens and no crash is logged: a process that's still running proves nothing, because Windows Error Reporting
+keeps a crashed process alive while it writes its report.
 
 ## winget-pkgs submission (R2.2): deferred until a trusted certificate
 
@@ -121,7 +126,7 @@ also covers `*.p12`, `*.pem`, `*.key`, `*.snk`, `*.pfx.*` and `.env.*`.
 ### Rollout order
 
 1. Before going public: workflows, scripts, docs, lock file, Dependabot config, `SECURITY.md`, key moved off the PC, and the settings a private repo accepts.
-2. Release `v1.0.1` through the new pipeline and check it, so the repo goes public with a release to download. Its `attest` job fails, as expected.
+2. Release `v1.0.2` through the new pipeline and check it, so the repo goes public with a release to download. Its `attest` job fails, as expected. `v1.0.1` stays published but isn't attested, and its portable zip crashes at start, so `v1.0.2` is the first good release.
 3. Make the repo public.
 4. Right after: the remaining GitHub settings, then re-run the failed `attest` job within 7 days.
 
@@ -133,8 +138,9 @@ also covers `*.p12`, `*.pem`, `*.key`, `*.snk`, `*.pfx.*` and `.env.*`.
 | R1.2, R1.3, R1.5 | Manual: on this PC and in Windows Sandbox, import the `.cer`, install the MSIX, check Start entry and icon, search + install + uninstall a small package, then uninstall the app |
 | R4.1 | Unit test on migration logic (fake stores) |
 | R3.2 | Manual: version shown in Settings matches the tag |
-| R5.1–R5.4 | Review of the workflows, plus the `v1.0.1` run: the `build` job has no secrets in its environment, and a tag such as `v1';calc;'` is rejected without running anything |
-| R5.5, R5.6 | `Sign-Release.ps1` checks itself in CI; manual `Get-AuthenticodeSignature` on the downloaded `v1.0.1` files, and a local run with a throwaway certificate must fail the thumbprint check |
+| R1.6 | Manual: run `CartonStash.exe` from the downloaded zip: the main window opens and no crash appears in the Application event log. `Publish-Release.ps1` fails without `CartonStash.pri` |
+| R5.1–R5.4 | Review of the workflows, plus the `v1.0.2` run: the `build` job has no secrets in its environment, and a tag such as `v1';calc;'` is rejected without running anything |
+| R5.5, R5.6 | `Sign-Release.ps1` checks itself in CI; manual `Get-AuthenticodeSignature` on the downloaded `v1.0.2` files, and a local run with a throwaway certificate must fail the thumbprint check |
 | R5.7, R5.8 | Manual: `gh attestation verify` and the README's thumbprint check on downloaded files |
 | R5.9, R5.10, R5.13 | Manual: read the settings with `gh api`; pushing a `v*` tag waits for approval |
 | R5.11 | Manual: the key folder is gone and `Cert:\CurrentUser\My` has no `CN=Anthony` private key |
@@ -152,5 +158,5 @@ also covers `*.p12`, `*.pem`, `*.key`, `*.snk`, `*.pfx.*` and `.env.*`.
 - **A compromised build dependency (R5):** it can no longer take the key, but it can still alter the app before signing. The lock file makes that harder; an attestation shows where a file was built, not that it's safe.
 - **Timestamp server down (R5.5):** the release fails and is run again. Accepted: an unstamped release is worse than a late one.
 - **Lock file across architectures and MSIX (R5.12):** unproven, because `PackageMsix` changes what gets restored. T9 proves it first. If it can't work, keep `nuget.config` and NuGet audit, and update this spec.
-- **Attestations need a public repo on the free plan (R5.7):** `v1.0.1` is published before its attestation exists. If the signed files expire before the `attest` job is re-run, it can't be attested and the next release is the first that is.
+- **Attestations need a public repo on the free plan (R5.7):** `v1.0.2` is published before its attestation exists. If the signed files expire before the `attest` job is re-run, it can't be attested and the next release is the first that is.
 - **Publishing before attesting (R5.7):** once public too, a release is visible for a moment before its attestation. Accepted: it costs nothing, and a failed `attest` job can be re-run alone.

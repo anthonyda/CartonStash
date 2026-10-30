@@ -29,6 +29,7 @@ release path has to protect the key and let users check what they download.
 | R1.2 | US1   | When installed from the MSIX, the app shall appear in Start with its name and icon, and uninstall cleanly from Windows Settings. |
 | R1.3 | US1   | The packaged app shall use WinGet through the same service code, with packaged COM activation, and pass the same integration tests. |
 | R1.4 | US1   | The project shall also produce a portable (unpackaged, self-contained) zip for users who can't install MSIX. |
+| R1.6 | US1   | The portable app shall start from the unzipped folder and open its main window. The release shall fail if the build is missing what it needs to do so. *(New 2026-10-30: the v1.0.1 portable zip crashed at start.)* |
 | R2.1 | US2   | Each release shall be published on GitHub Releases with the MSIX, the portable zip, and SHA-256 checksums. |
 | R2.2 | US2   | **Deferred** until the MSIX is signed with a trusted certificate: winget-pkgs validation installs the package, which a self-signed MSIX fails. ~~After the first public release, the app shall be submitted to the `winget-pkgs` repository so it can be installed with WinGet itself.~~ |
 | R3.1 | US3   | A GitHub Actions workflow shall build, run unit tests, and produce release artifacts on every tag `v*`. |

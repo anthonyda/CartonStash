@@ -42,16 +42,18 @@ Before going public:
 
 - [x] **T15a.** The GitHub settings a private repo accepts: Actions limited to GitHub-owned, Dependabot alerts and security updates, immutable releases, `release` environment limited to `v*` tags. *(R5.3, R5.9, R5.10, R5.13)*
   - Verify: read back with `gh api` (see log).
-- [ ] **T11b.** Move attestation to its own job after publishing, so a release can go out before the repo is public. *(R5.2, R5.7)*
-  - Verify: on the private repo, `release` publishes and `attest` fails only on GitHub's refusal.
-- [ ] **T16.** Release `v1.0.1` through the new pipeline. *(R5.1–R5.6, R5.8)*
-  - Verify: downloaded files have timestamps and the right thumbprint, the `build` job log shows no secrets.
+- [x] **T11b.** Move attestation to its own job after publishing, so a release can go out before the repo is public. *(R5.2, R5.7)*
+  - Verify: on the private repo, `release` publishes and `attest` fails only on GitHub's refusal (see log).
+- [x] **T18.** Portable build includes `CartonStash.pri`, and the release fails without it. *(R1.4, R1.6)*
+  - Verify: the release script builds a zip whose app opens its window; without the setting the script stops (see log).
+- [ ] **T16.** Release `v1.0.2` through the new pipeline. *(R1.6, R5.1–R5.6, R5.8)*
+  - Verify: downloaded files have timestamps and the right thumbprint, the portable app opens its window with no crash logged, the `build` job log shows no secrets.
 
 After going public:
 
 - [ ] **T15b.** The remaining GitHub settings: required reviewer on `release`, secrets moved there and repo-level ones deleted, rulesets, secret scanning, private reporting, approval for outside contributors. *(R5.9, R5.10, R5.13)*
   - Verify: read back with `gh api`.
-- [ ] **T17.** Re-run the failed `attest` job for `v1.0.1`, within 7 days. *(R5.7)*
+- [ ] **T17.** Re-run the failed `attest` job for `v1.0.2`, within 7 days. *(R5.7)*
   - Verify: `gh attestation verify` passes on a downloaded file.
 
 ## Manual verification log
@@ -68,11 +70,14 @@ After going public:
 | R1.1, R3.2 (CI build) | 2026-10-30 | Pass | Downloaded x64 MSIX: signature CN=Anthony valid, checksum matches SHA256SUMS.txt; installs as 1.0.0.0, Settings "CartonStash 1.0.0", WinGet search works, uninstalls cleanly |
 | Single-file exe | 2026-10-30 | Rejected | 92 MB self-extracting exe crashes at start in Microsoft.UI.Xaml.dll (0xc000027b) |
 | R5.12 | 2026-10-30 | Pass | With `CI=true`: Release build, unit tests, MSIX and portable for x64 and ARM64 all restore from the lock files. Changing a version in `Directory.Packages.props` fails with NU1004; the lock files are unchanged afterwards. No SDK-tied package in them, so the floating `10.0.x` is safe. CI itself not run yet |
-| R5.5, R5.6, R5.1 | 2026-10-30 | Pass (local) | Real x64 build, throwaway key: `Publish-Release.ps1` leaves it unsigned with no checksums; `Sign-Release.ps1` signs the MSIX and the 3 portable binaries, each with a DigiCert timestamp; 525 files survive the re-zip; checksums match; the signed portable app starts. Against `tools/CartonStash.cer` the script refuses: "is not signed with certificate 99EE…" |
+| R5.5, R5.6, R5.1 | 2026-10-30 | Pass (local) | Real x64 build, throwaway key: `Publish-Release.ps1` leaves it unsigned with no checksums; `Sign-Release.ps1` signs the MSIX and the 3 portable binaries, each with a DigiCert timestamp; 525 files survive the re-zip; checksums match. *Corrected 2026-10-30:* this row also said the signed portable app starts. It didn't: the test only saw a live process, and the app had crashed (see the R1.6 row). Against `tools/CartonStash.cer` the script refuses: "is not signed with certificate 99EE…" |
 | R5.11 (script) | 2026-10-30 | Pass | `New-SigningCert.ps1` with a throwaway key: only the PFX in the folder, one ACL rule, certificate store unchanged, `tools/CartonStash.cer` untouched. `.gitignore` covers `*.pfx.*`, `*.p12`, `*.pem`, `*.key`, `*.snk`, `.env.*`, and no tracked file is ignored. Moving the real key is T14 |
 | R5.1–R5.4 (review) | 2026-10-30 | Pass | Parsed both workflows: all actions `actions/*` pinned to a full SHA, `persist-credentials: false` on every checkout, no `${{ }}` in any `run:`, secrets only in the `Sign` step, no `dotnet` in the job with the key. `v1';calc;'` is a legal git ref; the tag check rejects it, and `v1.2` and `v1.2.3-test` too |
 | R5.11 (key) | 2026-10-30 | Pass | Maintainer saved the PFX and password in KeePass and checked the saved copy's thumbprint before deleting. Checked afterwards: `%USERPROFILE%\.cartonstash\` gone, no `CN=Anthony` certificate in `CurrentUser\My` or `LocalMachine\My`, no key files in Desktop, Downloads, Documents, Temp, OneDrive or `C:\dev`. Public entries remain in `TrustedPeople` |
 | R5.2, R5.3, R5.12 (CI) | 2026-10-30 | Pass | First run on GitHub's runner, run 41070202520 on `4166d0e`: hardened `ci.yml` green, restore from the lock files, build, 170 unit tests |
 | R5.8 | 2026-10-30 | Pass | `(Get-PfxCertificate tools\CartonStash.cer).Thumbprint` prints the thumbprint in the README, `SECURITY.md` and release notes; the file's SHA-256 equals the v1.0.0 release asset |
+| R5.2, R5.7 (T11b) | 2026-10-30 | Pass | `v1.0.1`, run 41080898080: `build` and `release` passed and the release was published; `attest` failed only with "Feature not available for user-owned private repositories" |
+| R1.4, R1.6 | 2026-10-30 | Fail, fixed | The `v1.0.1` portable zip crashes at start (`0xc000027b` in `Microsoft.UI.Xaml.dll`) because publish left out `CartonStash.pri`. The `v1.0.0` file list had no such file either, and the zip was never launched before. `v1.0.1` is immutable, so the fix ships as `v1.0.2`. Local test: without the setting no window and a crash; with it the window "CartonStash" opens and no crash is logged. The installed `v1.0.1` MSIX opened its window with no crash |
+| R1.4, R1.6 (T18) | 2026-10-30 | Pass (local) | `Publish-Release.ps1` with `CI=true`: the zip has `CartonStash.pri`, the app opens its window "CartonStash", no crash logged, and the MSIX still has `resources.pri`. A copy without the setting stops at the guard and produces no zip. ARM64 can't be run here |
 | R5.3, R5.9, R5.10, R5.13 (T15a) | 2026-10-30 | Pass | Tried every setting on the private repo. Read back with `gh api`: Actions `selected`, GitHub-owned only; security updates on; immutable releases on; `release` environment limited to `v*` tags. Refused: required reviewer, rulesets, secret scanning, private reporting, outside-contributor approval (T15b) |
 | Repo recreated | 2026-10-30 | Done | Fresh repo at the same URL with history rewritten to the GitHub noreply address, so the personal address isn't published. `v1.0.0` and its release stayed in the old repo, so the first release here is `v1.0.1`. Commit SHAs and run IDs earlier in this log refer to the old repo |
