@@ -43,7 +43,7 @@ If implementation reveals the spec is wrong, **stop, update the spec first**, th
 | 004 | [Available updates](004-updates/)                      | In progress: code done; live update (R2.1) pending; R3 pins deferred, open |
 | 005 | [Package details pane](005-package-details/)           | In progress: code done; link-opens-browser check (R1.3) pending |
 | 006 | [Settings](006-settings/)                              | In progress: code done; high-contrast check pending; amendment R5 (start page) approved |
-| 007 | [Packaging and release](007-packaging-release/)        | In progress: v1.0.0 released (self-signed MSIX + portable zip); Sandbox check and winget-pkgs pending; amendment R5 (release hardening) in progress: scripts, workflows and docs done, CI green, key moved off the dev PC, private-repo settings done; v1.0.2 (v1.0.1's portable zip crashes at start), then the remaining settings and attestation after going public |
+| 007 | [Packaging and release](007-packaging-release/)        | In progress: Sandbox check and winget-pkgs pending; public; v1.0.2 released and attested (v1.0.1's portable zip crashes at start); amendment R5 (release hardening) in progress: moving the signing secrets into the `release` environment pending |
 | 008 | [Pin management](008-pin-management/)                  | Draft, on hold (updated against current code; constitution exception A6 undecided; issue #1) |
 | 009 | [Activity pane](009-activity-pane/)                    | Done (card redesign, operation logs, pin the pane; issues #2, #3, #4); high-contrast check pending |
 
