@@ -63,7 +63,7 @@ public sealed class DialogService(IClipboardService clipboard) : IDialogService
         return await ShowAsync(dialog) == ContentDialogResult.Primary;
     }
 
-    /// <summary>The operation log: read-only plain text, with Copy and Open folder (009 R2.2, R2.4, R2.6).</summary>
+    /// <summary>The operation log: read-only plain text, with Copy and Open folder (009 R2.2, R2.4, R2.6, R2.7).</summary>
     public async Task ShowLogAsync(string title, string text, string folder)
     {
         var box = new TextBox
@@ -80,10 +80,18 @@ public sealed class DialogService(IClipboardService clipboard) : IDialogService
         ScrollViewer.SetHorizontalScrollBarVisibility(box, ScrollBarVisibility.Auto);
         ScrollViewer.SetVerticalScrollBarVisibility(box, ScrollBarVisibility.Auto);
 
+        var content = new StackPanel { Spacing = 8 };
+        content.Children.Add(new TextBlock
+        {
+            Text = "Logs can include your user name, PC name and file paths. Check before sharing.",
+            TextWrapping = TextWrapping.Wrap,
+        });
+        content.Children.Add(box);
+
         var dialog = new ContentDialog
         {
             Title = $"Log: {title}",
-            Content = box,
+            Content = content,
             PrimaryButtonText = "Copy",
             SecondaryButtonText = "Open folder",
             CloseButtonText = "Close",
