@@ -44,6 +44,7 @@ If implementation reveals the spec is wrong, **stop, update the spec first**, th
 | 005 | [Package details pane](005-package-details/)           | In progress: code done; link-opens-browser check (R1.3) pending |
 | 006 | [Settings](006-settings/)                              | In progress: code done; high-contrast check pending; amendment R5 (start page) approved |
 | 007 | [Packaging and release](007-packaging-release/)        | In progress: v1.0.0 released (self-signed MSIX + portable zip); Sandbox check and winget-pkgs pending |
-| 008 | [Pin management](008-pin-management/)                  | Draft: needs review and update (imported from an earlier session; tracks issue #1) |
+| 008 | [Pin management](008-pin-management/)                  | Draft: **needs review**, updated against current code; constitution exception A6 (issue #1) |
+| 009 | [Activity pane](009-activity-pane/)                    | Draft: **needs review** (card redesign, operation logs, pin the pane; issues #2, #3, #4) |
 
 Suggested build order: 002 → 003 → 004 → 005 → 006 → 007 (006's scope setting slots into 003's installer when it lands).

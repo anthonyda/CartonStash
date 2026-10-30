@@ -1,13 +1,14 @@
 # 008 – Pin management: Design
 
-**Status:** Draft, needs review (see the note in [requirements.md](requirements.md))
+**Status:** Draft, updated 2026-10-30, **needs review**
 **Requirements:** [requirements.md](requirements.md)
 
 ## Overview
 
 The COM API has no pin support (reflection over ComInterop 1.29.380: no pin types or members). Pins are
-therefore read and changed through the `winget pin` CLI, isolated in **one** adapter class in `Core/Services`
-that returns plain records. This needs a constitution amendment (below). Pin state is merged into the
+therefore read and changed through the `winget pin` CLI, and packages requiring explicit targeting are read from
+`winget upgrade` (read-only), isolated in **one** adapter class in `Core/Services`
+that returns plain records. This needs a constitution amendment (below). The result is merged into the
 installed data from 002 and consumed by the Installed and Updates pages. Fail closed: if anything about the
 CLI output is unexpected, the app shows "Pin status unavailable" rather than a guess.
 
@@ -18,7 +19,7 @@ Approving this spec approves the following change to `constitution.md`. Applied 
 - **A2** (amended): *"Only classes in `Core/Services` touch WinGet, through `Microsoft.Management.Deployment`,
   or through the CLI under A6. They return plain records (`Core/Models`), never COM objects or raw text."*
 - **A6** (new): **CLI fallback, by exception only.** The app may call `winget.exe` only for a capability the
-  COM API doesn't offer, each case approved in a spec that names it. Current list: `winget pin` (spec 008).
+  COM API doesn't offer, each case approved in a spec that names it. Current list: `winget pin` and read-only `winget upgrade` (spec 008).
   Rules: one adapter class per command group in `Core/Services`; prefer exit codes over output; parsing of
   output is tolerant of column widths and language, covered by fixture tests of real captured output, and
   fails closed (an unparseable result is an error, never a guess); no `--force` or destructive call without
@@ -33,16 +34,18 @@ Reason: pins are a core WinGet feature users rely on with "update all", and WinG
 |-------|------|----------------|---------------|
 | Core/Models | `PinType` enum | `Pinning`, `Blocking`, `Gating` | new |
 | Core/Models | `PinInfo` record | `PackageId`, `Source`, `Type`, `GatedVersion?` (range), `PinnedVersion?` | new |
-| Core/Models | `PackageInfo` | add `PinInfo? Pin` | changed |
+| Core/Models | `PackageInfo` | add `PinInfo? Pin`, `bool RequiresExplicitUpgrade` | changed |
+| Core/Services | `WinGetTableParser` | Pure: splits `winget` table output into tables and rows by column offsets; shared by the two parsers below | new |
 | Core/Services | `IPinService` | `ListAsync`, `AddAsync(id, source, type, range?, installed, replace)`, `RemoveAsync(id, source)`, `ResetAsync()`; all take a `CancellationToken` | new |
 | Core/Services | `WinGetCliPinService` | Implements `IPinService` with `winget pin`. The only A6 adapter. | new |
 | Core/Services | `IProcessRunner` / `ProcessRunner` | Runs a process, returns exit code + stdout + stderr; fakeable for tests | new |
 | Core/Services | `PinListParser` | Pure function: `winget pin list` text → `IReadOnlyList<PinInfo>` or parse error | new |
+| Core/Services | `ExplicitUpgradeParser` | Pure function: `winget upgrade` text → package IDs in the "require explicit targeting" table, or parse error | new |
 | Core/Services | `WinGetLocator` | Finds `winget.exe` (R5.4) | new |
-| Core/Services | `InstalledPackagesStore` (004 T2) | Loads installed packages and pins in parallel, joins on (Id, Source); pin failure → `PinStatusAvailable = false` (R1.4) | changed |
+| Core/Services | `InstalledPackagesStore` | Loads installed rows, pins and the explicit list in parallel; joins on (Id, Source) to `IsPrimaryMatch` rows only (R7.1); pin failure → `PinStatusAvailable = false` (R1.4); explicit-list failure → nothing marked (R6.3) | changed |
 | Core/ViewModels | `PinActionsViewModel` | Pin / Block / Range / Unpin commands per row, enablement, confirmation for replace, range prefill (R2.x, R3.1) | new |
-| Core/ViewModels | `InstalledViewModel` | "Pinned only" filter (R1.3) | changed |
-| Core/ViewModels | `UpdatesViewModel` | Excludes Pin/Block from Update all, skipped count in confirmation, Update disabled for Block (R4.x) | changed |
+| Core/ViewModels | `InstalledViewModel` | `ShowPinnedOnly` + `PinnedCount`, in `ApplyFilter()` with the 002 R8 filters (R1.3) | changed |
+| Core/ViewModels | `UpdatesViewModel` | Excludes Pin/Block and explicit-only packages from Update all, skipped count in confirmation, Update disabled for Block (R4.x, R6.x) | changed |
 | Core/ViewModels | `SettingsViewModel` | Remove all pins (R3.2) | changed |
 | App | `PinBadge` control, Pin `MenuFlyout`, range `ContentDialog` | View only | new |
 
@@ -58,6 +61,7 @@ Every call adds `--disable-interactivity --accept-source-agreements` so nothing 
 | Gate | … `--version <range>` |
 | Unpin | `winget pin remove --id <id> --exact --source <src>` |
 | Reset | `winget pin reset --force` |
+| Explicit list | `winget upgrade` (read-only) |
 
 - Arguments are passed through `ProcessStartInfo.ArgumentList` (no string concatenation, no shell).
 - `StandardOutputEncoding` = UTF-8; VT escape sequences and progress spinner characters are stripped before parsing.
@@ -94,10 +98,22 @@ Git      Git.Git      2.56.0   winget  Pinning
   together with exit code 0 → empty list. Exit code ≠ 0 → error.
 - `PinListParser` is pure and has no I/O, so all of the above is unit-testable on Linux CI.
 
+### Parsing `winget upgrade` (R6)
+
+Seen on the dev PC: the output has the regular table (or "No installed package found…") and then, after a sentence, a
+second table under "The following packages have an upgrade available, but require explicit targeting for upgrade:".
+
+- The section is found by the **English sentence**, or by being the second table in the output when a first table exists.
+  With no first table and a localized sentence it can't be identified safely: fail closed, nothing marked (R6.3). The app
+  is English-only (006), but WinGet follows the Windows display language; French is captured in T1 to add its sentence.
+- Rows are cut by the shared column logic; the ID is the second column. Truncated IDs (`…`) are skipped.
+- Runs in parallel with the other loads; ~1–3 s on the dev PC, in the background, never delays the list (R6.3).
+
 ## Data flow
 
-- **Load:** `InstalledPackagesStore.ReloadAsync` → `Task.WhenAll(packageService.GetInstalledAsync, pinService.ListAsync)`
-  → join on (Id, Source), case-insensitive → `PackageInfo with { Pin = … }` → `Changed`.
+- **Load:** `InstalledPackagesStore.ReloadAsync` → `GetInstalledAsync` shows the list first; `pinService.ListAsync` and the
+  explicit list follow in parallel → join on (Id, Source), case-insensitive, primary rows only → `PackageInfo with { Pin = …,
+  RequiresExplicitUpgrade = … }`, so a slow CLI never delays the list.
 - **Change:** Pin menu → `PinActionsViewModel` (confirm replace if needed, R2.5) → `IPinService.AddAsync` →
   success message → `store.ReloadPinsAsync()` (re-reads `pin list` only, not the whole installed catalog, R5.1).
 - Pin calls are not part of the 003 operation queue (they take < 1 s and don't touch installers); one pin call
@@ -105,8 +121,8 @@ Git      Git.Git      2.56.0   winget  Pinning
 
 ## Interaction with 004 (Updates)
 
-- Update all = updates where `Pin is null or { Type: Gating }`. Confirmation: "Update 5 packages? 2 pinned
-  packages will be skipped."
+- Update all = updates where `Pin is null or { Type: Gating }` and not `RequiresExplicitUpgrade`. Confirmation: "Update 5
+  packages? 2 pinned or manual-only packages will be skipped."
 - Block → row Update disabled (R4.2). Pin → row Update enabled (R4.3).
 - **Gate (R4.3):** whether `UpgradePackageAsync` (COM) honours pins is unknown; T2 verifies it.
   - If COM honours gates: nothing more to do, WinGet picks the highest version in range or reports no applicable upgrade.
@@ -120,7 +136,8 @@ Git      Git.Git      2.56.0   winget  Pinning
 ## UI
 
 ```
-Installed                                   Filter [____]  [☐ Pinned only]
+Installed                                   Filter [____]
+All · Up to date 72 · Update available 1 · Newer 17 · Other 29 · 📌 Pinned 2
 Git        Git.Git     2.56.0   winget   📌 Pinned         [⋯]
 7-Zip      7zip.7zip   24.08    winget   📌 Gated 24.*     [⋯]
                                                            └ Pin ▸ Pin / Block updates / Pin to version range… / Unpin
@@ -139,7 +156,8 @@ Git        Git.Git     2.56.0   winget   📌 Pinned         [⋯]
 - Pin listed for a package no longer installed: ignored by the UI (out of scope), still counted by Remove all pins.
 - `winget` upgraded to a version with a different output layout → parse error → R1.4. Fixture tests make it visible.
 - Group Policy disabling the CLI or pins → non-zero exit code → readable message.
-- App packaged as MSIX (007): launching the App Execution Alias from a packaged app must work; checked in 007's tasks.
+- App packaged as MSIX (007): launching the App Execution Alias from a packaged app must work; verified in T1 on an installed MSIX (R7.2).
+- Two programs sharing an ID (002 R6): the pin shows on the primary row only (R7.1).
 
 ## Testing strategy
 
@@ -148,7 +166,8 @@ Git        Git.Git     2.56.0   winget   📌 Pinned         [⋯]
 | R1.1, R1.4, parsing (all rules above) | `PinListParserTests` on captured fixture files (`tests/.../Fixtures/pin-list-*.txt`): English, French, no pins, truncated Id, wide characters, unknown layout |
 | R2.x, R3.1, R5.1, R5.4 | `PinActionsViewModelTests` with a fake `IPinService` |
 | Command lines, exit-code mapping, timeout, cancellation | `WinGetCliPinServiceTests` with a fake `IProcessRunner` |
-| R1.3, R4.1, R4.2 | `InstalledViewModelTests`, `UpdatesViewModelTests` |
+| R6.x, parsing | `ExplicitUpgradeParserTests` on captured output (dev PC output incl. Miniconda, no updates, both tables, French, garbage) |
+| R1.3, R4.1, R4.2, R6.2, R7.1 | `InstalledViewModelTests`, `UpdatesViewModelTests`, store join tests |
 | Real pin add / list / remove round trip | Integration test (Windows only), cleans up its pin |
 | R1.2, R2.6, R3.2, R5.3, accessibility | Manual on the user's PC |
 
@@ -158,5 +177,5 @@ Git        Git.Git     2.56.0   winget   📌 Pinned         [⋯]
   using it only for reading; writes rely on exit codes.
 - **Alternative: read WinGet's pin database directly** (SQLite under the App Installer package's LocalState).
   Rejected: undocumented internal file, schema can change, worse than CLI text.
-- **Alternative: no pin support** (004 option A). Rejected by the user: "Update all" must respect pins.
+- **Alternative: no pin support** (004 option A). Shipped in 1.0; issue #1 asks to go further.
 - **Alternative: wait for COM API support.** Kept as the exit plan: A6 says revisit each WinGet release.
