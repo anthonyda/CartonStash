@@ -56,15 +56,17 @@ After going public:
 - [x] **T17.** Re-run the failed `attest` job for `v1.0.2`, within 7 days. *(R5.7)*
   - Verify: `gh attestation verify` passes on a downloaded file (see log).
 
-### Amendment R6: Microsoft Store (draft, not started until approved)
+### Amendment R6: Microsoft Store (approved 2026-10-30)
 
-- [ ] **T20.** `Publish-Release.ps1` builds the Store MSIX per architecture into `store\`. *(R6.1, R6.2)*
+- [x] **T20.** `Publish-Release.ps1` builds the Store MSIX per architecture into `store\`. *(R6.1, R6.2)*
   - Verify: a local build's manifests show the Store identity and the tag's version, and the repo's manifest is unchanged afterwards.
+  - Done 2026-10-30 for x64, version 1.0.4: the Store and GitHub MSIX each carry their own identity, both unsigned, and `Package.appxmanifest` is unchanged. ARM64 is checked on the next tag.
 - [ ] **T21.** Release workflow uploads the `store` artifact from `build`. *(R6.1, R6.3)*
   - Verify: review of the workflow; checked for real on the next tag: the artifact exists, and the GitHub Release has no Store files.
-- [ ] **T22.** `PRIVACY.md`. *(R6.6)*
+- [x] **T22.** `PRIVACY.md`. *(R6.6)*
   - Verify: compare with 009's logs, 006's settings and the README's connection note.
-- [ ] **T23.** Run the Windows App Certification Kit on the x64 Store MSIX. *(R6.5)*
+- [x] **T23.** Run the Windows App Certification Kit on the x64 Store MSIX. *(R6.5)*
+  - Done 2026-10-30: overall PASS, 22 of 24 tests. The two failures are optional: "General metadata correctness" (WinUI and Windows App SDK `winmd` files) and "Blocked executables" (mostly text matches in framework DLLs, plus process-launch API references).
 - [ ] **T24.** Maintainer submits; record the review's outcome. Install from the Store and repeat a search, an install and an uninstall. *(R6.1, R1.3)*
 
 ## Manual verification log

@@ -43,7 +43,7 @@ If implementation reveals the spec is wrong, **stop, update the spec first**, th
 | 004 | [Available updates](004-updates/)                      | In progress: code done; live update (R2.1) pending; R3 pins deferred, open |
 | 005 | [Package details pane](005-package-details/)           | In progress: code done; link-opens-browser check (R1.3) pending; amendment R6 (https icons) done |
 | 006 | [Settings](006-settings/)                              | In progress: code done; high-contrast check pending; amendment R5 (start page) approved; amendment R4.3 (safe diagnostics) done |
-| 007 | [Packaging and release](007-packaging-release/)        | In progress: Sandbox check and winget-pkgs pending; public; v1.0.3 released and attested (v1.0.1's portable zip crashes at start); amendment R5 (release hardening) done; amendment R6 (Microsoft Store): draft, needs review |
+| 007 | [Packaging and release](007-packaging-release/)        | In progress: Sandbox check and winget-pkgs pending; public; v1.0.3 released and attested (v1.0.1's portable zip crashes at start); amendment R5 (release hardening) done; amendment R6 (Microsoft Store): approved, in progress |
 | 008 | [Pin management](008-pin-management/)                  | Draft, on hold (updated against current code; constitution exception A6 undecided; issue #1) |
 | 009 | [Activity pane](009-activity-pane/)                    | Done (card redesign, operation logs, pin the pane; issues #2, #3, #4); high-contrast check pending; amendment R2.7 (log privacy note): code done, visual check pending; amendment R2.8–R2.10 (WinGet's record in the log): done, released in v1.0.3 |
 
