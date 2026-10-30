@@ -56,14 +56,28 @@ Get the latest version from **[Releases](https://github.com/anthonyda/CartonStas
   Start and uninstalls cleanly from Settings → Apps.
 - **Portable (zip)**: `CartonStash_<version>_x64_portable.zip`. Unzip anywhere and run `CartonStash.exe`. Nothing to install.
 
-The MSIX is signed with CartonStash's own certificate, which Windows doesn't trust out of the box yet. Trust it once
-(as administrator), then double-click the `.msix`:
+The MSIX is signed with CartonStash's own certificate, which Windows doesn't trust out of the box yet. Before you trust
+it, check that `CartonStash.cer` is the real one. This must print `99EE388A0F4388D0118678B7043D8626AA904441`:
+
+```powershell
+(Get-PfxCertificate .\CartonStash.cer).Thumbprint
+```
+
+Then trust it once (as administrator) and double-click the `.msix`:
 
 ```powershell
 Import-Certificate -FilePath .\CartonStash.cer -CertStoreLocation Cert:\LocalMachine\TrustedPeople
 ```
 
-Each release lists SHA-256 checksums in `SHA256SUMS.txt`.
+**Checking a download.** Each release lists SHA-256 checksums in `SHA256SUMS.txt`. From v1.0.1 on, every file also has a
+build attestation, which shows it was built by this repository's release workflow:
+
+```powershell
+gh attestation verify CartonStash_1.0.1_x64.msix --repo anthonyda/CartonStash
+```
+
+From v1.0.1 on, the portable zip's `CartonStash.exe`, `CartonStash.dll` and `CartonStash.Core.dll` are signed with the same
+certificate. Windows still shows an unknown publisher for them, so compare the thumbprint if you want to check them.
 
 **Requirements:** Windows 10 version 2004 (build 19041) or later, or Windows 11, with
 [App Installer](https://apps.microsoft.com/detail/9NBLGGH4NNS1) (WinGet) 1.29 or later. Nothing else: .NET and the
@@ -95,7 +109,7 @@ Visual Studio 2026 with the *WinUI application development* workload is optional
 dotnet build                                   # whole solution
 dotnet run --project src/CartonStash.App       # run the app
 dotnet test --filter "Category!=Integration"   # unit tests (add integration tests with plain `dotnet test`)
-.\tools\Publish-Release.ps1 -Version 1.2.3     # signed MSIX + portable zip in artifacts\
+.\tools\Publish-Release.ps1 -Version 1.2.3     # unsigned MSIX + portable zip in artifacts\
 ```
 
 Keep the repository at a short path (for example `C:\dev\CartonStash`): long paths break the XAML compiler.
@@ -125,7 +139,8 @@ that spec.
   When testing shows the spec itself was wrong, the spec is corrected first and the change is recorded, so the
   documentation and the code never drift apart.
 - **Checked on every change.** Every push is built and tested by [CI](https://github.com/anthonyda/CartonStash/actions/workflows/ci.yml);
-  releases are produced by the same script every time, signed, and published with SHA-256 checksums.
+  releases are built by the same workflow every time, signed with the project's own certificate, and published with
+  SHA-256 checksums.
 
 Ideas and bug reports are welcome as [issues](https://github.com/anthonyda/CartonStash/issues). New features start the
 same way: as a spec.

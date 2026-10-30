@@ -25,11 +25,13 @@ dotnet build                                            # whole solution (RID de
 dotnet test                                             # all tests, incl. live WinGet
 dotnet test --filter "Category!=Integration"            # unit tests only
 dotnet run --project src/CartonStash.App             # run the app
-.\tools\Publish-Release.ps1 -Version 1.2.3            # signed MSIX + portable zip in artifacts\ (spec 007)
+.\tools\Publish-Release.ps1 -Version 1.2.3            # unsigned MSIX + portable zip in artifacts\ (spec 007)
+.\tools\Sign-Release.ps1 -PfxPath x.pfx -PfxPassword y  # signs them, writes checksums (the release workflow does this)
 ```
 
 ## Gotchas
 
 - WinGet collections: index them, don't `foreach` (constitution W2).
 - Keep the repo at a short path. Long paths break the XAML compiler (error WMC1006 / WMC9999).
-- Package versions live only in `Directory.Packages.props`.
+- Package versions live only in `Directory.Packages.props`. After changing one, run `dotnet restore --force-evaluate` and
+  commit the `packages.lock.json` files: CI refuses a restore that doesn't match them (error NU1004).
