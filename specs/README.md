@@ -43,7 +43,7 @@ If implementation reveals the spec is wrong, **stop, update the spec first**, th
 | 004 | [Available updates](004-updates/)                      | In progress: code done; live update (R2.1) pending; R3 pins deferred, open |
 | 005 | [Package details pane](005-package-details/)           | In progress: code done; link-opens-browser check (R1.3) pending |
 | 006 | [Settings](006-settings/)                              | In progress: code done; high-contrast check pending; amendment R5 (start page) approved |
-| 007 | [Packaging and release](007-packaging-release/)        | In progress (self-signed MSIX + portable zip on GitHub) |
+| 007 | [Packaging and release](007-packaging-release/)        | In progress: v1.0.0 released (self-signed MSIX + portable zip); Sandbox check and winget-pkgs pending |
 | 008 | [Pin management](008-pin-management/)                  | Draft: needs review and update (imported from an earlier session; tracks issue #1) |
 
 Suggested build order: 002 → 003 → 004 → 005 → 006 → 007 (006's scope setting slots into 003's installer when it lands).
