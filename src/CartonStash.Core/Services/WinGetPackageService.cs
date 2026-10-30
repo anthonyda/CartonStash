@@ -159,7 +159,7 @@ public sealed class WinGetPackageService(CatalogConnection connection) : IPackag
         // Metadata calls are synchronous cross-process calls; keep them off the UI thread.
         return Task.Run(async () =>
         {
-            var found = await connection.FindByIdAsync(package.Id, package.Source, package.IsInstalled, cancellationToken);
+            var found = await connection.FindForDetailsAsync(package.Id, package.Source, package.IsInstalled, cancellationToken);
             var version = found.DefaultInstallVersion;
             if (version is null)
             {

@@ -28,4 +28,5 @@
 | R5.1, R5.2 | 2026-10-29 | Pass | Screenshots: Firefox, CPU-Z, CrystalDiskMark icons in rows; glyph for packages without one (Git, Mozilla.Firefox.MSIX); list shown before icons arrive |
 | Esc tooltip | 2026-10-29 | Pass | User report: hovering showed "Esc" everywhere. Page accelerator placement set to Hidden; user confirmed it is gone |
 | R5.1 (bug) | 2026-10-30 | Fixed | User report: Chatterino showed the VS Code icon, Fusion / Blender a setup icon. WinGet has no icon for any of the three; recycled rows kept old pictures. After fix: glyph for all three after heavy scrolling; VS Code keeps its icon; pane switches VS Code → Chatterino correctly |
+| R1.2 (bug) | 2026-10-30 | Fixed | Details failed with "WinGet can no longer find the package" for `Microsoft.PowerShell`: installed and linked to `winget` in the list, but a local-first search by ID returned nothing. `Details_work_for_every_managed_installed_package` now opens details for every managed package on the dev PC |
 | R1.3 | – | **Pending** | Click a link and confirm the default browser opens (skipped so as not to open your browser) |
