@@ -43,11 +43,13 @@ try {
         $msix = Get-ChildItem $packages -Recurse -Filter *.msix | Select-Object -First 1
         Copy-Item $msix.FullName (Join-Path $Output "CartonStash_${semver}_$arch.msix")
 
-        # Portable zip: the unpackaged, self-contained app folder (R1.4).
+        # Portable zip: the unpackaged, self-contained app folder (R1.4). EnableMsixTooling makes publish include
+        # CartonStash.pri, the app's compiled XAML; without it the app crashes at start (R1.6).
         $portable = Join-Path ([IO.Path]::GetTempPath()) "cartonstash-portable-$arch"
         if (Test-Path $portable) { Remove-Item $portable -Recurse -Force }
-        dotnet publish $app -c Release -r $rid --self-contained true -p:Version=$semver -p:Platform=$arch -o $portable
+        dotnet publish $app -c Release -r $rid --self-contained true -p:EnableMsixTooling=true -p:Version=$semver -p:Platform=$arch -o $portable
         if ($LASTEXITCODE) { throw "Portable build failed for $rid." }
+        if (-not (Test-Path (Join-Path $portable 'CartonStash.pri'))) { throw "Portable build for $rid has no CartonStash.pri: the app would crash at start." }
         Get-ChildItem $portable -Filter *.pdb | Remove-Item
         Compress-Archive -Path (Join-Path $portable '*') -DestinationPath (Join-Path $Output "CartonStash_${semver}_${arch}_portable.zip")
         Remove-Item $portable -Recurse -Force

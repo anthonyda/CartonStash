@@ -69,14 +69,14 @@ Then trust it once (as administrator) and double-click the `.msix`:
 Import-Certificate -FilePath .\CartonStash.cer -CertStoreLocation Cert:\LocalMachine\TrustedPeople
 ```
 
-**Checking a download.** Each release lists SHA-256 checksums in `SHA256SUMS.txt`. From v1.0.1 on, every file also has a
+**Checking a download.** Each release lists SHA-256 checksums in `SHA256SUMS.txt`. From v1.0.2 on, every file also has a
 build attestation, which shows it was built by this repository's release workflow:
 
 ```powershell
-gh attestation verify CartonStash_1.0.1_x64.msix --repo anthonyda/CartonStash
+gh attestation verify CartonStash_1.0.2_x64.msix --repo anthonyda/CartonStash
 ```
 
-From v1.0.1 on, the portable zip's `CartonStash.exe`, `CartonStash.dll` and `CartonStash.Core.dll` are signed with the same
+From v1.0.2 on, the portable zip's `CartonStash.exe`, `CartonStash.dll` and `CartonStash.Core.dll` are signed with the same
 certificate. Windows still shows an unknown publisher for them, so compare the thumbprint if you want to check them.
 
 **Requirements:** Windows 10 version 2004 (build 19041) or later, or Windows 11, with
