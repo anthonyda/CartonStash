@@ -21,7 +21,7 @@ and attaches everything to a GitHub Release.
 | Build | `Version` | *Decided:* tag-derived `-p:Version` (assembly, shown in Settings) and the manifest `Version` stamped by `Publish-Release.ps1` (R3.2) |
 | Core | `JsonSettingsStore` + `AppPackage` | *Amended:* same JSON store, path chosen by `AppPackage.IsPackaged` (`GetCurrentPackageFullName`): the package's `ApplicationData.LocalFolder` when packaged, `%LOCALAPPDATA%\CartonStash` otherwise; the earlier file is copied once (R4.1) |
 | Tools | `tools/New-SigningCert.ps1` | *Amended by R5:* creates the self-signed `CN=Anthony` certificate (3-year validity), only needed to replace the key: exports `CartonStash.pfx` (to a path outside the repo) and `CartonStash.cer`, and leaves no key in the store |
-| CI | `.github/workflows/release.yml` | *Amended by R5:* on `v*` tag, a `build` job (unit tests, x64 + ARM64 MSIX and portable zips) then a `release` job (sign, attest, GitHub Release with `.msix` ×2, `.zip` ×2, `CartonStash.cer`, `SHA256SUMS.txt`, install steps in the release notes) |
+| CI | `.github/workflows/release.yml` | *Amended by R5:* on `v*` tag, a `build` job (unit tests, x64 + ARM64 MSIX and portable zips) then a `release` job (sign, GitHub Release with `.msix` ×2, `.zip` ×2, `CartonStash.cer`, `SHA256SUMS.txt`, install steps in the release notes) and an `attest` job |
 | CI | `.github/workflows/ci.yml` | On PR/push: build + unit tests (integration tests excluded; they need WinGet with network) |
 
 ## WinGet COM in a packaged app (R1.3)
@@ -59,14 +59,16 @@ The certificate and key stay the same (see requirements, Decisions).
 
 ### Release workflow (R5.1–R5.4, R5.7, R5.9)
 
-Two jobs, so build code and the key never run together. The workflow sets `permissions: {}`; each job asks for what it needs.
+Three jobs, so build code and the key never run together, and attesting needs neither. The workflow sets `permissions: {}`; each job asks for what it needs.
 
 | Job | Token | Secrets | Steps |
 |-----|-------|---------|-------|
 | `build` | `contents: read` | None | Check the tag format, restore from the lock file, unit tests, `Publish-Release.ps1`, upload the unsigned `artifacts\` (kept 1 day) |
-| `release` | `contents: write`, `id-token: write`, `attestations: write` | Signing key, from the `release` environment | Download the artifacts, `Sign-Release.ps1`, remove the key, attest every file, `gh release create` |
+| `release` | `contents: write` | Signing key, from the `release` environment | Download the artifacts, `Sign-Release.ps1`, remove the key, upload the signed files (kept 7 days), `gh release create` |
+| `attest` | `contents: read`, `id-token: write`, `attestations: write` | None | Download the signed files, attest every file |
 
 - The `release` job never runs `dotnet`, so no NuGet package code runs near the key. `signtool` comes from the Windows SDK on the runner, not from a NuGet package.
+- `attest` runs after publishing as its own job. GitHub refuses attestations on a private repo on the free plan, so a release made before going public shows that job as failed. Re-running only `attest` after the visibility change attests the same signed files, as long as they're still kept. Once public, it passes in the normal run.
 - The key and password are in the environment of the signing step only.
 - Every `actions/checkout` uses `persist-credentials: false`. All actions are `actions/*`, pinned to a full SHA with the version in a comment. `ci.yml` gets `permissions: contents: read` and the same pins.
 - The tag reaches scripts only as `env: TAG: ${{ github.ref_name }}`, read as `$env:TAG`. No `${{ }}` inside any `run:` block.
@@ -88,12 +90,20 @@ Two jobs, so build code and the key never run together. The workflow sets `permi
 
 ### GitHub settings (R5.9, R5.10, R5.13)
 
-Environments and rulesets aren't available on a private repo on the free plan, so these follow the visibility change.
+A private repo on the free plan accepts some of these, tested 2026-10-30.
 
-- Environment `release`: holds `SIGNING_PFX_BASE64` and `SIGNING_PFX_PASSWORD`, deployments limited to `v*` tags, the maintainer as required reviewer. The repo-level secrets are then deleted.
+Accepted while private:
+
+- Environment `release` limited to `v*` tags.
+- Immutable releases, Dependabot alerts and security updates.
+- Actions limited to GitHub-owned actions.
+
+Refused until the repo is public:
+
+- The maintainer as required reviewer on `release`. `SIGNING_PFX_BASE64` and `SIGNING_PFX_PASSWORD` then move there and the repo-level secrets are deleted.
 - Rulesets: `main`, no force-push or deletion; `v*` tags, no update or deletion.
-- Immutable releases, secret scanning with push protection, Dependabot alerts and security updates, private vulnerability reporting.
-- Actions limited to GitHub-owned actions; approval required for workflows from outside contributors.
+- Secret scanning with push protection, private vulnerability reporting.
+- Approval required for workflows from outside contributors.
 
 ### Key custody (R5.11)
 
@@ -110,10 +120,10 @@ also covers `*.p12`, `*.pem`, `*.key`, `*.snk`, `*.pfx.*` and `.env.*`.
 
 ### Rollout order
 
-1. Before going public: workflows, scripts, docs, lock file, Dependabot config, `SECURITY.md`, key moved off the PC.
-2. Make the repo public.
-3. Right after: the GitHub settings above.
-4. Release `v1.0.1` through the new pipeline and check it. This is the first release that can be attested. `v1.0.0` stays published, without a timestamp.
+1. Before going public: workflows, scripts, docs, lock file, Dependabot config, `SECURITY.md`, key moved off the PC, and the settings a private repo accepts.
+2. Release `v1.0.1` through the new pipeline and check it, so the repo goes public with a release to download. Its `attest` job fails, as expected.
+3. Make the repo public.
+4. Right after: the remaining GitHub settings, then re-run the failed `attest` job within 7 days.
 
 ## Testing strategy
 
@@ -142,4 +152,5 @@ also covers `*.p12`, `*.pem`, `*.key`, `*.snk`, `*.pfx.*` and `.env.*`.
 - **A compromised build dependency (R5):** it can no longer take the key, but it can still alter the app before signing. The lock file makes that harder; an attestation shows where a file was built, not that it's safe.
 - **Timestamp server down (R5.5):** the release fails and is run again. Accepted: an unstamped release is worse than a late one.
 - **Lock file across architectures and MSIX (R5.12):** unproven, because `PackageMsix` changes what gets restored. T9 proves it first. If it can't work, keep `nuget.config` and NuGet audit, and update this spec.
-- **Attestations need a public repo on the free plan (R5.7):** the first release after the visibility change is the first that can pass.
+- **Attestations need a public repo on the free plan (R5.7):** `v1.0.1` is published before its attestation exists. If the signed files expire before the `attest` job is re-run, it can't be attested and the next release is the first that is.
+- **Publishing before attesting (R5.7):** once public too, a release is visible for a moment before its attestation. Accepted: it costs nothing, and a failed `attest` job can be re-run alone.
