@@ -38,8 +38,8 @@ Tick a task only when its verification passes. Keep tasks small enough for one c
   - Verify: `WinGetRecordReaderTests.*`.
 - [x] **T14.** `OperationLogStore` and the queue add the `--- WinGet log ---` section. *(R2.8, R2.9, R2.5)*
   - Verify: `ActivityTests.WinGets_record_comes_last_and_is_saved`, `A_missing_record_is_explained_and_the_operation_still_succeeds`.
-- [ ] **T15.** Manual: a package with no installer log, one with an installer log, and a failed one, on the portable app and an installed MSIX. *(R2.8–R2.10)*
-  - Portable passed. The dev build also passed under the installed 1.0.1 package's identity (see log), but a real MSIX of this code is still to check, with the next release.
+- [x] **T15.** Manual: a package with no installer log, one with an installer log, and a failed one, on the portable app and an installed MSIX. *(R2.8–R2.10)*
+  - Passed on the portable app and the released v1.0.3 MSIX (see log).
 
 ## Manual verification log
 
@@ -59,5 +59,5 @@ Tick a task only when its verification passes. Keep tasks small enough for one c
 | R2.5 (log file) | 2026-10-30 | Closed, no bug | The Firefox install's log was missing when first checked, after the uninstall, because the maintainer had deleted it by hand. Firefox's installer takes no log switch (`/S /PreventRebootRequired=true`), so that file only held our summary |
 | R2.8–R2.10 (portable) | 2026-10-30 | Pass | From the app: jq (no installer log), LocalSend (25 KB Inno log, then WinGet's section) and Wget (failed, hash mismatch). Each log held its own record, last; URLs had no query; the headers line read "(removed)" |
 | R2.8–R2.10 (package identity) | 2026-10-30 | Pass | Same three cases with the dev build started through `Invoke-CommandInDesktopPackage` in the installed 1.0.1 package: logs went to the package's `LocalState\logs`, and `Caller:` matched the family name. Not a real MSIX of this code |
-| R2.8–R2.10 (real MSIX) | – | **Pending** | Check on the next release's MSIX |
+| R2.8–R2.10 (real MSIX) | 2026-10-30 | Pass | Released v1.0.3 x64 MSIX, installed over 1.0.1 and started from Start: jq, LocalSend and the failing Wget each logged their own record, last, with the package family name as `Caller:`, no URL queries, and the headers line "(removed)". Queuing two operations was tested on the portable app only |
 | R1.7 high contrast | – | **Pending** | With the 006 high-contrast pass |
