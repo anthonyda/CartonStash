@@ -1,6 +1,6 @@
 # 007 – Packaging and release: Requirements
 
-**Status:** Approved (2026-10-30). Amendment R5 (release hardening) approved 2026-10-30
+**Status:** Approved (2026-10-30). Amendment R5 (release hardening) approved 2026-10-30. Amendment R6 (Microsoft Store) **Draft, needs review**
 **Depends on:** 001–006 (can start in parallel once 003 is done)
 
 ## Problem
@@ -19,6 +19,7 @@ release path has to protect the key and let users check what they download.
 - **US3.** As the maintainer, I want releases to be built the same way every time.
 - **US4.** As a user, I want to check that a download really came from this project before I trust its certificate.
 - **US5.** As the maintainer, I want the signing key to stay safe even if a build dependency is compromised.
+- **US6.** As a user, I want to install the app from the Microsoft Store, without trusting a certificate by hand. *(Draft, amendment R6.)*
 
 ## Acceptance criteria (EARS)
 
@@ -48,10 +49,17 @@ release path has to protect the key and let users check what they download.
 | R5.11 | US5  | The private key and its password shall not stay in usable form on the development PC. They shall be kept in the maintainer's password manager. Release builds on the PC shall be unsigned unless a PFX is given explicitly. |
 | R5.12 | US5  | Package restores shall use only nuget.org, and CI shall restore from a lock file. Dependabot shall propose updates for NuGet packages and pinned actions. |
 | R5.13 | US5  | The repository shall have a `SECURITY.md` explaining how to report a vulnerability privately, with private vulnerability reporting, secret scanning with push protection, and Dependabot alerts turned on. |
+| R6.1 | US6   | *Draft.* Each tagged release shall also produce an MSIX for the Microsoft Store, for x64 and ARM64, from the same code and version as the GitHub files. |
+| R6.2 | US6   | *Draft.* The Store MSIX shall carry the identity Partner Center assigned: name `51376anthonydapps.CartonStash`, publisher `CN=8E7BFF24-3095-4F83-84B3-2D4A3E780750`, publisher display name `anthonydapps`. |
+| R6.3 | US6   | *Draft.* The Store MSIX shall not be signed by the project, shall not be published on GitHub Releases, and shall never reach the signing job. Microsoft signs it after certification. |
+| R6.4 | US6   | *Draft.* The GitHub MSIX and portable zip shall stay as they are (R1.1, R1.4, R2.1, R5.x), with the `CN=Anthony` identity and certificate. |
+| R6.5 | US6   | *Draft.* The Store MSIX shall pass the Windows App Certification Kit before it's submitted. |
+| R6.6 | US6   | *Draft.* The Store's privacy policy text shall be kept in the repository as `PRIVACY.md`, and shall match what the app does. |
 
 ## Out of scope
 
-- Microsoft Store listing (possible later; needs a Partner Center account).
+- ~~Microsoft Store listing (possible later; needs a Partner Center account).~~ *Moved in scope by draft amendment R6.*
+- Submitting to the Store from the workflow: the maintainer uploads each package in Partner Center by hand.
 - Automatic in-app updater for the portable zip.
 - A publicly trusted certificate or cloud signing service (amendment R5 hardens the self-signed setup; R1.1 still applies).
 
@@ -68,6 +76,14 @@ release path has to protect the key and let users check what they download.
   - *Same key.* The security review found no leak in git history, Actions logs or release files, so the certificate stays and users don't have to trust a new one.
   - *CI still signs.* Signing on the maintainer's PC was rejected: that PC runs third-party installers by design, and it would drop R3.1's automation.
   - *Portable zip signed too (R5.6).* With a self-signed certificate Windows still shows an unknown publisher, so this only helps someone who checks the thumbprint. It costs little and matches what the README promises.
+
+- **Amendment R6: signing through the Store, decided 2026-10-30.** No certificate is bought. Store-only signing leaves the GitHub files self-signed, and
+  R2.2 (winget-pkgs) stays deferred. Store users can install with `winget install 9MT37M7DBZRK --source msstore` once the app is listed.
+
+## Open questions (amendment R6, needs your decision)
+
+- **Where the Store MSIX is built.** *Proposed: in the release workflow's `build` job, kept as a short-lived `store` artifact.* Same machine and code as the GitHub files, and no build on the PC that runs third-party installers. The alternative is building it locally with `Publish-Release.ps1`.
+- **Keep offering the GitHub MSIX?** *Proposed: yes.* Some users can't use the Store, and it keeps winget-pkgs possible later. The Store and GitHub versions have different identities, so they don't update each other and can both be installed.
 
 ## Open questions (history)
 
