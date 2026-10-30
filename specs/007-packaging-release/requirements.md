@@ -1,6 +1,6 @@
 # 007 – Packaging and release: Requirements
 
-**Status:** Approved (2026-10-30)
+**Status:** Approved (2026-10-30). Amendment R5 (release hardening) approved 2026-10-30
 **Depends on:** 001–006 (can start in parallel once 003 is done)
 
 ## Problem
@@ -8,11 +8,17 @@
 Today the app runs only from a developer build folder. Users need a normal way to install it, get updates,
 and trust what they're running.
 
+*Amendment R5 (security review, 2026-10-30):* users trust the release certificate across their whole PC, and a self-signed
+certificate can't be revoked. A leaked key would let anyone ship an MSIX that Windows accepts as a CartonStash update, so the
+release path has to protect the key and let users check what they download.
+
 ## User stories
 
 - **US1.** As a user, I want to install the app like any Windows app (Start menu entry, clean uninstall).
 - **US2.** As a user, I want to get new versions easily.
 - **US3.** As the maintainer, I want releases to be built the same way every time.
+- **US4.** As a user, I want to check that a download really came from this project before I trust its certificate.
+- **US5.** As the maintainer, I want the signing key to stay safe even if a build dependency is compromised.
 
 ## Acceptance criteria (EARS)
 
@@ -28,11 +34,25 @@ and trust what they're running.
 | R3.1 | US3   | A GitHub Actions workflow shall build, run unit tests, and produce release artifacts on every tag `v*`. |
 | R3.2 | US3   | The app version shall come from the git tag (one source of truth) and appear in Settings (006 R4.1). |
 | R4.1 | –     | Settings (006) shall move to `ApplicationData` when packaged, migrating an existing JSON file once. |
+| R5.1 | US5   | The release workflow shall build every artifact without access to the signing key or its password. The key shall exist only in a separate signing job that restores no packages and runs no build. |
+| R5.2 | US5   | The workflows shall run with the least access each job needs: no default token permissions, a read-only token for building, write access only where the release is published, and no token left in the checkout. |
+| R5.3 | US5   | Every action used by a workflow shall be GitHub-owned and pinned to a full commit SHA. |
+| R5.4 | US5   | The tag name shall never be pasted into a script: workflows shall pass it as an environment variable, and the release workflow shall reject a tag that isn't `v` + `major.minor.patch` before doing anything else. |
+| R5.5 | US4   | Every signature shall carry an RFC 3161 timestamp, so it stays valid after the certificate expires. If a timestamp can't be obtained, the release shall fail. |
+| R5.6 | US4   | The first-party binaries in the portable zip (`CartonStash.exe`, `CartonStash.dll`, `CartonStash.Core.dll`) shall be signed with the same certificate as the MSIX. |
+| R5.7 | US4   | Each release shall carry a build attestation for every artifact, so anyone can check it was built by this repository's workflow. |
+| R5.8 | US4   | The README and release notes shall publish the certificate's thumbprint with the steps to check it before trusting the certificate, and shall describe accurately what is signed. |
+| R5.9 | US5   | The signing key and password shall be available only to the release workflow on `v*` tags, through a protected GitHub environment that needs the maintainer's approval for each release. |
+| R5.10 | US5  | `main` and `v*` tags shall be protected against force-push and deletion, and published releases shall be immutable. |
+| R5.11 | US5  | The private key and its password shall not stay in usable form on the development PC. They shall be kept in the maintainer's password manager. Release builds on the PC shall be unsigned unless a PFX is given explicitly. |
+| R5.12 | US5  | Package restores shall use only nuget.org, and CI shall restore from a lock file. Dependabot shall propose updates for NuGet packages and pinned actions. |
+| R5.13 | US5  | The repository shall have a `SECURITY.md` explaining how to report a vulnerability privately, with private vulnerability reporting, secret scanning with push protection, and Dependabot alerts turned on. |
 
 ## Out of scope
 
 - Microsoft Store listing (possible later; needs a Partner Center account).
 - Automatic in-app updater for the portable zip.
+- A publicly trusted certificate or cloud signing service (amendment R5 hardens the self-signed setup; R1.1 still applies).
 
 ## Decisions
 
@@ -43,6 +63,10 @@ and trust what they're running.
 - **Portable zip: decided 2026-10-30: keep it (R1.4).** A single-file `.exe` was tried and rejected: `PublishSingleFile`
   with self-extraction builds (92 MB) but crashes at start inside `Microsoft.UI.Xaml.dll` (0xc000027b).
 - **Hosting: decided 2026-10-30: GitHub** (`anthonyda/CartonStash`, GitHub Releases).
+- **Amendment R5: decided 2026-10-30:**
+  - *Same key.* The security review found no leak in git history, Actions logs or release files, so the certificate stays and users don't have to trust a new one.
+  - *CI still signs.* Signing on the maintainer's PC was rejected: that PC runs third-party installers by design, and it would drop R3.1's automation.
+  - *Portable zip signed too (R5.6).* With a self-signed certificate Windows still shows an unknown publisher, so this only helps someone who checks the thumbprint. It costs little and matches what the README promises.
 
 ## Open questions (history)
 

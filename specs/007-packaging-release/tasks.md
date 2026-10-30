@@ -1,6 +1,6 @@
 # 007 – Packaging and release: Tasks
 
-**Status:** In progress (v1.0.0 released 2026-10-30; Windows Sandbox check and winget-pkgs pending)
+**Status:** In progress (v1.0.0 released 2026-10-30; Windows Sandbox check and winget-pkgs pending). Amendment R5: approved, in progress
 **Design:** [design.md](design.md)
 
 - [x] **T1.** `Package.appxmanifest` (Anthony.CartonStash, CN=Anthony) + logo set rendered from `AppIcon.svg` (`tools/Render-Logos.ps1`). *(R1.2)*
@@ -22,6 +22,31 @@
   - https://github.com/anthonyda/CartonStash/releases/tag/v1.0.0
 - [ ] **T8.** Mark `Done`.
 
+### Amendment R5: release hardening (approved 2026-10-30)
+
+Before going public:
+
+- [x] **T9.** `nuget.config`, lock file proven on all four builds (x64 and ARM64, MSIX and portable), `.github/dependabot.yml`. *(R5.12)*
+  - Verify: locked restore passes on all four; changing a version in `Directory.Packages.props` makes it fail (see log).
+- [x] **T10.** Split the scripts: `Publish-Release.ps1` builds only; new `Sign-Release.ps1` signs with timestamps, checks every signature, writes checksums. *(R5.1, R5.5, R5.6, R5.11)*
+  - Verify: local run with a throwaway certificate (subject `CN=Anthony`, see design) signs everything with a timestamp; the thumbprint check then fails against `tools/CartonStash.cer`, as it must (see log).
+- [ ] **T11.** `release.yml` as two jobs and `ci.yml` hardened: `permissions`, `persist-credentials: false`, SHA pins, tag through `env`, tag check first, attestation. *(R5.1–R5.4, R5.7)*
+  - Verify: CI green; no `${{ }}` inside any `run:` block; `git check-ref-format` confirms the bad-tag example is a legal ref that the check rejects.
+  - Written; every check passes except CI green, which needs the first push (see log). `release.yml` itself first runs in T16.
+- [x] **T12.** README, release notes and `CLAUDE.md`: thumbprint and check, attestation, accurate signing wording, new script commands. `SECURITY.md`. *(R5.8, R5.13)*
+  - Verify: the README steps work as written on a downloaded `.cer` (see log).
+- [x] **T13.** `New-SigningCert.ps1` writes no password or base64 file and leaves no key in the store; `.gitignore` additions. *(R5.11)*
+  - Verify: run with a throwaway subject and folder, then check the folder and the store (see log).
+- [ ] **T14. Maintainer.** Save the PFX and password in a password manager, then remove `%USERPROFILE%\.cartonstash\` and the private key in `Cert:\CurrentUser\My`. *(R5.11)*
+  - Verify: see design, Testing strategy.
+
+After going public:
+
+- [ ] **T15.** GitHub settings: `release` environment, secrets moved and repo-level ones deleted, rulesets, immutable releases, scanning, Dependabot, private reporting, Actions limits. *(R5.3, R5.9, R5.10, R5.13)*
+  - Verify: read back with `gh api`.
+- [ ] **T16.** Release `v1.0.1` through the new pipeline. *(R5.1–R5.8)*
+  - Verify: downloaded files have timestamps and the right thumbprint, `gh attestation verify` passes, the `build` job log shows no secrets.
+
 ## Manual verification log
 
 | Criterion | Date | Result | Notes |
@@ -35,3 +60,8 @@
 | R2.1, R3.1 | 2026-10-30 | Pass | Tag v1.0.0 → release workflow built, signed and published 2 MSIX, 2 portable zips, CartonStash.cer, SHA256SUMS.txt |
 | R1.1, R3.2 (CI build) | 2026-10-30 | Pass | Downloaded x64 MSIX: signature CN=Anthony valid, checksum matches SHA256SUMS.txt; installs as 1.0.0.0, Settings "CartonStash 1.0.0", WinGet search works, uninstalls cleanly |
 | Single-file exe | 2026-10-30 | Rejected | 92 MB self-extracting exe crashes at start in Microsoft.UI.Xaml.dll (0xc000027b) |
+| R5.12 | 2026-10-30 | Pass | With `CI=true`: Release build, unit tests, MSIX and portable for x64 and ARM64 all restore from the lock files. Changing a version in `Directory.Packages.props` fails with NU1004; the lock files are unchanged afterwards. No SDK-tied package in them, so the floating `10.0.x` is safe. CI itself not run yet |
+| R5.5, R5.6, R5.1 | 2026-10-30 | Pass (local) | Real x64 build, throwaway key: `Publish-Release.ps1` leaves it unsigned with no checksums; `Sign-Release.ps1` signs the MSIX and the 3 portable binaries, each with a DigiCert timestamp; 525 files survive the re-zip; checksums match; the signed portable app starts. Against `tools/CartonStash.cer` the script refuses: "is not signed with certificate 99EE…" |
+| R5.11 (script) | 2026-10-30 | Pass | `New-SigningCert.ps1` with a throwaway key: only the PFX in the folder, one ACL rule, certificate store unchanged, `tools/CartonStash.cer` untouched. `.gitignore` covers `*.pfx.*`, `*.p12`, `*.pem`, `*.key`, `*.snk`, `.env.*`, and no tracked file is ignored. Moving the real key is T14 |
+| R5.1–R5.4 (review) | 2026-10-30 | Pass | Parsed both workflows: all actions `actions/*` pinned to a full SHA, `persist-credentials: false` on every checkout, no `${{ }}` in any `run:`, secrets only in the `Sign` step, no `dotnet` in the job with the key. `v1';calc;'` is a legal git ref; the tag check rejects it, and `v1.2` and `v1.2.3-test` too |
+| R5.8 | 2026-10-30 | Pass | `(Get-PfxCertificate tools\CartonStash.cer).Thumbprint` prints the thumbprint in the README, `SECURITY.md` and release notes; the file's SHA-256 equals the v1.0.0 release asset |
