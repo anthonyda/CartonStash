@@ -44,6 +44,10 @@ It talks to WinGet directly through its official API, so what you see is exactly
 |---|---|
 | ![Installed programs with color-coded version badges and status filter chips](docs/images/installed.png) | ![The Updates page with an available update and Update all](docs/images/updates.png) |
 
+| Activity pane, pinned beside the page | Operation log |
+|---|---|
+| ![The Activity pane pinned next to the Installed page, with finished and failed operations](docs/images/activity.png) | ![The log of a failed install, with WinGet's result and Copy and Open folder buttons](docs/images/log.png) |
+
 ## Download and install
 
 Get the latest version from **[Releases](https://github.com/anthonyda/CartonStash/releases/latest)**:
