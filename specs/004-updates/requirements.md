@@ -38,7 +38,7 @@ Keeping software current with `winget upgrade` means reading a table, then runni
 
 ## Open questions
 
-- **R3 (explicit targeting / pins) is deferred and stays open (decision 2026-10-29).** 004 ships without it:
+- **R3 (explicit targeting / pins) is deferred and stays open (decision 2026-10-29), tracked in [issue #1](https://github.com/anthonyda/CartonStash/issues/1).** 004 ships without it:
   "Update all" queues every package WinGet reports. WinGet itself refuses pinned / explicit-only packages, and the
   per-package result says why (003 R5.2).
   - Why it's blocked: the COM API 1.29 doesn't expose pins or `RequireExplicitUpgrade` (see design.md, T1).
