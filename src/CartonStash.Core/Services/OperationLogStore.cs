@@ -33,16 +33,19 @@ public sealed class OperationLogStore : IOperationLogStore
 
     private const string NoInstallerLog = "(The installer didn't write a log.)";
 
-    public OperationLogStore()
+    private readonly IWinGetRecordReader? _records;
+
+    public OperationLogStore(IWinGetRecordReader records)
         : this(Path.Combine(
             AppPackage.LocalFolder ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AppInfo.DataFolder),
-            "logs"))
+            "logs"), records)
     {
     }
 
-    public OperationLogStore(string folder)
+    public OperationLogStore(string folder, IWinGetRecordReader? records = null)
     {
         Folder = folder;
+        _records = records;
         Prune();
     }
 
@@ -80,7 +83,7 @@ public sealed class OperationLogStore : IOperationLogStore
         try
         {
             var installerLog = File.Exists(path) ? File.ReadAllText(path) : null;
-            File.WriteAllText(path, Compose(operation, installerLog));
+            File.WriteAllText(path, Compose(operation, installerLog, FindRecord(operation)));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
@@ -103,11 +106,17 @@ public sealed class OperationLogStore : IOperationLogStore
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
         }
-        return Compose(operation, null);
+        return Compose(operation, null, FindRecord(operation));
     }
 
-    /// <summary>The summary, then the installer's log or a note that there is none (R2.2, R2.3).</summary>
-    internal static string Compose(PackageOperation operation, string? installerLog)
+    private WinGetRecord? FindRecord(PackageOperation operation) =>
+        operation is { StartedAt: { } started, FinishedAt: { } finished } ? _records?.Find(started, finished) : null;
+
+    /// <summary>
+    /// The summary, the installer's log or a note that there is none, then WinGet's record or why it's missing
+    /// (R2.2, R2.3, R2.8, R2.9). WinGet's part stays last: the dialog keeps the end of a very long log.
+    /// </summary>
+    internal static string Compose(PackageOperation operation, string? installerLog, WinGetRecord? record = null)
     {
         var package = operation.Package;
         var text = new StringBuilder()
@@ -126,10 +135,16 @@ public sealed class OperationLogStore : IOperationLogStore
             text.AppendLine(details.Trim());
         }
 
-        return text.AppendLine()
+        text.AppendLine()
             .AppendLine("--- Installer log ---")
-            .AppendLine(string.IsNullOrWhiteSpace(installerLog) ? NoInstallerLog : installerLog)
-            .ToString();
+            .AppendLine(string.IsNullOrWhiteSpace(installerLog) ? NoInstallerLog : installerLog);
+        if (record is not null)
+        {
+            text.AppendLine()
+                .AppendLine("--- WinGet log ---")
+                .AppendLine(record.Text ?? record.Missing);
+        }
+        return text.ToString();
     }
 
     /// <summary>Keeps the newest logs (R2.5).</summary>

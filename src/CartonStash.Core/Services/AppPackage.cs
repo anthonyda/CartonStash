@@ -14,6 +14,9 @@ public static class AppPackage
     /// <summary>The package's local app-data folder, or null when not packaged (007 R4.1).</summary>
     public static string? LocalFolder => IsPackaged ? ApplicationData.Current.LocalFolder.Path : null;
 
+    /// <summary>The package family name, or null when not packaged (009 R2.9).</summary>
+    public static string? FamilyName => IsPackaged ? Windows.ApplicationModel.Package.Current.Id.FamilyName : null;
+
     private static bool DetectPackaged()
     {
         uint length = 0;

@@ -76,6 +76,54 @@ public sealed class ActivityTests : IDisposable
         Assert.Contains("The installer didn't write a log.", logs.Read(op));
     }
 
+    private sealed class FixedRecords(WinGetRecord record) : IWinGetRecordReader
+    {
+        public (DateTimeOffset Started, DateTimeOffset Finished)? Asked { get; private set; }
+
+        public WinGetRecord Find(DateTimeOffset startedAt, DateTimeOffset finishedAt)
+        {
+            Asked = (startedAt, finishedAt);
+            return record;
+        }
+    }
+
+    private (ScriptedInstaller Installer, PackageOperationQueue Queue, OperationLogStore Logs) CreateWith(IWinGetRecordReader records)
+    {
+        _ = new TestApp();
+        var installer = new ScriptedInstaller();
+        var logs = new OperationLogStore(_folder, records);
+        return (installer, new PackageOperationQueue(installer, logs), logs);
+    }
+
+    [Fact]
+    public void WinGets_record_comes_last_and_is_saved() // R2.8
+    {
+        var records = new FixedRecords(new WinGetRecord("winget line 1", null));
+        var (installer, queue, logs) = CreateWith(records);
+        var op = queue.Enqueue(OperationKind.Install, Pkg.Remote("A"));
+        File.WriteAllText(op.LogFilePath!, "installer line 1");
+
+        installer.Complete("A");
+
+        var text = logs.Read(op);
+        Assert.True(text.IndexOf("installer line 1", StringComparison.Ordinal) < text.IndexOf("--- WinGet log ---", StringComparison.Ordinal));
+        Assert.True(text.IndexOf("--- WinGet log ---", StringComparison.Ordinal) < text.IndexOf("winget line 1", StringComparison.Ordinal));
+        Assert.Contains("winget line 1", File.ReadAllText(op.LogFilePath!));
+        Assert.Equal((op.StartedAt!.Value, op.FinishedAt!.Value), records.Asked);
+    }
+
+    [Fact]
+    public void A_missing_record_is_explained_and_the_operation_still_succeeds() // R2.9
+    {
+        var (installer, queue, logs) = CreateWith(new FixedRecords(new WinGetRecord(null, WinGetRecordReader.NotFound)));
+        var op = queue.Enqueue(OperationKind.Install, Pkg.Remote("A"));
+
+        installer.Complete("A");
+
+        Assert.Equal(OperationResult.Succeeded, op.Result);
+        Assert.Contains(WinGetRecordReader.NotFound, logs.Read(op));
+    }
+
     [Fact]
     public void Details_are_included_in_the_summary() // R2.2
     {
