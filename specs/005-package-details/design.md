@@ -1,6 +1,6 @@
 # 005 – Package details: Design
 
-**Status:** Approved (2026-10-29), amended during implementation
+**Status:** Approved (2026-10-29), amended during implementation. Amendment R6 approved 2026-10-30
 **Requirements:** [requirements.md](requirements.md)
 
 ## Overview
@@ -74,6 +74,13 @@ Action button → same commands as the row → queue. The pane reflects the queu
 - Very long descriptions: `TextBlock` wrapping inside a `ScrollViewer`. Release notes are collapsed by default.
 - Only `http`/`https` links are launched. Anything else (e.g. `file:`) is shown as plain text (security).
 - WinGet's full installed list links some programs to a source that a search by ID on the local-first catalog can't find (seen with `Microsoft.PowerShell`). Details then look in the source itself: the row's own source only (003 R1.2), and read-only, so operations don't change.
+
+## Amendment R6: https icons (approved 2026-10-30)
+
+- `PickIcon` accepts only `https` URLs, so a package with both kinds uses the https one.
+- `PackageActions.GetIconAsync` checks again with a new https-only `PackageDetailsViewModel.SafeIconUri`, which is the part unit tests can reach.
+- Links in the details pane keep `SafeUri` (http and https): the user clicks those, and the browser shows the address.
+- README: a short note in Features or the FAQ (R6.2).
 
 ## Testing strategy
 

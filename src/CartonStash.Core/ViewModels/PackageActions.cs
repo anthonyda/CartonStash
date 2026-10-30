@@ -31,7 +31,7 @@ public sealed class PackageActions(PackageOperationQueue queue, IPackageInstalle
         }
         try
         {
-            return PackageDetailsViewModel.SafeUri(await packages.GetIconUrlAsync(package));
+            return PackageDetailsViewModel.SafeIconUri(await packages.GetIconUrlAsync(package));
         }
         catch (Exception)
         {

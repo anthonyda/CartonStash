@@ -148,4 +148,8 @@ public sealed partial class PackageDetailsViewModel(IPackageService packages) : 
         Uri.TryCreate(url, UriKind.Absolute, out var uri) && (uri.Scheme == Uri.UriSchemeHttps || uri.Scheme == Uri.UriSchemeHttp)
             ? uri
             : null;
+
+    /// <summary>Icons load with no user action, so only https (005 R6.1). Links stay on <see cref="SafeUri"/>: the user clicks those.</summary>
+    public static Uri? SafeIconUri(string? url) =>
+        Uri.TryCreate(url, UriKind.Absolute, out var uri) && uri.Scheme == Uri.UriSchemeHttps ? uri : null;
 }

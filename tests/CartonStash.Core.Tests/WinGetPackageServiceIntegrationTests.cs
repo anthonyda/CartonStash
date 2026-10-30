@@ -89,6 +89,16 @@ public class WinGetPackageServiceIntegrationTests
     }
 
     [Fact]
+    public async Task Real_package_icons_are_https() // 005 R6.1: https-only must not lose the icons WinGet provides
+    {
+        var firefox = (await _service.SearchAsync("Mozilla.Firefox")).First(p => p.Id == "Mozilla.Firefox");
+
+        var url = await _service.GetIconUrlAsync(firefox);
+
+        Assert.StartsWith("https://", url);
+    }
+
+    [Fact]
     public async Task Details_work_for_every_managed_installed_package() // 005 R1.2: a search by ID misses some (Microsoft.PowerShell)
     {
         var installed = await _service.GetInstalledAsync();

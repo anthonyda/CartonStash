@@ -277,14 +277,14 @@ public sealed class WinGetPackageService(CatalogConnection connection) : IPackag
         return packages;
     }
 
-    /// <summary>Prefers the theme-neutral icon; only web URLs (005 R5.2).</summary>
+    /// <summary>Prefers the theme-neutral icon; https only (005 R6.1).</summary>
     private static string? PickIcon(IReadOnlyList<Icon> icons)
     {
         string? fallback = null;
         for (var i = 0; i < icons.Count; i++)
         {
             var url = icons[i].Url;
-            if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || (uri.Scheme != Uri.UriSchemeHttps && uri.Scheme != Uri.UriSchemeHttp))
+            if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || uri.Scheme != Uri.UriSchemeHttps)
             {
                 continue;
             }
