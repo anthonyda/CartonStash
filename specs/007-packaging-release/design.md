@@ -130,7 +130,7 @@ also covers `*.p12`, `*.pem`, `*.key`, `*.snk`, `*.pfx.*` and `.env.*`.
 3. Make the repo public.
 4. Right after: the remaining GitHub settings, then re-run the failed `attest` job within 7 days.
 
-## Amendment R6: Microsoft Store (draft, needs review)
+## Amendment R6: Microsoft Store (approved 2026-10-30)
 
 - **Partner Center product.** Type *MSIX or PWA app*. Store ID `9MT37M7DBZRK`, package family name `51376anthonydapps.CartonStash_zq0btdd4d5nd6`. These values are public, so they live in the script, not in secrets.
 - **Build.** `Publish-Release.ps1` gets a third build per architecture: it swaps `Identity Name`, `Publisher` and `PublisherDisplayName` in the manifest, as it already does for the version, and restores the file afterwards.
@@ -157,11 +157,11 @@ also covers `*.p12`, `*.pem`, `*.key`, `*.snk`, `*.pfx.*` and `.env.*`.
 | R5.11 | Manual: the key folder is gone and `Cert:\CurrentUser\My` has no `CN=Anthony` private key |
 | R5.12 | Locked restore passes on all four builds; changing a version in `Directory.Packages.props` makes it fail |
 
-*Amendment R6 (draft):* R6.1–R6.3 by reading the built packages' manifests and running `Sign-Release.ps1` on a test release; R6.5 with the Windows App Certification Kit; R6.1 end to end when Partner Center accepts the upload and the Store build installs.
+*Amendment R6:* R6.1–R6.3 by reading the built packages' manifests and running `Sign-Release.ps1` on a test release; R6.5 with the Windows App Certification Kit; R6.1 end to end when Partner Center accepts the upload and the Store build installs.
 
 ## Risks and alternatives considered
 
-- **Store review (amendment R6, draft).** An app that installs other software with `runFullTrust` may get questions or be refused, and how review treats it is unknown until the first submission. The GitHub files don't depend on the outcome.
+- **Store review (amendment R6).** An app that installs other software with `runFullTrust` may get questions or be refused, and how review treats it is unknown until the first submission. The GitHub files don't depend on the outcome.
 
 - **Windows Sandbox lacks WinGet by default:** install App Installer in the sandbox first (script it).
 - **MSIX + WinGet server activation regressions:** caught by R1.3 manual check before each release.
