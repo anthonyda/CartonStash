@@ -1,6 +1,6 @@
 # 007 – Packaging and release: Tasks
 
-**Status:** In progress (v1.0.0 released 2026-10-30; Windows Sandbox check and winget-pkgs pending). Amendment R5: approved, in progress
+**Status:** In progress (Windows Sandbox check and winget-pkgs pending). Amendment R5: done 2026-10-30
 **Design:** [design.md](design.md)
 
 - [x] **T1.** `Package.appxmanifest` (Anthony.CartonStash, CN=Anthony) + logo set rendered from `AppIcon.svg` (`tools/Render-Logos.ps1`). *(R1.2)*
@@ -51,8 +51,8 @@ Before going public:
 
 After going public:
 
-- [ ] **T15b.** The remaining GitHub settings: required reviewer on `release`, secrets moved there and repo-level ones deleted, rulesets, secret scanning, private reporting, approval for outside contributors. *(R5.9, R5.10, R5.13)*
-  - Verify: read back with `gh api` (see log). Everything is on except the secrets, which still sit at repository level until the maintainer moves them from KeePass.
+- [x] **T15b.** The remaining GitHub settings: required reviewer on `release`, secrets moved there and repo-level ones deleted, rulesets, secret scanning, private reporting, approval for outside contributors. *(R5.9, R5.10, R5.13)*
+  - Verify: read back with `gh api` (see log).
 - [x] **T17.** Re-run the failed `attest` job for `v1.0.2`, within 7 days. *(R5.7)*
   - Verify: `gh attestation verify` passes on a downloaded file (see log).
 
@@ -80,7 +80,7 @@ After going public:
 | R1.4, R1.6 | 2026-10-30 | Fail, fixed | The `v1.0.1` portable zip crashes at start (`0xc000027b` in `Microsoft.UI.Xaml.dll`) because publish left out `CartonStash.pri`. The `v1.0.0` file list had no such file either, and the zip was never launched before. `v1.0.1` is immutable, so the fix ships as `v1.0.2`. Local test: without the setting no window and a crash; with it the window "CartonStash" opens and no crash is logged. The installed `v1.0.1` MSIX opened its window with no crash |
 | R1.4, R1.6 (T18) | 2026-10-30 | Pass (local) | `Publish-Release.ps1` with `CI=true`: the zip has `CartonStash.pri`, the app opens its window "CartonStash", no crash logged, and the MSIX still has `resources.pri`. A copy without the setting stops at the guard and produces no zip. ARM64 can't be run here |
 | R1.6, R5.1–R5.6, R5.8 (T16) | 2026-10-30 | Pass | `v1.0.2`, run 41083988419: `build` and `release` passed, secrets seen only by `release`, log has no key material, private address or personal path. Downloaded files: all 6 present, checksums match, `.cer` matches the repo, both MSIX and all 6 portable binaries signed with `99EE…` and timestamped, version 1.0.2.0. x64 portable zip opens its window with no crash logged; ARM64 can't be run here |
-| R5.9, R5.10, R5.13 (T15b) | 2026-10-30 | Partly done | Repo public 2026-10-30. Read back with `gh api`: required reviewer and `v*` tag limit on `release`, rulesets on `main` and `v*` tags, secret scanning with push protection, private reporting, approval for outside contributors. Secrets not yet moved |
+| R5.9, R5.10, R5.13 (T15b) | 2026-10-30 | Pass | Repo public 2026-10-30. Read back with `gh api`: required reviewer and `v*` tag limit on `release`, rulesets on `main` and `v*` tags, secret scanning with push protection, private reporting, approval for outside contributors. The maintainer added both secrets to `release` from KeePass, and the repository-level ones were then deleted. The next release is the first to use them |
 | R5.7 (T17) | 2026-10-30 | Pass | Re-ran only the `attest` job of run 41083988419: passed. `gh attestation verify` passes on the x64 MSIX, x64 portable zip and `SHA256SUMS.txt`, and rejects a changed file |
 | R5.3, R5.9, R5.10, R5.13 (T15a) | 2026-10-30 | Pass | Tried every setting on the private repo. Read back with `gh api`: Actions `selected`, GitHub-owned only; security updates on; immutable releases on; `release` environment limited to `v*` tags. Refused: required reviewer, rulesets, secret scanning, private reporting, outside-contributor approval (T15b) |
 | Repo recreated | 2026-10-30 | Done | Fresh repo at the same URL with history rewritten to the GitHub noreply address, so the personal address isn't published. `v1.0.0` and its release stayed in the old repo, so the first release here is `v1.0.1`. Commit SHAs and run IDs earlier in this log refer to the old repo |
