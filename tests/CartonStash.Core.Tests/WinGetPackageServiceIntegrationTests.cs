@@ -89,6 +89,17 @@ public class WinGetPackageServiceIntegrationTests
     }
 
     [Fact]
+    public async Task Details_work_for_every_managed_installed_package() // 005 R1.2: a search by ID misses some (Microsoft.PowerShell)
+    {
+        var installed = await _service.GetInstalledAsync();
+
+        foreach (var package in installed.Where(p => p.IsManaged).DistinctBy(p => p.Id))
+        {
+            Assert.NotNull(await _service.GetDetailsAsync(package));
+        }
+    }
+
+    [Fact]
     public async Task Package_is_not_found_in_a_source_that_does_not_have_it() // 003 R1.2: no fallback to another source
     {
         var connection = new CatalogConnection();

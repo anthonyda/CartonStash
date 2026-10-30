@@ -165,6 +165,22 @@ public sealed class CatalogConnection
     internal async Task<CatalogPackage> FindByIdAsync(string id, string? source, bool localFirst, CancellationToken cancellationToken)
     {
         var catalog = localFirst ? await GetLocalFirstAsync(cancellationToken) : await GetRemoteFirstAsync(cancellationToken);
+        return await FindInCatalogAsync(catalog, id, source, cancellationToken) ?? throw NotFound(id);
+    }
+
+    /// <summary>
+    /// Finds a package to read its details (005 R1.2). WinGet's full installed list links some programs to a source that a
+    /// search by ID on the local-first catalog can't find (seen with Microsoft.PowerShell), so this also looks in the source
+    /// itself. Read-only: operations use <see cref="FindByIdAsync"/>, which only acts on what WinGet can match.
+    /// </summary>
+    internal async Task<CatalogPackage> FindForDetailsAsync(string id, string? source, bool installed, CancellationToken cancellationToken)
+    {
+        var found = installed ? await FindInCatalogAsync(await GetLocalFirstAsync(cancellationToken), id, source, cancellationToken) : null;
+        return found ?? await FindInCatalogAsync(await GetRemoteFirstAsync(cancellationToken), id, source, cancellationToken) ?? throw NotFound(id);
+    }
+
+    private static async Task<CatalogPackage?> FindInCatalogAsync(PackageCatalog catalog, string id, string? source, CancellationToken cancellationToken)
+    {
         var options = new FindPackagesOptions();
         options.Selectors.Add(new PackageMatchFilter
         {
@@ -188,8 +204,11 @@ public sealed class CatalogConnection
                 return package;
             }
         }
-        throw new WinGetException($"WinGet can no longer find the package '{id}'. Refresh and try again.", null);
+        return null;
     }
+
+    private static WinGetException NotFound(string id) =>
+        new($"WinGet can no longer find the package '{id}'. Refresh and try again.", null);
 
     internal static bool IsFromSource(string? requested, string? actual) =>
         string.IsNullOrEmpty(requested) || actual == requested;

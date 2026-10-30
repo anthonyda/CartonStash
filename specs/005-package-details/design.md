@@ -73,6 +73,7 @@ Action button → same commands as the row → queue. The pane reflects the queu
 
 - Very long descriptions: `TextBlock` wrapping inside a `ScrollViewer`. Release notes are collapsed by default.
 - Only `http`/`https` links are launched. Anything else (e.g. `file:`) is shown as plain text (security).
+- WinGet's full installed list links some programs to a source that a search by ID on the local-first catalog can't find (seen with `Microsoft.PowerShell`). Details then look in the source itself: the row's own source only (003 R1.2), and read-only, so operations don't change.
 
 ## Testing strategy
 
