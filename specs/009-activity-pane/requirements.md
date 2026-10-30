@@ -1,6 +1,6 @@
 # 009 – Activity pane: Requirements
 
-**Status:** Draft, **needs review**
+**Status:** Done (2026-10-30)
 **Depends on:** 003 (operation queue, Activity pane), 006 (settings)
 **Issues:** [#2](https://github.com/anthonyda/CartonStash/issues/2) (operation logs), [#3](https://github.com/anthonyda/CartonStash/issues/3) (pin the pane), [#4](https://github.com/anthonyda/CartonStash/issues/4) (redesign)
 
@@ -49,9 +49,9 @@ user clicks elsewhere, so it can't be watched while using the app.
 
 ## Open questions
 
-- **Close while pinned (R3.6):** *Proposed:* the close button is hidden while pinned, and pressing the Activity navigation item
+- **Close while pinned (R3.6):** **Decided 2026-10-30:** the close button is hidden while pinned, and pressing the Activity navigation item
   does nothing special; unpin to close. Simple, and "pinned" means it stays.
-- **Log dialog or just open the file?** *Proposed:* an in-app dialog. It works the same on every package, and a summary is always there, even
+- **Log dialog or just open the file?** **Decided 2026-10-30:** an in-app dialog. It works the same on every package, and a summary is always there, even
   when the installer wrote nothing.
-- **Show Log on running operations?** *Proposed:* no, finished only (no live streaming).
-- **Keep 50 logs?** *Proposed:* yes, about 50 files, usually a few MB at most in total.
+- **Show Log on running operations?** **Decided 2026-10-30:** no, finished only (no live streaming).
+- **Keep 50 logs?** **Decided 2026-10-30:** yes, about 50 files, usually a few MB at most in total.

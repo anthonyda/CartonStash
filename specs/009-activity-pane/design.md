@@ -1,6 +1,6 @@
 # 009 – Activity pane: Design
 
-**Status:** Draft, **needs review**
+**Status:** Approved (2026-10-30)
 **Requirements:** [requirements.md](requirements.md)
 
 ## Overview
@@ -50,7 +50,8 @@ No new WinGet concepts: everything goes through the existing queue and installer
 - **The folder must be the real path.** Inside the MSIX, `%LOCALAPPDATA%` is virtualized for the app, while WinGet's server is another
   process. So the packaged app uses `ApplicationData.Current.LocalFolder`, which is a real path. T1 verifies WinGet can write there.
 - WinGet passes the log option to the installer where the installer type supports it (MSI, Inno, Nullsoft, Burn…). Portable, zip and
-  MSIX packages usually write nothing, hence R2.3.
+  MSIX packages usually write nothing, hence R2.3. *T1 (2026-10-30):* `LogOutputPath` wrote a 25 KB log for LocalSend (Inno, user scope);
+  uninstalling the same package succeeded but wrote no log, so uninstalls will mostly show the summary only.
 - After the operation the queue prepends the summary to the file (or creates it), so a log always exists. All log I/O is caught and ignored
   for the operation's result (R2.5); a failed write leaves `LogFilePath` null and the dialog shows the in-memory summary.
 - Pruning: at startup, keep the 50 newest `*.log` by time.

@@ -32,7 +32,9 @@ It talks to WinGet directly through its official API, so what you see is exactly
 - **Update apps on Windows**: one package, a selection, or **Update all** with a confirmation first.
 - **Uninstall programs** cleanly, with a confirmation that names exactly what will be removed.
 - **Progress for everything**: downloads, installs and uninstalls run one at a time in a queue, with cancel (while
-  downloading), retry, and a clear success or error message.
+  downloading), retry, and a clear success or error message. Pin the Activity pane to keep it open beside the page.
+- **Logs when something fails**: every operation keeps a log with WinGet's result and the installer's own output, ready
+  to read or copy into a bug report.
 - **Runs without admin rights.** When an installer needs administrator access, Windows asks for that installer only.
 - **Settings**: light / dark theme, start page, default install scope (current user or all users), WinGet sources with
   refresh, and copyable diagnostic info.

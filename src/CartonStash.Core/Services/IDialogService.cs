@@ -10,6 +10,9 @@ public interface IDialogService
 
     /// <summary>Shows agreement texts with Accept / Decline. Returns true when accepted (003 R1.3, 006 R3.3).</summary>
     Task<bool> ShowAgreementsAsync(string title, IReadOnlyList<Agreement> agreements);
+
+    /// <summary>Shows an operation's log as plain text, with Copy and Open folder (009 R2.2, R2.4, R2.6).</summary>
+    Task ShowLogAsync(string title, string text, string folder);
 }
 
 /// <summary>Puts text on the clipboard (006 R4.2).</summary>

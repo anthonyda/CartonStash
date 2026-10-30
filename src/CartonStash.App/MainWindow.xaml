@@ -3,6 +3,7 @@
     x:Class="CartonStash.App.MainWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:CartonStash.App.Controls"
     xmlns:models="using:CartonStash.Core.Models"
     xmlns:ui="using:CartonStash.App"
     Title="CartonStash">
@@ -103,7 +104,18 @@
                                 Orientation="Horizontal"
                                 Spacing="4">
                                 <Button Command="{x:Bind Activity.ClearFinishedCommand}" Content="Clear finished" />
-                                <Button AutomationProperties.Name="Close activity" Click="CloseActivity_Click">
+                                <!-- 009 R3.1 -->
+                                <ToggleButton
+                                    AutomationProperties.Name="Pin the Activity pane"
+                                    IsChecked="{x:Bind Activity.IsPinned, Mode=TwoWay}"
+                                    ToolTipService.ToolTip="Keep Activity open beside the page">
+                                    <FontIcon FontSize="12" Glyph="&#xE718;" />
+                                </ToggleButton>
+                                <!-- 009 R3.6: hidden while pinned -->
+                                <Button
+                                    AutomationProperties.Name="Close activity"
+                                    Click="CloseActivity_Click"
+                                    Visibility="{x:Bind ui:Ui.Collapsed(Activity.IsPinned), Mode=OneWay}">
                                     <FontIcon FontSize="12" Glyph="&#xE711;" />
                                 </Button>
                             </StackPanel>
@@ -119,62 +131,16 @@
                             AutomationProperties.Name="Operations"
                             ItemsSource="{x:Bind Activity.Operations}"
                             SelectionMode="None">
+                            <ListView.ItemContainerStyle>
+                                <Style BasedOn="{StaticResource DefaultListViewItemStyle}" TargetType="ListViewItem">
+                                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                    <Setter Property="Padding" Value="0" />
+                                    <Setter Property="Margin" Value="0,0,0,8" />
+                                </Style>
+                            </ListView.ItemContainerStyle>
                             <ListView.ItemTemplate>
                                 <DataTemplate x:DataType="models:PackageOperation">
-                                    <Grid
-                                        Padding="0,8"
-                                        AutomationProperties.Name="{x:Bind Title}"
-                                        ColumnSpacing="8"
-                                        RowSpacing="4">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto" />
-                                            <RowDefinition Height="Auto" />
-                                            <RowDefinition Height="Auto" />
-                                        </Grid.RowDefinitions>
-                                        <TextBlock
-                                            Style="{StaticResource BodyStrongTextBlockStyle}"
-                                            Text="{x:Bind Title}"
-                                            TextTrimming="CharacterEllipsis" />
-                                        <TextBlock
-                                            Grid.Row="1"
-                                            Text="{x:Bind StatusText, Mode=OneWay}" />
-                                        <ProgressBar
-                                            Grid.Row="2"
-                                            AutomationProperties.Name="{x:Bind StatusText, Mode=OneWay}"
-                                            IsIndeterminate="{x:Bind IsIndeterminate, Mode=OneWay}"
-                                            Maximum="100"
-                                            Visibility="{x:Bind IsActive, Mode=OneWay}"
-                                            Value="{x:Bind ProgressValue, Mode=OneWay}" />
-                                        <TextBlock
-                                            Grid.Row="2"
-                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                            Style="{StaticResource CaptionTextBlockStyle}"
-                                            Text="{x:Bind Message, Mode=OneWay}"
-                                            TextWrapping="Wrap"
-                                            Visibility="{x:Bind ui:Ui.Collapsed(IsActive), Mode=OneWay}" />
-                                        <StackPanel
-                                            Grid.RowSpan="3"
-                                            Grid.Column="1"
-                                            VerticalAlignment="Center"
-                                            Orientation="Horizontal"
-                                            Spacing="4">
-                                            <Button
-                                                AutomationProperties.Name="{x:Bind ui:Ui.Format('Cancel {0}', Title)}"
-                                                Command="{x:Bind CancelCommand}"
-                                                Content="Cancel"
-                                                Visibility="{x:Bind CanCancel, Mode=OneWay}" />
-                                            <!-- 003 R5.2 -->
-                                            <Button
-                                                AutomationProperties.Name="{x:Bind ui:Ui.Format('Retry {0}', Title)}"
-                                                Command="{x:Bind RetryCommand}"
-                                                Content="Retry"
-                                                Visibility="{x:Bind CanRetry, Mode=OneWay}" />
-                                        </StackPanel>
-                                    </Grid>
+                                    <controls:OperationCard Operation="{x:Bind}" />
                                 </DataTemplate>
                             </ListView.ItemTemplate>
                         </ListView>

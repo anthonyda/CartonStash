@@ -35,7 +35,7 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
         }, cancellationToken);
     }
 
-    public async Task<OperationOutcome> RunAsync(OperationKind kind, PackageInfo package, bool acceptAgreements,
+    public async Task<OperationOutcome> RunAsync(OperationKind kind, PackageInfo package, bool acceptAgreements, string? logPath,
         IProgress<OperationProgress> progress, CancellationToken cancellationToken)
     {
         // Re-find the package; COM objects never leave this class (A2).
@@ -46,8 +46,8 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
         {
             return kind switch
             {
-                OperationKind.Uninstall => await UninstallAsync(found, progress, cancellationToken),
-                _ => await InstallAsync(kind, found, acceptAgreements, progress, cancellationToken),
+                OperationKind.Uninstall => await UninstallAsync(found, logPath, progress, cancellationToken),
+                _ => await InstallAsync(kind, found, acceptAgreements, logPath, progress, cancellationToken),
             };
         }
         finally
@@ -57,7 +57,7 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
         }
     }
 
-    private async Task<OperationOutcome> InstallAsync(OperationKind kind, CatalogPackage package, bool acceptAgreements,
+    private async Task<OperationOutcome> InstallAsync(OperationKind kind, CatalogPackage package, bool acceptAgreements, string? logPath,
         IProgress<OperationProgress> progress, CancellationToken cancellationToken)
     {
         var options = new InstallOptions
@@ -66,6 +66,10 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
             PackageInstallScope = ToWinGet(settings.Current.InstallScope), // 006 R2.1
             AcceptPackageAgreements = acceptAgreements,
         };
+        if (logPath is not null)
+        {
+            options.LogOutputPath = logPath;
+        }
 
         var operation = kind == OperationKind.Upgrade
             ? connection.Manager.UpgradePackageAsync(package, options)
@@ -74,17 +78,22 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
         var result = await operation.AsTask(cancellationToken, winGetProgress);
 
         return MapInstallResult(kind, result.Status, result.InstallerErrorCode, result.RebootRequired, settings.Current.InstallScope,
-            result.ExtendedErrorCode?.HResult ?? 0);
+            result.ExtendedErrorCode?.HResult ?? 0) with { Details = FormatDetails(result.Status.ToString(), result.InstallerErrorCode, result.ExtendedErrorCode) };
     }
 
-    private async Task<OperationOutcome> UninstallAsync(CatalogPackage package, IProgress<OperationProgress> progress, CancellationToken cancellationToken)
+    private async Task<OperationOutcome> UninstallAsync(CatalogPackage package, string? logPath, IProgress<OperationProgress> progress, CancellationToken cancellationToken)
     {
         var options = new UninstallOptions { PackageUninstallMode = PackageUninstallMode.Silent };
+        if (logPath is not null)
+        {
+            options.LogOutputPath = logPath;
+        }
         IAsyncOperationWithProgress<UninstallResult, UninstallProgress> operation = connection.Manager.UninstallPackageAsync(package, options);
         var winGetProgress = new Progress<UninstallProgress>(p => progress.Report(MapUninstallProgress(p)));
         var result = await operation.AsTask(cancellationToken, winGetProgress);
 
-        return MapUninstallResult(result.Status, result.UninstallerErrorCode, result.RebootRequired);
+        return MapUninstallResult(result.Status, result.UninstallerErrorCode, result.RebootRequired)
+            with { Details = FormatDetails(result.Status.ToString(), result.UninstallerErrorCode, result.ExtendedErrorCode) };
     }
 
     /// <summary>
@@ -155,6 +164,11 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
         UninstallResultStatus.CatalogError => Failed("Couldn't read the installed packages."),
         _ => Failed($"WinGet reported {status}."),
     };
+
+    /// <summary>The technical result lines of the log (009 R2.2).</summary>
+    internal static string FormatDetails(string status, uint installerExitCode, Exception? extendedError) =>
+        $"WinGet status: {status}\nInstaller exit code: {installerExitCode}\nExtended error: "
+        + (extendedError is null ? "none" : $"0x{extendedError.HResult:X8}");
 
     private static OperationOutcome Failed(string message) => new(OperationResult.Failed, message);
 

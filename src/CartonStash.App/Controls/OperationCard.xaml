@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 009 R1: one operation in the Activity pane. The state is always an icon plus words, never color alone. -->
+<UserControl
+    x:Class="CartonStash.App.Controls.OperationCard"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:CartonStash.App.Controls"
+    xmlns:ui="using:CartonStash.App">
+
+    <UserControl.Resources>
+        <!-- ThemeResource setters re-evaluate when the theme changes. -->
+        <Style x:Key="NormalCard" TargetType="Border">
+            <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}" />
+            <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}" />
+        </Style>
+        <Style x:Key="FailedCard" TargetType="Border">
+            <Setter Property="Background" Value="{ThemeResource SystemFillColorCriticalBackgroundBrush}" />
+            <Setter Property="BorderBrush" Value="{ThemeResource SystemFillColorCriticalBrush}" />
+        </Style>
+        <Style x:Key="NeutralIcon" TargetType="FontIcon">
+            <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}" />
+        </Style>
+        <Style x:Key="SuccessIcon" TargetType="FontIcon">
+            <Setter Property="Foreground" Value="{ThemeResource SystemFillColorSuccessBrush}" />
+        </Style>
+        <Style x:Key="CautionIcon" TargetType="FontIcon">
+            <Setter Property="Foreground" Value="{ThemeResource SystemFillColorCautionBrush}" />
+        </Style>
+        <Style x:Key="CriticalIcon" TargetType="FontIcon">
+            <Setter Property="Foreground" Value="{ThemeResource SystemFillColorCriticalBrush}" />
+        </Style>
+    </UserControl.Resources>
+
+    <Border
+        x:Name="Card"
+        Padding="12"
+        BorderThickness="1"
+        CornerRadius="8"
+        Style="{StaticResource NormalCard}">
+        <Grid ColumnSpacing="12" RowSpacing="4">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="32" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <controls:PackageIcon
+                x:Name="Icon"
+                Grid.RowSpan="2"
+                Width="32"
+                Height="32"
+                VerticalAlignment="Top" />
+
+            <!-- Name and time -->
+            <Grid Grid.Column="1" ColumnSpacing="8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock
+                    Style="{StaticResource BodyStrongTextBlockStyle}"
+                    Text="{x:Bind Operation.Package.Name, Mode=OneWay}"
+                    TextTrimming="CharacterEllipsis"
+                    TextWrapping="NoWrap" />
+                <TextBlock
+                    Grid.Column="1"
+                    VerticalAlignment="Center"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                    Style="{StaticResource CaptionTextBlockStyle}"
+                    Text="{x:Bind Operation.TimeText, Mode=OneWay}" />
+            </Grid>
+
+            <!-- Action and state -->
+            <StackPanel
+                Grid.Row="1"
+                Grid.Column="1"
+                Orientation="Horizontal"
+                Spacing="6">
+                <TextBlock
+                    VerticalAlignment="Center"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                    Text="{x:Bind Operation.KindText, Mode=OneWay}" />
+                <TextBlock
+                    VerticalAlignment="Center"
+                    Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                    Text="·" />
+                <FontIcon
+                    x:Name="StateIcon"
+                    VerticalAlignment="Center"
+                    AutomationProperties.AccessibilityView="Raw"
+                    FontSize="14"
+                    Style="{StaticResource NeutralIcon}" />
+                <TextBlock
+                    VerticalAlignment="Center"
+                    AutomationProperties.LiveSetting="Polite"
+                    Text="{x:Bind Operation.StatusText, Mode=OneWay}" />
+            </StackPanel>
+
+            <!-- Progress or result -->
+            <StackPanel
+                Grid.Row="2"
+                Grid.Column="1"
+                Spacing="4">
+                <ProgressBar
+                    AutomationProperties.Name="{x:Bind Operation.StatusText, Mode=OneWay}"
+                    IsIndeterminate="{x:Bind Operation.IsIndeterminate, Mode=OneWay}"
+                    Maximum="100"
+                    Visibility="{x:Bind Operation.IsActive, Mode=OneWay}"
+                    Value="{x:Bind Operation.ProgressValue, Mode=OneWay}" />
+                <TextBlock
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                    Style="{StaticResource CaptionTextBlockStyle}"
+                    Text="{x:Bind Operation.Message, Mode=OneWay}"
+                    TextWrapping="Wrap"
+                    Visibility="{x:Bind ui:Ui.VisibleIf(Operation.Message), Mode=OneWay}" />
+            </StackPanel>
+
+            <!-- Actions (R1.6, R2.1) -->
+            <StackPanel
+                Grid.Row="3"
+                Grid.Column="1"
+                Margin="0,4,0,0"
+                HorizontalAlignment="Right"
+                Orientation="Horizontal"
+                Spacing="8">
+                <Button
+                    AutomationProperties.Name="{x:Bind ui:Ui.Format('Cancel {0}', Operation.Title), Mode=OneWay}"
+                    Command="{x:Bind Operation.CancelCommand, Mode=OneWay}"
+                    Content="Cancel"
+                    Visibility="{x:Bind Operation.CanCancel, Mode=OneWay}" />
+                <Button
+                    AutomationProperties.Name="{x:Bind ui:Ui.Format('Log for {0}', Operation.Title), Mode=OneWay}"
+                    Command="{x:Bind Operation.ShowLogCommand, Mode=OneWay}"
+                    Content="Log"
+                    Visibility="{x:Bind Operation.HasLog, Mode=OneWay}" />
+                <Button
+                    AutomationProperties.Name="{x:Bind ui:Ui.Format('Retry {0}', Operation.Title), Mode=OneWay}"
+                    Command="{x:Bind Operation.RetryCommand, Mode=OneWay}"
+                    Content="Retry"
+                    Visibility="{x:Bind Operation.CanRetry, Mode=OneWay}" />
+            </StackPanel>
+        </Grid>
+    </Border>
+</UserControl>

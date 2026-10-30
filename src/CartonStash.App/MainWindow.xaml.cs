@@ -35,7 +35,20 @@ public sealed partial class MainWindow : Window
         AppWindow.SetIcon(Path.Combine(AppContext.BaseDirectory, "Assets", "AppIcon.ico")); // taskbar + Alt+Tab
         AppWindow.Closing += AppWindow_Closing;
 
-        Root.Loaded += (_, _) => dialogs.XamlRoot = Root.XamlRoot;
+        Root.Loaded += (_, _) =>
+        {
+            dialogs.XamlRoot = Root.XamlRoot;
+            ApplyActivityPin();
+        };
+        Root.SizeChanged += (_, _) => ApplyActivityPin();
+        ActivitySplit.PaneClosing += (_, e) => e.Cancel = ActivitySplit.DisplayMode == SplitViewDisplayMode.Inline; // 009 R3.2
+        activity.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(ActivityViewModel.IsPinned))
+            {
+                ApplyActivityPin();
+            }
+        };
         theme.Attach(this);
 
         OpenStartPage(settings.Current.StartPage);
@@ -89,6 +102,23 @@ public sealed partial class MainWindow : Window
     // Narrow windows collapse the navigation to a menu button over the content; keep page titles clear of it.
     private void Nav_DisplayModeChanged(NavigationView sender, NavigationViewDisplayModeChangedEventArgs args) =>
         ContentFrame.Margin = args.DisplayMode == NavigationViewDisplayMode.Minimal ? new Thickness(0, 40, 0, 0) : new Thickness(0);
+
+    /// <summary>Below this window width a pinned pane acts as an overlay (009 R3.5).</summary>
+    private const double PinnedPaneMinWindowWidth = 1000;
+
+    // 009 R3: inline beside the page while pinned and there's room, otherwise today's overlay.
+    private void ApplyActivityPin()
+    {
+        var inline = Activity.IsPinned && Root.ActualWidth >= PinnedPaneMinWindowWidth;
+        var mode = inline ? SplitViewDisplayMode.Inline : SplitViewDisplayMode.Overlay;
+        if (ActivitySplit.DisplayMode == mode)
+        {
+            return;
+        }
+
+        ActivitySplit.DisplayMode = mode;
+        ActivitySplit.IsPaneOpen = inline;
+    }
 
     private void CloseActivity_Click(object sender, RoutedEventArgs e) => ActivitySplit.IsPaneOpen = false;
 

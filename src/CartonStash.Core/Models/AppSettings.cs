@@ -32,6 +32,9 @@ public sealed record AppSettings
 
     /// <summary>Missing in files saved before 006 R5, which then keep this default (R5.4).</summary>
     public StartPage StartPage { get; init; } = StartPage.Search;
+
+    /// <summary>Keep the Activity pane open beside the page (009 R3.4).</summary>
+    public bool ActivityPinned { get; init; }
 }
 
 /// <summary>A configured WinGet source (006 R3.1).</summary>

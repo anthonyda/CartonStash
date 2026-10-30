@@ -1,4 +1,6 @@
 using Microsoft.UI.Text;
+using Microsoft.UI.Xaml.Automation;
+using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -11,7 +13,7 @@ using CartonStash.Core.ViewModels;
 namespace CartonStash.App.Services;
 
 /// <summary>ContentDialogs for confirmations and agreements (003 R1.3, R2.2, R6.2; 004 R2.3; 006 R3.3).</summary>
-public sealed class DialogService : IDialogService
+public sealed class DialogService(IClipboardService clipboard) : IDialogService
 {
     // WinUI allows only one open ContentDialog at a time.
     private readonly SemaphoreSlim _oneAtATime = new(1, 1);
@@ -59,6 +61,49 @@ public sealed class DialogService : IDialogService
             DefaultButton = ContentDialogButton.Close,
         };
         return await ShowAsync(dialog) == ContentDialogResult.Primary;
+    }
+
+    /// <summary>The operation log: read-only plain text, with Copy and Open folder (009 R2.2, R2.4, R2.6).</summary>
+    public async Task ShowLogAsync(string title, string text, string folder)
+    {
+        var box = new TextBox
+        {
+            AcceptsReturn = true, // before Text: otherwise the text stops at its first line break
+            Text = text,
+            IsReadOnly = true,
+            TextWrapping = TextWrapping.NoWrap,
+            FontFamily = new FontFamily("Consolas"),
+            FontSize = 12,
+            Height = 440,
+        };
+        AutomationProperties.SetName(box, "Log text");
+        ScrollViewer.SetHorizontalScrollBarVisibility(box, ScrollBarVisibility.Auto);
+        ScrollViewer.SetVerticalScrollBarVisibility(box, ScrollBarVisibility.Auto);
+
+        var dialog = new ContentDialog
+        {
+            Title = $"Log: {title}",
+            Content = box,
+            PrimaryButtonText = "Copy",
+            SecondaryButtonText = "Open folder",
+            CloseButtonText = "Close",
+            DefaultButton = ContentDialogButton.Close,
+        };
+        dialog.Resources["ContentDialogMaxWidth"] = 900.0;
+
+        // Copy and Open folder leave the dialog open.
+        dialog.PrimaryButtonClick += (_, e) =>
+        {
+            e.Cancel = true;
+            clipboard.SetText(text);
+        };
+        dialog.SecondaryButtonClick += async (_, e) =>
+        {
+            e.Cancel = true;
+            Directory.CreateDirectory(folder);
+            await Launcher.LaunchFolderPathAsync(folder);
+        };
+        await ShowAsync(dialog);
     }
 
     private async Task<ContentDialogResult> ShowAsync(ContentDialog dialog)

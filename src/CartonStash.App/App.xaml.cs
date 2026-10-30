@@ -30,6 +30,7 @@ public partial class App : Application
             .AddSingleton<CatalogConnection>()
             .AddSingleton<IPackageService, WinGetPackageService>()
             .AddSingleton<IPackageInstaller, WinGetPackageInstaller>()
+            .AddSingleton<IOperationLogStore, OperationLogStore>()
             .AddSingleton<PackageOperationQueue>()
             .AddSingleton<InstalledPackagesStore>()
             // Settings (006)

@@ -46,6 +46,7 @@ public interface IPackageInstaller
     Task<IReadOnlyList<Agreement>> GetAgreementsAsync(PackageInfo package, CancellationToken cancellationToken = default);
 
     /// <summary>Runs the operation. Throws <see cref="OperationCanceledException"/> when cancelled.</summary>
-    Task<OperationOutcome> RunAsync(OperationKind kind, PackageInfo package, bool acceptAgreements,
+    /// <param name="logPath">Where the installer should write its log, or null (009 R2).</param>
+    Task<OperationOutcome> RunAsync(OperationKind kind, PackageInfo package, bool acceptAgreements, string? logPath,
         IProgress<OperationProgress> progress, CancellationToken cancellationToken);
 }

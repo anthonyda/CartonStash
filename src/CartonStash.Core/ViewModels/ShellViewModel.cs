@@ -117,21 +117,49 @@ public sealed partial class ShellViewModel : ObservableObject
     }
 }
 
-/// <summary>The Activity pane (003): every operation this session with progress, Cancel and Retry.</summary>
+/// <summary>
+/// The Activity pane (003, 009): every operation this session with progress, Cancel, Retry and Log,
+/// and whether the pane is pinned beside the page.
+/// </summary>
 public sealed partial class ActivityViewModel : ObservableObject
 {
     private readonly PackageOperationQueue _queue;
+    private readonly IOperationLogStore _logs;
+    private readonly IDialogService _dialogs;
+    private readonly ISettings _settings;
 
-    public ActivityViewModel(PackageOperationQueue queue)
+    public ActivityViewModel(PackageOperationQueue queue, IOperationLogStore logs, IDialogService dialogs, ISettings settings)
     {
         _queue = queue;
+        _logs = logs;
+        _dialogs = dialogs;
+        _settings = settings;
         ((INotifyCollectionChanged)queue.Operations).CollectionChanged += (_, _) => OnPropertyChanged(nameof(IsEmpty));
+        queue.LogRequested += async (_, operation) => await ShowLogAsync(operation);
     }
 
     public System.Collections.ObjectModel.ObservableCollection<PackageOperation> Operations => _queue.Operations;
 
     public bool IsEmpty => _queue.Operations.Count == 0;
 
+    /// <summary>Saved at once and restored at start (R3.4).</summary>
+    public bool IsPinned
+    {
+        get => _settings.Current.ActivityPinned;
+        set
+        {
+            if (value != IsPinned)
+            {
+                _settings.Update(s => s with { ActivityPinned = value });
+                OnPropertyChanged();
+            }
+        }
+    }
+
     [RelayCommand]
     private void ClearFinished() => _queue.ClearFinished();
+
+    /// <summary>The Log button of a finished operation (R2.2).</summary>
+    public Task ShowLogAsync(PackageOperation operation) =>
+        _dialogs.ShowLogAsync(operation.Title, _logs.Read(operation), _logs.Folder);
 }

@@ -194,6 +194,98 @@ public class PackageOperationQueueTests
     }
 
     [Fact]
+    public void Active_operations_stay_first_then_newest_finished() // 009 R1.5
+    {
+        var app = new TestApp();
+        var a = app.Queue.Enqueue(OperationKind.Install, Pkg.Remote("A"));
+        app.Queue.Enqueue(OperationKind.Install, Pkg.Remote("B"));
+        app.Queue.Enqueue(OperationKind.Install, Pkg.Remote("C"));
+        Assert.Equal(["C", "B", "A"], app.Queue.Operations.Select(o => o.Package.Id));
+
+        app.Installer.Complete("A"); // finished goes below the two active ones
+        Assert.Equal(["C", "B", "A"], app.Queue.Operations.Select(o => o.Package.Id));
+
+        app.Installer.Complete("B"); // newest finished on top of the finished ones
+        Assert.Equal(["C", "B", "A"], app.Queue.Operations.Select(o => o.Package.Id));
+
+        app.Queue.Enqueue(OperationKind.Install, Pkg.Remote("D"));
+        app.Installer.Complete("C");
+        Assert.Equal(["D", "C", "B", "A"], app.Queue.Operations.Select(o => o.Package.Id));
+        Assert.False(a.IsActive);
+    }
+
+    [Fact]
+    public void Finished_operation_moves_below_active_ones_added_after_it() // 009 R1.5
+    {
+        var app = new TestApp();
+        app.Queue.Enqueue(OperationKind.Install, Pkg.Remote("A"));
+        app.Queue.Enqueue(OperationKind.Install, Pkg.Remote("B"));
+        app.Installer.Complete("A");
+
+        Assert.Equal(["B", "A"], app.Queue.Operations.Select(o => o.Package.Id));
+
+        var first = new TestApp();
+        first.Queue.Enqueue(OperationKind.Install, Pkg.Remote("X"));
+        first.Queue.Enqueue(OperationKind.Install, Pkg.Remote("Y"));
+        first.Queue.Cancel(first.Queue.Find(Pkg.Remote("Y"))!);
+
+        Assert.Equal(["X", "Y"], first.Queue.Operations.Select(o => o.Package.Id));
+    }
+
+    [Fact]
+    public void Times_and_state_follow_the_operation() // 009 R1.3, R1.4
+    {
+        var app = new TestApp();
+        var op = app.Queue.Enqueue(OperationKind.Upgrade, Pkg.Installed("A"));
+        Assert.NotNull(op.StartedAt);
+        Assert.Null(op.FinishedAt);
+        Assert.Equal(OperationState.Queued, op.State); // until WinGet reports progress
+        Assert.Equal("Update", op.KindText);
+        Assert.False(op.HasLog);
+
+        var queued = app.Queue.Enqueue(OperationKind.Install, Pkg.Remote("B"));
+        Assert.Equal(OperationState.Queued, queued.State);
+
+        app.Installer.Report("A", OperationPhase.Running);
+        Assert.Equal(OperationState.Running, op.State);
+
+        app.Installer.Complete("A", OperationResult.SucceededRestartRequired, "Restart");
+        Assert.Equal(OperationState.RestartRequired, op.State);
+        Assert.NotNull(op.FinishedAt);
+        Assert.True(op.HasLog);
+
+        app.Installer.Complete("B", OperationResult.Failed, "no");
+        Assert.Equal(OperationState.Failed, queued.State);
+    }
+
+    [Fact]
+    public void Retry_clears_the_previous_run() // 009 R1.3, design: new log per run
+    {
+        var app = new TestApp();
+        var op = app.Queue.Enqueue(OperationKind.Install, Pkg.Remote("A"));
+        app.Installer.Complete("A", OperationResult.Failed, "no");
+        Assert.NotNull(op.FinishedAt);
+
+        op.RetryCommand.Execute(null);
+
+        Assert.Null(op.FinishedAt);
+        Assert.False(op.HasLog);
+        Assert.Null(op.Details);
+    }
+
+    [Theory] // 009 R1.4
+    [InlineData(0, false)]
+    [InlineData(-3, true)]
+    public void Time_shows_the_date_only_when_not_today(int days, bool showsDate)
+    {
+        var now = new DateTimeOffset(2026, 10, 30, 14, 32, 0, TimeSpan.Zero);
+
+        var text = PackageOperation.FormatTime(now.AddDays(days), now);
+
+        Assert.Equal(showsDate, text.Contains("2026") || text.Contains("10/27") || text.Contains("27/10"));
+    }
+
+    [Fact]
     public void Clear_finished_keeps_active_ones()
     {
         var app = new TestApp();

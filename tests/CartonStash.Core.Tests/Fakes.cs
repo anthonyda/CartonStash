@@ -88,10 +88,13 @@ internal sealed class ScriptedInstaller : IPackageInstaller
     public Task<IReadOnlyList<Agreement>> GetAgreementsAsync(PackageInfo package, CancellationToken cancellationToken = default) =>
         Task.FromResult(Agreements);
 
-    public Task<OperationOutcome> RunAsync(OperationKind kind, PackageInfo package, bool acceptAgreements,
+    public List<string?> LogPaths { get; } = [];
+
+    public Task<OperationOutcome> RunAsync(OperationKind kind, PackageInfo package, bool acceptAgreements, string? logPath,
         IProgress<OperationProgress> progress, CancellationToken cancellationToken)
     {
         Calls.Add((kind, package.Id, acceptAgreements));
+        LogPaths.Add(logPath);
         if (AutoComplete is { } outcome)
         {
             return Task.FromResult(outcome);
@@ -125,6 +128,14 @@ internal sealed class FakeDialogs : IDialogService
     {
         Confirmations.Add($"{title} | {message}");
         return Task.FromResult(Answer);
+    }
+
+    public List<(string Title, string Text, string Folder)> LogsShown { get; } = [];
+
+    public Task ShowLogAsync(string title, string text, string folder)
+    {
+        LogsShown.Add((title, text, folder));
+        return Task.CompletedTask;
     }
 
     public Task<bool> ShowAgreementsAsync(string title, IReadOnlyList<Agreement> agreements)

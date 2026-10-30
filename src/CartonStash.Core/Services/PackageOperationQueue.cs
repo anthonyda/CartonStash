@@ -8,7 +8,7 @@ namespace CartonStash.Core.Services;
 /// never the same package twice (R4.2). Create it and call its members on the UI thread; the worker's
 /// continuations come back to that thread, so <see cref="Operations"/> is only touched there.
 /// </summary>
-public sealed class PackageOperationQueue(IPackageInstaller installer)
+public sealed class PackageOperationQueue(IPackageInstaller installer, IOperationLogStore? logs = null)
 {
     private readonly Queue<PackageOperation> _pending = new();
     private PackageOperation? _running;
@@ -21,6 +21,9 @@ public sealed class PackageOperationQueue(IPackageInstaller installer)
 
     /// <summary>Raised when an operation is added (or retried), so rows can show its state.</summary>
     public event EventHandler<PackageOperation>? Enqueued;
+
+    /// <summary>Raised when the user asks for an operation's log (009 R2.2).</summary>
+    public event EventHandler<PackageOperation>? LogRequested;
 
     /// <summary>Raised when an operation ends, whatever the result.</summary>
     public event EventHandler<PackageOperation>? Completed;
@@ -59,7 +62,7 @@ public sealed class PackageOperationQueue(IPackageInstaller installer)
             return active;
         }
 
-        var operation = new PackageOperation(kind, package, acceptAgreements, Cancel, Retry);
+        var operation = new PackageOperation(kind, package, acceptAgreements, Cancel, Retry, o => LogRequested?.Invoke(this, o));
         Operations.Insert(0, operation);
         Start(operation);
         return operation;
@@ -125,12 +128,16 @@ public sealed class PackageOperationQueue(IPackageInstaller installer)
         operation.Result = null;
         operation.Message = null;
         operation.Percent = null;
+        operation.FinishedAt = null;
+        operation.LogFilePath = null;
+        operation.Details = null;
         Start(operation);
     }
 
     private void Start(PackageOperation operation)
     {
         operation.Phase = OperationPhase.Queued;
+        operation.StartedAt = DateTimeOffset.Now;
         _pending.Enqueue(operation);
         Enqueued?.Invoke(this, operation);
         if (!_isWorking)
@@ -146,6 +153,8 @@ public sealed class PackageOperationQueue(IPackageInstaller installer)
         while (_pending.TryDequeue(out var operation))
         {
             _running = operation;
+            operation.StartedAt = DateTimeOffset.Now;
+            operation.LogFilePath = logs?.CreateLogPath(operation);
             using var cancellation = new CancellationTokenSource();
             _runningCancellation = cancellation;
 
@@ -161,7 +170,7 @@ public sealed class PackageOperationQueue(IPackageInstaller installer)
                         operation.Percent = p.Percent;
                     }
                 });
-                outcome = await installer.RunAsync(operation.Kind, operation.Package, operation.AcceptAgreements, progress, cancellation.Token);
+                outcome = await installer.RunAsync(operation.Kind, operation.Package, operation.AcceptAgreements, operation.LogFilePath, progress, cancellation.Token);
             }
             catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
             {
@@ -188,6 +197,17 @@ public sealed class PackageOperationQueue(IPackageInstaller installer)
         operation.Phase = OperationPhase.Done;
         operation.Result = outcome.Result;
         operation.Message = outcome.Message;
+        operation.Details = outcome.Details;
+        operation.FinishedAt = DateTimeOffset.Now;
+        logs?.Complete(operation);
+
+        // Active operations stay first, then finished ones, newest first (009 R1.5).
+        var firstFinished = Operations.Count(o => o.IsActive);
+        var index = Operations.IndexOf(operation);
+        if (index >= 0 && index != firstFinished)
+        {
+            Operations.Move(index, firstFinished);
+        }
         Completed?.Invoke(this, operation);
     }
 }
