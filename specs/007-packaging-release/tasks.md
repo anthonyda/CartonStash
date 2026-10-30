@@ -40,12 +40,19 @@ Before going public:
 - [x] **T14. Maintainer.** Save the PFX and password in a password manager, then remove `%USERPROFILE%\.cartonstash\` and the private key in `Cert:\CurrentUser\My`. *(R5.11)*
   - Verify: see design, Testing strategy, and the log.
 
+- [x] **T15a.** The GitHub settings a private repo accepts: Actions limited to GitHub-owned, Dependabot alerts and security updates, immutable releases, `release` environment limited to `v*` tags. *(R5.3, R5.9, R5.10, R5.13)*
+  - Verify: read back with `gh api` (see log).
+- [ ] **T11b.** Move attestation to its own job after publishing, so a release can go out before the repo is public. *(R5.2, R5.7)*
+  - Verify: on the private repo, `release` publishes and `attest` fails only on GitHub's refusal.
+- [ ] **T16.** Release `v1.0.1` through the new pipeline. *(R5.1–R5.6, R5.8)*
+  - Verify: downloaded files have timestamps and the right thumbprint, the `build` job log shows no secrets.
+
 After going public:
 
-- [ ] **T15.** GitHub settings: `release` environment, secrets moved and repo-level ones deleted, rulesets, immutable releases, scanning, Dependabot, private reporting, Actions limits. *(R5.3, R5.9, R5.10, R5.13)*
+- [ ] **T15b.** The remaining GitHub settings: required reviewer on `release`, secrets moved there and repo-level ones deleted, rulesets, secret scanning, private reporting, approval for outside contributors. *(R5.9, R5.10, R5.13)*
   - Verify: read back with `gh api`.
-- [ ] **T16.** Release `v1.0.1` through the new pipeline. *(R5.1–R5.8)*
-  - Verify: downloaded files have timestamps and the right thumbprint, `gh attestation verify` passes, the `build` job log shows no secrets.
+- [ ] **T17.** Re-run the failed `attest` job for `v1.0.1`, within 7 days. *(R5.7)*
+  - Verify: `gh attestation verify` passes on a downloaded file.
 
 ## Manual verification log
 
@@ -67,4 +74,5 @@ After going public:
 | R5.11 (key) | 2026-10-30 | Pass | Maintainer saved the PFX and password in KeePass and checked the saved copy's thumbprint before deleting. Checked afterwards: `%USERPROFILE%\.cartonstash\` gone, no `CN=Anthony` certificate in `CurrentUser\My` or `LocalMachine\My`, no key files in Desktop, Downloads, Documents, Temp, OneDrive or `C:\dev`. Public entries remain in `TrustedPeople` |
 | R5.2, R5.3, R5.12 (CI) | 2026-10-30 | Pass | First run on GitHub's runner, run 41070202520 on `4166d0e`: hardened `ci.yml` green, restore from the lock files, build, 170 unit tests |
 | R5.8 | 2026-10-30 | Pass | `(Get-PfxCertificate tools\CartonStash.cer).Thumbprint` prints the thumbprint in the README, `SECURITY.md` and release notes; the file's SHA-256 equals the v1.0.0 release asset |
+| R5.3, R5.9, R5.10, R5.13 (T15a) | 2026-10-30 | Pass | Tried every setting on the private repo. Read back with `gh api`: Actions `selected`, GitHub-owned only; security updates on; immutable releases on; `release` environment limited to `v*` tags. Refused: required reviewer, rulesets, secret scanning, private reporting, outside-contributor approval (T15b) |
 | Repo recreated | 2026-10-30 | Done | Fresh repo at the same URL with history rewritten to the GitHub noreply address, so the personal address isn't published. `v1.0.0` and its release stayed in the old repo, so the first release here is `v1.0.1`. Commit SHAs and run IDs earlier in this log refer to the old repo |
