@@ -1,0 +1,12 @@
+# Spec 007 R5.12: keeps NuGet packages and the SHA-pinned actions up to date.
+version: 2
+updates:
+  - package-ecosystem: nuget
+    directory: /
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
