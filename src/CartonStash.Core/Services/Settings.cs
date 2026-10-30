@@ -36,29 +36,45 @@ public sealed class JsonSettingsStore(string path) : ISettingsStore
     };
 
     public JsonSettingsStore()
-        : this(DefaultPath())
+        : this(DefaultPath(AppPackage.LocalFolder, Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData)))
     {
     }
 
-    private static string DefaultPath()
+    /// <summary>
+    /// Where settings live: the package's own app-data folder when running from the MSIX (007 R4.1), otherwise
+    /// <c>%LOCALAPPDATA%\CartonStash</c> (006, portable zip). Earlier files are copied once, newest location first.
+    /// </summary>
+    internal static string DefaultPath(string? packageFolder, string localAppData)
     {
-        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        var path = Path.Combine(localAppData, AppInfo.DataFolder, "settings.json");
+        var unpackaged = Path.Combine(localAppData, AppInfo.DataFolder, "settings.json");
+        var beforeRename = Path.Combine(localAppData, AppInfo.LegacyDataFolder, "settings.json");
 
-        // One-time carry-over from the folder used before the app was renamed.
-        var legacy = Path.Combine(localAppData, AppInfo.LegacyDataFolder, "settings.json");
-        if (!File.Exists(path) && File.Exists(legacy))
+        if (packageFolder is null)
         {
-            try
-            {
-                Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-                File.Copy(legacy, path);
-            }
-            catch (IOException)
-            {
-            }
+            CopyOnce(unpackaged, beforeRename);
+            return unpackaged;
         }
-        return path;
+
+        var packaged = Path.Combine(packageFolder, "settings.json");
+        CopyOnce(packaged, unpackaged, beforeRename);
+        return packaged;
+    }
+
+    /// <summary>Copies the first existing earlier file to <paramref name="target"/> if it has no settings yet.</summary>
+    private static void CopyOnce(string target, params string[] earlier)
+    {
+        if (File.Exists(target) || earlier.FirstOrDefault(File.Exists) is not { } source)
+        {
+            return;
+        }
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+            File.Copy(source, target);
+        }
+        catch (IOException)
+        {
+        }
     }
 
     public string FilePath => path;

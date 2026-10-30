@@ -87,6 +87,48 @@ public sealed class SettingsTests : IDisposable
         Assert.Equal(AppTheme.Light, new JsonSettingsStore(SettingsPath).Load().Settings.Theme);
     }
 
+    [Fact]
+    public void Packaged_app_copies_the_portable_settings_once() // 007 R4.1
+    {
+        var localAppData = Path.Combine(_dir, "local");
+        var package = Path.Combine(_dir, "package");
+        Directory.CreateDirectory(Path.Combine(localAppData, "CartonStash"));
+        File.WriteAllText(Path.Combine(localAppData, "CartonStash", "settings.json"), """{ "Theme": "Dark" }""");
+
+        var path = JsonSettingsStore.DefaultPath(package, localAppData);
+
+        Assert.Equal(Path.Combine(package, "settings.json"), path);
+        Assert.Equal(AppTheme.Dark, new JsonSettingsStore(path).Load().Settings.Theme);
+
+        // Later changes in the package are kept: no second copy.
+        new JsonSettingsStore(path).Save(new AppSettings { Theme = AppTheme.Light });
+        JsonSettingsStore.DefaultPath(package, localAppData);
+        Assert.Equal(AppTheme.Light, new JsonSettingsStore(path).Load().Settings.Theme);
+    }
+
+    [Fact]
+    public void Packaged_app_falls_back_to_the_pre_rename_settings() // 007 R4.1 + rename
+    {
+        var localAppData = Path.Combine(_dir, "local");
+        Directory.CreateDirectory(Path.Combine(localAppData, "WinGetFrontend"));
+        File.WriteAllText(Path.Combine(localAppData, "WinGetFrontend", "settings.json"), """{ "InstallScope": "User" }""");
+
+        var path = JsonSettingsStore.DefaultPath(Path.Combine(_dir, "package"), localAppData);
+
+        Assert.Equal(InstallScope.User, new JsonSettingsStore(path).Load().Settings.InstallScope);
+    }
+
+    [Fact]
+    public void Unpackaged_app_keeps_settings_in_local_app_data() // 006, portable zip
+    {
+        var localAppData = Path.Combine(_dir, "local");
+
+        var path = JsonSettingsStore.DefaultPath(packageFolder: null, localAppData);
+
+        Assert.Equal(Path.Combine(localAppData, "CartonStash", "settings.json"), path);
+        Assert.False(AppPackage.IsPackaged); // test host is not packaged
+    }
+
     [Theory] // R2.1: the setting maps onto WinGet's install scope
     [InlineData(InstallScope.Any, PackageInstallScope.Any)]
     [InlineData(InstallScope.User, PackageInstallScope.User)]

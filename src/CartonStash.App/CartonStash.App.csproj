@@ -15,9 +15,25 @@
     <!-- One output folder whether built via the solution (Platform=x64) or the project; the RID already names the arch. -->
     <AppendPlatformToOutputPath>false</AppendPlatformToOutputPath>
     <UseWinUI>true</UseWinUI>
-    <!-- Unpackaged for now (plain .exe, F5 just works). Switch to MSIX later via a spec. -->
+    <!-- Day to day: unpackaged (plain .exe, F5 just works). -->
     <WindowsPackageType>None</WindowsPackageType>
     <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+  </PropertyGroup>
+
+  <!--
+    Spec 007: `dotnet publish -c Release -r win-x64 -p:PackageMsix=true` produces an unsigned MSIX in AppPackages\
+    (signed afterwards with signtool, locally or in CI). .NET and the Windows App SDK are bundled, so users need neither.
+  -->
+  <PropertyGroup Condition="'$(PackageMsix)' == 'true'">
+    <WindowsPackageType>MSIX</WindowsPackageType>
+    <EnableMsixTooling>true</EnableMsixTooling>
+    <SelfContained>true</SelfContained>
+    <GenerateAppxPackageOnBuild>true</GenerateAppxPackageOnBuild>
+    <AppxPackageSigningEnabled>false</AppxPackageSigningEnabled>
+    <AppxBundle>Never</AppxBundle>
+    <AppxPackageDir>$(MSBuildProjectDirectory)\AppPackages\</AppxPackageDir>
+    <GenerateTestArtifacts>false</GenerateTestArtifacts>
+    <AppxSymbolPackageEnabled>false</AppxSymbolPackageEnabled>
   </PropertyGroup>
 
   <ItemGroup>
@@ -26,10 +42,11 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
   </ItemGroup>
 
-  <!-- App icon: AppIcon.svg is the source; AppIcon.ico is rendered from it (16–256 px). -->
+  <!-- App icon: AppIcon.svg is the source; AppIcon.ico and the MSIX logos are rendered from it by tools\Render-Logos.ps1. -->
   <ItemGroup>
     <Content Include="Assets\AppIcon.ico" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="Assets\AppIcon.svg" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Assets\*.png" />
   </ItemGroup>
 
   <ItemGroup>

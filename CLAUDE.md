@@ -25,6 +25,7 @@ dotnet build                                            # whole solution (RID de
 dotnet test                                             # all tests, incl. live WinGet
 dotnet test --filter "Category!=Integration"            # unit tests only
 dotnet run --project src/CartonStash.App             # run the app
+.	oolsPublish-Release.ps1 -Version 1.2.3           # signed MSIX + portable zip in artifacts (spec 007)
 ```
 
 ## Gotchas
