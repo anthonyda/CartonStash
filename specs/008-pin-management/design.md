@@ -51,7 +51,7 @@ Reason: pins are a core WinGet feature users rely on with "update all", and WinG
 
 ## WinGet CLI usage
 
-Every call adds `--disable-interactivity --accept-source-agreements` so nothing can prompt and hang.
+Every call adds `--disable-interactivity --accept-source-agreements` so nothing can prompt and hang. *Decided 2026-10-30:* keep `--accept-source-agreements`, even though 006 R3.3 otherwise leaves accepting to the user.
 
 | Action | Command |
 |--------|---------|
@@ -69,8 +69,9 @@ Every call adds `--disable-interactivity --accept-source-agreements` so nothing 
   readable message (pin exists, package not found, invalid version range…). The exact `APPINSTALLER_CLI_ERROR_*`
   codes are captured in T1, not assumed. stderr / stdout text is only shown as a fallback detail.
 - Timeout 30 s per call, then the process is killed and an error shown. Cancellation kills the process.
-- **Locating winget (R5.4):** `%LOCALAPPDATA%\Microsoft\WindowsApps\winget.exe` (App Execution Alias), then
-  `PATH`. Verified once per session with `winget --version`; result cached for the session.
+- **Locating winget (R5.4):** only `%LOCALAPPDATA%\Microsoft\WindowsApps\winget.exe` (App Execution Alias). `PATH` isn't
+  searched, because a writable folder on it could supply a different `winget.exe`. Verified once per session with
+  `winget --version`; result cached for the session.
 
 ### Parsing `winget pin list` (the risky part)
 
