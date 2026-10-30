@@ -1,6 +1,6 @@
 # 003 – Install / uninstall with progress: Tasks
 
-**Status:** In progress (code done; one manual check pending)
+**Status:** Done
 **Design:** [design.md](design.md)
 
 - [x] **T1.** Models: `PackageOperation`, `OperationPhase`, `OperationResult`, `OperationProgress`, `OperationOutcome`.
@@ -16,9 +16,9 @@
   - Verify: `PackageActionsTests.Row_*` + manual, see log.
 - [x] **T6.** Activity pane + footer badge; success / failure InfoBars; Installed refresh on completion. *(R3.1, R5.1, R5.2)*
   - Verify: `ShellViewModelTests.*` + manual, see log.
-- [ ] **T7.** Manual end-to-end: install → uninstall a small package; one admin-scope installer shows UAC only for itself. *(R6.1)*
-  - Install → uninstall done (jqlang.jq). UAC check still pending.
-- [ ] **T8.** Mark `Done`.
+- [x] **T7.** Manual end-to-end: install → uninstall a small package; one admin-scope installer shows UAC only for itself. *(R6.1)*
+  - Install → uninstall done (jqlang.jq, Mozilla.Firefox). UAC checked on the Firefox install (see log).
+- [x] **T8.** Mark `Done`.
 
 ## Manual verification log
 
@@ -35,4 +35,4 @@
 | R1.2, R2.2, R5.1 | 2026-10-30 | Pass | Mozilla.Firefox through the app: install took 19 s to Program Files with the app unelevated; the uninstall confirmation named the package. "Uninstalled" appeared after 4 s while Firefox's own uninstaller finished in the background, and the files were gone about 30 s later |
 | R3.2 (live) | – | Not run | Covered by `PackageOperationQueueTests.Cancel_*`; jq downloads too fast to cancel by hand |
 | R1.3 (live) | – | Not run | Covered by `PackageActionsTests.Install_with_agreements_*`; needs a package with agreements (e.g. an msstore app) |
-| R6.1 | – | **Pending** | Needs a machine-scope installer and a human at the UAC prompt |
+| R6.1 | 2026-10-30 | Pass | Mozilla.Firefox to Program Files: Windows' UAC prompt appeared and was approved by hand, and the app stayed unelevated |
