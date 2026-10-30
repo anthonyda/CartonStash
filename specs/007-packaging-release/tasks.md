@@ -30,15 +30,15 @@ Before going public:
   - Verify: locked restore passes on all four; changing a version in `Directory.Packages.props` makes it fail (see log).
 - [x] **T10.** Split the scripts: `Publish-Release.ps1` builds only; new `Sign-Release.ps1` signs with timestamps, checks every signature, writes checksums. *(R5.1, R5.5, R5.6, R5.11)*
   - Verify: local run with a throwaway certificate (subject `CN=Anthony`, see design) signs everything with a timestamp; the thumbprint check then fails against `tools/CartonStash.cer`, as it must (see log).
-- [ ] **T11.** `release.yml` as two jobs and `ci.yml` hardened: `permissions`, `persist-credentials: false`, SHA pins, tag through `env`, tag check first, attestation. *(R5.1–R5.4, R5.7)*
-  - Verify: CI green; no `${{ }}` inside any `run:` block; `git check-ref-format` confirms the bad-tag example is a legal ref that the check rejects.
-  - Written; every check passes except CI green, which needs the first push (see log). `release.yml` itself first runs in T16.
+- [x] **T11.** `release.yml` as two jobs and `ci.yml` hardened: `permissions`, `persist-credentials: false`, SHA pins, tag through `env`, tag check first, attestation. *(R5.1–R5.4, R5.7)*
+  - Verify: CI green; no `${{ }}` inside any `run:` block; `git check-ref-format` confirms the bad-tag example is a legal ref that the check rejects (see log).
+  - `release.yml` itself first runs in T16.
 - [x] **T12.** README, release notes and `CLAUDE.md`: thumbprint and check, attestation, accurate signing wording, new script commands. `SECURITY.md`. *(R5.8, R5.13)*
   - Verify: the README steps work as written on a downloaded `.cer` (see log).
 - [x] **T13.** `New-SigningCert.ps1` writes no password or base64 file and leaves no key in the store; `.gitignore` additions. *(R5.11)*
   - Verify: run with a throwaway subject and folder, then check the folder and the store (see log).
-- [ ] **T14. Maintainer.** Save the PFX and password in a password manager, then remove `%USERPROFILE%\.cartonstash\` and the private key in `Cert:\CurrentUser\My`. *(R5.11)*
-  - Verify: see design, Testing strategy.
+- [x] **T14. Maintainer.** Save the PFX and password in a password manager, then remove `%USERPROFILE%\.cartonstash\` and the private key in `Cert:\CurrentUser\My`. *(R5.11)*
+  - Verify: see design, Testing strategy, and the log.
 
 After going public:
 
@@ -64,4 +64,6 @@ After going public:
 | R5.5, R5.6, R5.1 | 2026-10-30 | Pass (local) | Real x64 build, throwaway key: `Publish-Release.ps1` leaves it unsigned with no checksums; `Sign-Release.ps1` signs the MSIX and the 3 portable binaries, each with a DigiCert timestamp; 525 files survive the re-zip; checksums match; the signed portable app starts. Against `tools/CartonStash.cer` the script refuses: "is not signed with certificate 99EE…" |
 | R5.11 (script) | 2026-10-30 | Pass | `New-SigningCert.ps1` with a throwaway key: only the PFX in the folder, one ACL rule, certificate store unchanged, `tools/CartonStash.cer` untouched. `.gitignore` covers `*.pfx.*`, `*.p12`, `*.pem`, `*.key`, `*.snk`, `.env.*`, and no tracked file is ignored. Moving the real key is T14 |
 | R5.1–R5.4 (review) | 2026-10-30 | Pass | Parsed both workflows: all actions `actions/*` pinned to a full SHA, `persist-credentials: false` on every checkout, no `${{ }}` in any `run:`, secrets only in the `Sign` step, no `dotnet` in the job with the key. `v1';calc;'` is a legal git ref; the tag check rejects it, and `v1.2` and `v1.2.3-test` too |
+| R5.11 (key) | 2026-10-30 | Pass | Maintainer saved the PFX and password in KeePass and checked the saved copy's thumbprint before deleting. Checked afterwards: `%USERPROFILE%\.cartonstash\` gone, no `CN=Anthony` certificate in `CurrentUser\My` or `LocalMachine\My`, no key files in Desktop, Downloads, Documents, Temp, OneDrive or `C:\dev`. Public entries remain in `TrustedPeople` |
+| R5.2, R5.3, R5.12 (CI) | 2026-10-30 | Pass | First run on GitHub's runner, run 41070202520 on `4166d0e`: hardened `ci.yml` green, restore from the lock files, build, 170 unit tests |
 | R5.8 | 2026-10-30 | Pass | `(Get-PfxCertificate tools\CartonStash.cer).Thumbprint` prints the thumbprint in the README, `SECURITY.md` and release notes; the file's SHA-256 equals the v1.0.0 release asset |
