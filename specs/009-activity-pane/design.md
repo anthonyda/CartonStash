@@ -1,6 +1,6 @@
 # 009 – Activity pane: Design
 
-**Status:** Approved (2026-10-30). Amendment R2.7 approved 2026-10-30
+**Status:** Approved (2026-10-30). Amendment R2.7 approved 2026-10-30. Amendment R2.8–R2.10 approved 2026-10-30
 **Requirements:** [requirements.md](requirements.md)
 
 ## Overview
@@ -49,8 +49,8 @@ No new WinGet concepts: everything goes through the existing queue and installer
 - Path per run: `logs\<yyyyMMdd-HHmmss>-<kind>-<sanitized id>.log`; Retry gets a new file.
 - **The folder must be the real path.** Inside the MSIX, `%LOCALAPPDATA%` is virtualized for the app, while WinGet's server is another
   process. So the packaged app uses `ApplicationData.Current.LocalFolder`, which is a real path. T1 verifies WinGet can write there.
-- WinGet passes the log option to the installer where the installer type supports it (MSI, Inno, Nullsoft, Burn…). Portable, zip and
-  MSIX packages usually write nothing, hence R2.3. *T1 (2026-10-30):* `LogOutputPath` wrote a 25 KB log for LocalSend (Inno, user scope);
+- WinGet passes the log option to the installer where the installer type supports it (MSI, Inno, Burn…). Nullsoft, portable, zip and
+  MSIX packages usually write nothing, hence R2.3. *Corrected 2026-10-30:* Firefox (Nullsoft) ran with only `/S /PreventRebootRequired=true`, and Mozilla documents no log option. *T1 (2026-10-30):* `LogOutputPath` wrote a 25 KB log for LocalSend (Inno, user scope);
   uninstalling the same package succeeded but wrote no log, so uninstalls will mostly show the summary only.
 - After the operation the queue prepends the summary to the file (or creates it), so a log always exists. All log I/O is caught and ignored
   for the operation's result (R2.5); a failed write leaves `LogFilePath` null and the dialog shows the in-memory summary.
@@ -85,6 +85,25 @@ Enqueue → queue stamps `StartedAt` when the worker takes it, gets a log path �
 - `DialogService.ShowLogAsync` shows one line above the log: "Logs can include your user name, PC name and file paths. Check before sharing."
 - It stays visible while scrolling, and Copy still copies the log as it is.
 
+## Amendment R2.8–R2.10: WinGet's record in the log (approved 2026-10-30)
+
+- **What exists.** WinGet's server writes `WinGetCOM-*.log` to `%LOCALAPPDATA%\Packages\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe\LocalState\DiagOutputDir`.
+  It holds the download URL, hash check, installer arguments and the installed entry WinGet matched. Each file has a `Caller:` line
+  (`CartonStash.exe` unpackaged, the package family name in the MSIX).
+- **Evidence (2026-10-30, dev PC, WinGet 1.29.380).** 13 of 13 operations had their own file, including runs 5 to 10 seconds apart and all on one server process.
+  This overturns the earlier reason for keeping these logs out of scope, but it comes from one PC and one WinGet version, so matching stays strict.
+- **T12 (2026-10-30).** A process started inside the installed 1.0.1 MSIX (`Invoke-CommandInDesktopPackage`) listed the folder and read a file with shared access. `jq` and `celq`, queued
+  together from the unpackaged app, got one file each, created after their `StartedAt`: 18.151 and 20.169 s, with the operations finishing at about 19.78 and 21.61 s. WinGet's last write came about 10 ms before `Complete`.
+- **New service.** `IWinGetRecordReader` / `WinGetRecordReader` in `Core/Services`, with the folder passed to the constructor so tests can use a temp folder.
+  `Find(startedAt, finishedAt)` returns the text or a reason it has none. It reads a text file and doesn't touch the COM API, so A2 is unaffected.
+- **Matching (R2.9).** Take `WinGetCOM-*.log` files created between `StartedAt` and `FinishedAt` whose `Caller:` is this app. The queue runs one operation at a time, so
+  there should be exactly one. None or several: no record, and the log says why.
+- **Reading.** Open with `FileShare.ReadWrite | FileShare.Delete`, because WinGet may still hold the file. Copy the text into our log, because WinGet cleans up its own files.
+- **Cleaning (R2.10).** Line by line, before `Compose`: strip user info, query and fragment from `http(s)` URLs, and blank the value of the `Installer download headers:` line.
+- **Log layout (R2.8).** Summary, `--- Installer log ---`, then `--- WinGet log ---`. `OperationLogStore.Complete` gets the cleaned text and `Compose` adds the section.
+- **Privacy.** The record holds local paths with the user name, which the R2.7 line already warns about.
+- **Failures.** All of this is caught like other log I/O (R2.5).
+
 ## Testing strategy
 
 | Criteria | How |
@@ -93,6 +112,7 @@ Enqueue → queue stamps `StartedAt` when the worker takes it, gets a log path �
 | R2.2, R2.3, R2.5 | `OperationLogStoreTests` (temp folder: summary, installer log appended, prune to 50, unwritable folder) |
 | R2.1, R2.4 | `ActivityViewModelTests` with fake dialogs and clipboard |
 | Log path passed to WinGet | Unit test on options mapping |
+| R2.8–R2.10 | `WinGetRecordReaderTests` (temp folder: one match, none, several, other caller, outside the time range, locked file, URL and header cleaning); `OperationLogStoreTests` for the layout |
 | R3.4, older settings | `SettingsTests` |
 | R1.1, R1.2, R1.6, R1.7, R3.1–R3.3, R3.5, R3.6 | Manual (UIA + screenshots, dark and light, keyboard) |
 | Real logs | Manual: an MSI or Inno package from the app (portable + MSIX app), and a failing one |
@@ -101,5 +121,6 @@ Enqueue → queue stamps `StartedAt` when the worker takes it, gets a log path �
 
 - **`LogOutputPath` in the packaged app:** unverified; T1 first, because it decides the folder.
 - **Alternative: the log as a page or a pane inside Activity.** Rejected for v1: a dialog needs no new navigation.
-- **Alternative: parse WinGet's own diagnostic logs per operation.** Rejected: files aren't per-operation.
+- **Alternative: parse WinGet's own diagnostic logs per operation.** Rejected: files aren't per-operation. *Reopened by amendment R2.8–R2.10.*
+- **The folder and file format are WinGet internals (amendment R2.8–R2.10).** They can change without notice, so R2.9 treats a missing or unmatched record as normal. T12 checks the MSIX can read the folder at all.
 - **Alternative: a real `ListView` grouping (Active / Finished).** Rejected: more chrome; ordering and state icons do the job.

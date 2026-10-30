@@ -1,6 +1,6 @@
 # 009 – Activity pane: Requirements
 
-**Status:** Done (2026-10-30). Amendment R2.7 (log privacy note) approved 2026-10-30
+**Status:** Done (2026-10-30). Amendment R2.7 (log privacy note) approved 2026-10-30. Amendment R2.8–R2.10 (WinGet's record in the log) approved 2026-10-30
 **Depends on:** 003 (operation queue, Activity pane), 006 (settings)
 **Issues:** [#2](https://github.com/anthonyda/CartonStash/issues/2) (operation logs), [#3](https://github.com/anthonyda/CartonStash/issues/3) (pin the pane), [#4](https://github.com/anthonyda/CartonStash/issues/4) (redesign)
 
@@ -34,6 +34,9 @@ user clicks elsewhere, so it can't be watched while using the app.
 | R2.5 | US2   | The app shall keep logs across restarts for at most the 50 newest operations, deleting older ones at startup. Log failures shall never fail an operation. |
 | R2.6 | –     | Log text shall be shown as plain text, never interpreted. |
 | R2.7 | US2   | The log dialog shall say that logs can contain the user's name, PC name and file paths, and should be checked before sharing. *(Security review, 2026-10-30: Copy exists for bug reports, and those are public.)* |
+| R2.8 | US2   | When an operation finishes, the app shall add WinGet's own record of that operation to its log, after the installer's log, and label it as WinGet's. *(2026-10-30: Firefox's installer has no log option, so the log held only the summary.)* |
+| R2.9 | US2   | If WinGet's record can't be found, can't be read, or can't be matched to exactly one operation, then the log shall say so, and shall never show a record that may belong to another operation. This shall never fail the operation (R2.5). |
+| R2.10 | US2  | Before WinGet's record is added, the app shall remove URL credentials, URL query strings and download header values, so that a private source's secrets don't reach a shared log. |
 | R3.1 | US3   | The pane header shall offer a **Pin** toggle with an accessible name and tooltip. |
 | R3.2 | US3   | While pinned, the pane shall stay open beside the page, the page shall resize next to it, and clicking elsewhere shall not close it. |
 | R3.3 | US3   | While unpinned, the pane shall behave as today (overlay, closes on click outside). |
@@ -44,7 +47,7 @@ user clicks elsewhere, so it can't be watched while using the app.
 ## Out of scope
 
 - Live log streaming while an operation runs (the log is shown once it has finished).
-- WinGet's internal diagnostic logs in the dialog. They can't be matched reliably to one operation (a file may cover several). The log dialog can link to their folder instead.
+- ~~WinGet's internal diagnostic logs in the dialog. They can't be matched reliably to one operation (a file may cover several). The log dialog can link to their folder instead.~~ *Replaced by amendment R2.8–R2.10: 13 of 13 operations checked on 2026-10-30 had their own file.*
 - Resizing the pane by dragging (fixed 400 px).
 - Keeping the operation list itself across restarts: the list stays per session, as in 003. Log files stay on disk for support.
 
@@ -56,3 +59,6 @@ user clicks elsewhere, so it can't be watched while using the app.
   when the installer wrote nothing.
 - **Show Log on running operations?** **Decided 2026-10-30:** no, finished only (no live streaming).
 - **Keep 50 logs?** **Decided 2026-10-30:** yes, about 50 files, usually a few MB at most in total.
+- **R2.8: always add WinGet's record, or only when the installer wrote nothing?** **Decided 2026-10-30: always.** It's the same shape on every package, and it shows the
+  arguments the installer got, which also helps when an installer log exists.
+- **R2.8: where in the log?** **Decided 2026-10-30: last.** The dialog keeps the end of a very long log, so a large installer log can't push it out.

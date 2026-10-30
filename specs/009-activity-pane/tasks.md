@@ -30,6 +30,17 @@ Tick a task only when its verification passes. Keep tasks small enough for one c
   - Verify: manual: open a log, the line is visible and readable in light, dark and high contrast.
   - Dark theme checked on a real Firefox install (see log). Light and high contrast still to check.
 
+### Amendment R2.8–R2.10: WinGet's record in the log (approved 2026-10-30)
+
+- [x] **T12.** Probe: can an installed MSIX read WinGet's `DiagOutputDir`? Does each operation still get one file when two are queued back to back? Record in design.md. *(R2.8, R2.9)*
+  - Done 2026-10-30: yes to both (see design). Queuing was tested on the unpackaged app; the MSIX is covered by T15.
+- [x] **T13.** `WinGetRecordReader`: matching and cleaning. *(R2.8–R2.10)*
+  - Verify: `WinGetRecordReaderTests.*`.
+- [x] **T14.** `OperationLogStore` and the queue add the `--- WinGet log ---` section. *(R2.8, R2.9, R2.5)*
+  - Verify: `ActivityTests.WinGets_record_comes_last_and_is_saved`, `A_missing_record_is_explained_and_the_operation_still_succeeds`.
+- [ ] **T15.** Manual: a package with no installer log, one with an installer log, and a failed one, on the portable app and an installed MSIX. *(R2.8–R2.10)*
+  - Portable passed. The dev build also passed under the installed 1.0.1 package's identity (see log), but a real MSIX of this code is still to check, with the next release.
+
 ## Manual verification log
 
 | Criterion | Date | Result | Notes |
@@ -45,5 +56,8 @@ Tick a task only when its verification passes. Keep tasks small enough for one c
 | Log dialog width | 2026-10-30 | Note | Stays at the default dialog width; long lines scroll sideways. Fine for now |
 | R2.7 (dark) | 2026-10-30 | Pass | Real Firefox install: the line is visible above the log, readable on a screenshot, and doesn't scroll away |
 | R2.7 (light, high contrast) | – | **Pending** | Open a log and check the privacy line |
-| R2.5 (log file) | 2026-10-30 | **Open** | The Firefox install wrote no log file: nothing on disk, while the uninstall right after it did. WinGet's record shows no log path went to the installer (`/S /PreventRebootRequired=true`), so the file should have held our summary. The operation and the dialog were unaffected (the dialog falls back to the summary). Cause not found |
+| R2.5 (log file) | 2026-10-30 | Closed, no bug | The Firefox install's log was missing when first checked, after the uninstall, because the maintainer had deleted it by hand. Firefox's installer takes no log switch (`/S /PreventRebootRequired=true`), so that file only held our summary |
+| R2.8–R2.10 (portable) | 2026-10-30 | Pass | From the app: jq (no installer log), LocalSend (25 KB Inno log, then WinGet's section) and Wget (failed, hash mismatch). Each log held its own record, last; URLs had no query; the headers line read "(removed)" |
+| R2.8–R2.10 (package identity) | 2026-10-30 | Pass | Same three cases with the dev build started through `Invoke-CommandInDesktopPackage` in the installed 1.0.1 package: logs went to the package's `LocalState\logs`, and `Caller:` matched the family name. Not a real MSIX of this code |
+| R2.8–R2.10 (real MSIX) | – | **Pending** | Check on the next release's MSIX |
 | R1.7 high contrast | – | **Pending** | With the 006 high-contrast pass |
