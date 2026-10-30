@@ -56,6 +56,17 @@ After going public:
 - [x] **T17.** Re-run the failed `attest` job for `v1.0.2`, within 7 days. *(R5.7)*
   - Verify: `gh attestation verify` passes on a downloaded file (see log).
 
+### Amendment R6: Microsoft Store (draft, not started until approved)
+
+- [ ] **T20.** `Publish-Release.ps1` builds the Store MSIX per architecture into `store\`. *(R6.1, R6.2)*
+  - Verify: a local build's manifests show the Store identity and the tag's version, and the repo's manifest is unchanged afterwards.
+- [ ] **T21.** Release workflow uploads the `store` artifact from `build`. *(R6.1, R6.3)*
+  - Verify: review of the workflow; checked for real on the next tag: the artifact exists, and the GitHub Release has no Store files.
+- [ ] **T22.** `PRIVACY.md`. *(R6.6)*
+  - Verify: compare with 009's logs, 006's settings and the README's connection note.
+- [ ] **T23.** Run the Windows App Certification Kit on the x64 Store MSIX. *(R6.5)*
+- [ ] **T24.** Maintainer submits; record the review's outcome. Install from the Store and repeat a search, an install and an uninstall. *(R6.1, R1.3)*
+
 ## Manual verification log
 
 | Criterion | Date | Result | Notes |
