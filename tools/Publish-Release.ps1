@@ -32,10 +32,10 @@ foreach ($folder in $Output, $StoreOutput) {
 $Output = (Resolve-Path $Output).Path
 $StoreOutput = (Resolve-Path $StoreOutput).Path
 
-function Build-Msix([string]$Rid, [string]$Arch, [string]$Destination) {
+function Build-Msix([string]$Rid, [string]$Arch, [string]$Destination, [string[]]$Extra = @()) {
     $packages = Join-Path $app 'AppPackages'
     if (Test-Path $packages) { Remove-Item $packages -Recurse -Force }
-    dotnet publish $app -c Release -r $Rid -p:PackageMsix=true -p:Version=$semver -p:Platform=$Arch
+    dotnet publish $app -c Release -r $Rid -p:PackageMsix=true -p:Version=$semver -p:Platform=$Arch @Extra
     if ($LASTEXITCODE) { throw "MSIX build failed for $Rid." }
     $msix = Get-ChildItem $packages -Recurse -Filter *.msix | Select-Object -First 1
     Copy-Item $msix.FullName $Destination
@@ -59,9 +59,9 @@ try {
         Set-Content $manifestPath $versioned -NoNewline
         Build-Msix $rid $arch (Join-Path $Output "CartonStash_${semver}_$arch.msix")
 
-        # MSIX for the Store (R6.1).
+        # MSIX for the Store (R6.1), on the shared Windows App SDK runtime the Store installs with it (R7.2).
         Set-Content $manifestPath $store -NoNewline
-        Build-Msix $rid $arch (Join-Path $StoreOutput "CartonStash_${semver}_$arch.msix")
+        Build-Msix $rid $arch (Join-Path $StoreOutput "CartonStash_${semver}_$arch.msix") @('-p:WindowsAppSDKSelfContained=false')
         Set-Content $manifestPath $manifest -NoNewline
 
         # Portable zip: the unpackaged, self-contained app folder (R1.4). EnableMsixTooling makes publish include
