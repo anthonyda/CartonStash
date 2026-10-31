@@ -60,14 +60,28 @@ After going public:
 
 - [x] **T20.** `Publish-Release.ps1` builds the Store MSIX per architecture into `store\`. *(R6.1, R6.2)*
   - Verify: a local build's manifests show the Store identity and the tag's version, and the repo's manifest is unchanged afterwards.
-  - Done 2026-10-30 for x64, version 1.0.4: the Store and GitHub MSIX each carry their own identity, both unsigned, and `Package.appxmanifest` is unchanged. ARM64 is checked on the next tag.
-- [ ] **T21.** Release workflow uploads the `store` artifact from `build`. *(R6.1, R6.3)*
+  - Done 2026-10-30 for x64, version 1.0.4: the Store and GitHub MSIX each carry their own identity, both unsigned, and `Package.appxmanifest` is unchanged. v1.0.4's `store` artifact confirms x64 and ARM64 with the Store identity, unsigned, and none of these files in the GitHub Release.
+- [x] **T21.** Release workflow uploads the `store` artifact from `build`. *(R6.1, R6.3)*
   - Verify: review of the workflow; checked for real on the next tag: the artifact exists, and the GitHub Release has no Store files.
 - [x] **T22.** `PRIVACY.md`. *(R6.6)*
   - Verify: compare with 009's logs, 006's settings and the README's connection note.
 - [x] **T23.** Run the Windows App Certification Kit on the x64 Store MSIX. *(R6.5)*
   - Done 2026-10-30: overall PASS, 22 of 24 tests. The two failures are optional: "General metadata correctness" (WinUI and Windows App SDK `winmd` files) and "Blocked executables" (mostly text matches in framework DLLs, plus process-launch API references).
-- [ ] **T24.** Maintainer submits; record the review's outcome. Install from the Store and repeat a search, an install and an uninstall. *(R6.1, R1.3)*
+- [x] **T24.** Maintainer submits; record the review's outcome. Install from the Store and repeat a search, an install and an uninstall. *(R6.1, R1.3)*
+  - Done 2026-10-31: the app passed review and is listed. Version 1.0.4 from the Store did a search and a `jq` install and uninstall, with no crash, and the package family name as `Caller:` in the logs.
+
+### Amendment R7: smaller packages (approved 2026-10-31)
+
+- [x] **T30.** Reference only the Windows App SDK parts in use; regenerate the lock files. *(R7.1)*
+  - Verify: `onnxruntime.dll` and `DirectML.dll` are gone from all packages; unit tests pass; the portable app starts; record the sizes.
+  - Done 2026-10-31 on x64: references `WinUI`, `DWrite` and `Runtime`. 197 tests pass, and the portable app opens with no crash. MSIX 92.6 → 68.6 MB, unpacked 235 → 176 MB.
+- [x] **T31.** Store build with the shared runtime. *(R7.2, R7.3)*
+  - Verify: the package declares the framework dependency and holds no `Microsoft.ui.xaml.dll`; .NET is still bundled; record the sizes, and apply the 50 MB rule.
+  - Done 2026-10-31 on x64: depends on `Microsoft.WindowsAppRuntime.2` 2.6.4.0. 45.2 MB, unpacked 115.5 MB, a further 60 MB saved, so R7.2 stays.
+- [x] **T32.** Run the Windows App Certification Kit on the Store MSIX, and a search, install and uninstall on a real install of each package. *(R7.4, R7.5)*
+  - Done 2026-10-31 on x64, with both 1.0.5 builds registered under test names beside the Store app, because the real Store identity was in use. Each did a search, a `jq` install and uninstall, with WinGet's record in both logs and no crash.
+  - Kit, overall PASS on the Store build: 22 of 24. "App resources" failed only because of the test name (`resources.pri` has no map for it), and "Blocked executables" is optional as before. "General metadata correctness" now passes.
+- [ ] **T33.** Tag a release, submit it, and confirm the Store updates the existing install with settings and logs kept. *(R7.6)*
 
 ## Manual verification log
 

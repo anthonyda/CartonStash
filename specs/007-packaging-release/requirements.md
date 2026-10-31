@@ -1,6 +1,6 @@
 # 007 – Packaging and release: Requirements
 
-**Status:** Approved (2026-10-30). Amendment R5 (release hardening) approved 2026-10-30. Amendment R6 (Microsoft Store) approved 2026-10-30
+**Status:** Approved (2026-10-30). Amendment R5 (release hardening) approved 2026-10-30. Amendment R6 (Microsoft Store) approved 2026-10-30. Amendment R7 (smaller packages) approved 2026-10-31
 **Depends on:** 001–006 (can start in parallel once 003 is done)
 
 ## Problem
@@ -20,6 +20,7 @@ release path has to protect the key and let users check what they download.
 - **US4.** As a user, I want to check that a download really came from this project before I trust its certificate.
 - **US5.** As the maintainer, I want the signing key to stay safe even if a build dependency is compromised.
 - **US6.** As a user, I want to install the app from the Microsoft Store, without trusting a certificate by hand. *(Amendment R6.)*
+- **US7.** As a user, I want a small download that doesn't fill my disk with parts the app never uses. *(Amendment R7.)*
 
 ## Acceptance criteria (EARS)
 
@@ -55,6 +56,12 @@ release path has to protect the key and let users check what they download.
 | R6.4 | US6   | The GitHub MSIX and portable zip shall stay as they are (R1.1, R1.4, R2.1, R5.x), with the `CN=Anthony` identity and certificate. |
 | R6.5 | US6   | The Store MSIX shall pass the Windows App Certification Kit before it's submitted. |
 | R6.6 | US6   | The Store's privacy policy text shall be kept in the repository as `PRIVACY.md`, and shall match what the app does. |
+| R7.1 | US7   | The app shall reference only the Windows App SDK parts it uses, so that every package leaves out the AI, machine learning, search and widget libraries, if the app works without them. |
+| R7.2 | US7   | The Store MSIX shall use the shared Windows App SDK runtime, which the Store installs with the app, instead of bundling its own copy. |
+| R7.3 | US7   | The .NET runtime shall stay bundled in every package, and the app shall not be trimmed. |
+| R7.4 | US7   | The GitHub MSIX and portable zip shall keep their own copy of the Windows App SDK, and shall still work on a PC with no Store access (R1.2, R1.4). |
+| R7.5 | US7   | Every package shall pass the same checks as before: unit tests, the portable start check (R1.6), and search, install and uninstall on a real install (R1.3). |
+| R7.6 | US7   | A Store update shall install over the existing Store version and keep its settings and logs. |
 
 ## Out of scope
 
@@ -79,6 +86,12 @@ release path has to protect the key and let users check what they download.
 
 - **Amendment R6: signing through the Store, decided 2026-10-30.** No certificate is bought. Store-only signing leaves the GitHub files self-signed, and
   R2.2 (winget-pkgs) stays deferred. Store users can install with `winget install 9MT37M7DBZRK --source msstore` once the app is listed.
+
+## Open questions (amendment R7)
+
+- **What if a Store user's PC can't get the shared runtime?** **Decided 2026-10-31: accept it.** The Store delivers it with the app, so this should only affect managed PCs that block the Store's framework packages, and they can use the GitHub MSIX or portable zip.
+- **Link to the runtime in the README?** **Decided 2026-10-31: no.** Under R7.4 nobody needs it, and removing the runtime from the GitHub files would add a step to an already harder install.
+- **Stop if the saving is small?** **Decided 2026-10-31: yes.** If T31 shows that R7.2 saves less than 50 MB, drop it and keep R7.1 only, because a separate runtime setup isn't worth a small gain.
 
 ## Open questions (amendment R6)
 

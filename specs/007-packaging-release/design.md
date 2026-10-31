@@ -141,6 +141,17 @@ also covers `*.p12`, `*.pem`, `*.key`, `*.snk`, `*.pfx.*` and `.env.*`.
 - **App behaviour.** No code changes expected: settings, logs and the `Caller:` match (009 R2.9) already come from the running package. Store and GitHub installs keep separate settings and logs.
 - **Docs.** `PRIVACY.md` holds the policy text. The README adds a Store link only once the listing is live.
 
+## Amendment R7: smaller packages (approved 2026-10-31)
+
+- **Today (v1.0.4 x64 Store MSIX).** 92.6 MB download, 235 MB unpacked: about 92 MB WinUI and Windows App SDK, 75 MB .NET, 50 MB AI libraries, 19 MB other. The groups are by file name, so they're approximate.
+- **R7.1, SDK parts.** `Microsoft.WindowsAppSDK` 2.6.4 is a metapackage of `AI`, `Base`, `DWrite`, `Foundation`, `InteractiveExperiences`, `ML`, `Runtime`, `Search`, `Widgets` and `WinUI`.
+  Replace it with the parts in use: `WinUI` and whatever it needs, adding others only if the build or a run shows they're required. Versions stay in `Directory.Packages.props`, and the `packages.lock.json` files are regenerated.
+  T30 checks that the removed parts aren't pulled back in by another package.
+- **R7.2, shared runtime.** `Publish-Release.ps1` passes `-p:WindowsAppSDKSelfContained=false` for the Store build only. The MSIX then declares a dependency on the `Microsoft.WindowsAppRuntime` framework package, which the Store installs. `SelfContained` stays true, because .NET is still bundled (R7.3).
+- **GitHub files (R7.4).** No flag changes; they gain only R7.1's saving.
+- **Local test of the Store build.** The kit and a sideloaded install need the framework package on the PC. If it's missing, T32 installs the matching runtime from Microsoft first.
+- **Rollout.** One tagged release. The Store identity and package family don't change, so this is a normal update (R7.6).
+
 ## Testing strategy
 
 | Criteria | How |
@@ -159,7 +170,12 @@ also covers `*.p12`, `*.pem`, `*.key`, `*.snk`, `*.pfx.*` and `.env.*`.
 
 *Amendment R6:* R6.1–R6.3 by reading the built packages' manifests and running `Sign-Release.ps1` on a test release; R6.5 with the Windows App Certification Kit; R6.1 end to end when Partner Center accepts the upload and the Store build installs.
 
+*Amendment R7:* R7.1 and R7.2 by listing the built packages' contents and sizes; R7.4 and R7.5 with the unit tests, the portable start check and a real install of each package; R7.6 by updating the Store version on a real PC.
+
 ## Risks and alternatives considered
+
+- **Missing SDK parts (amendment R7).** A removed part might only fail at runtime, so R7.5's real installs are required, not just a build.
+- **Alternative: trimming .NET (amendment R7).** Rejected by R7.3: it can break WinUI and the WinGet COM calls in ways that only show at runtime.
 
 - **Store review (amendment R6).** An app that installs other software with `runFullTrust` may get questions or be refused, and how review treats it is unknown until the first submission. The GitHub files don't depend on the outcome.
 
