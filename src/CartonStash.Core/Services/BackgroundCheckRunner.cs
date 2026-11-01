@@ -116,7 +116,8 @@ public sealed class BackgroundCheckRunner(
         try
         {
             var sources = await packages.GetSourcesAsync(budget.Token);
-            foreach (var source in sources.Where(s => !s.IsExplicit))
+            // Nobody is there to read an agreement, so a source that isn't accepted is left alone (006 R3.8).
+            foreach (var source in sources.Where(s => !s.IsExplicit && s.AgreementStatus is AgreementStatus.None or AgreementStatus.Accepted))
             {
                 await packages.RefreshSourceAsync(source.Name, budget.Token);
             }
