@@ -34,18 +34,22 @@ public sealed class WinGetPackageService(CatalogConnection connection) : IPackag
             return [];
         }
 
-        var catalog = await connection.GetRemoteFirstAsync(cancellationToken);
-
-        var options = new FindPackagesOptions { ResultLimit = (uint)maxResults };
-        options.Selectors.Add(new PackageMatchFilter
+        FindPackagesOptions Options()
         {
-            Field = PackageMatchField.CatalogDefault,
-            Option = PackageFieldMatchOption.ContainsCaseInsensitive,
-            Value = query.Trim(),
-        });
+            var options = new FindPackagesOptions { ResultLimit = (uint)maxResults };
+            options.Selectors.Add(new PackageMatchFilter
+            {
+                Field = PackageMatchField.CatalogDefault,
+                Option = PackageFieldMatchOption.ContainsCaseInsensitive,
+                Value = query.Trim(),
+            });
+            return options;
+        }
 
-        return await FindAsync(catalog, options, cancellationToken);
+        return ToPackages(await connection.FindAsync(localFirst: false, Options, cancellationToken));
     }
+
+    public IReadOnlyList<SourceFailure> SourceFailures => connection.SourceFailures;
 
     /// <summary>
     /// One row per installed program (002 R6): WinGet's installed-only catalog joined with its source matches.
@@ -63,7 +67,7 @@ public sealed class WinGetPackageService(CatalogConnection connection) : IPackag
     private async Task<IReadOnlyList<InstalledEntry>> ReadInstalledEntriesAsync(CancellationToken cancellationToken)
     {
         var catalog = await connection.GetInstalledOnlyAsync(cancellationToken);
-        var matches = await FindMatchesAsync(catalog, new FindPackagesOptions(), cancellationToken);
+        var matches = await CatalogConnection.FindMatchesAsync(catalog, new FindPackagesOptions(), cancellationToken);
         var entries = new List<InstalledEntry>(matches.Count);
         for (var i = 0; i < matches.Count; i++)
         {
@@ -80,8 +84,7 @@ public sealed class WinGetPackageService(CatalogConnection connection) : IPackag
 
     private async Task<IReadOnlyList<MatchedPackage>> ReadMatchedPackagesAsync(CancellationToken cancellationToken)
     {
-        var catalog = await connection.GetLocalFirstAsync(cancellationToken);
-        var matches = await FindMatchesAsync(catalog, new FindPackagesOptions(), cancellationToken);
+        var matches = await connection.FindAsync(localFirst: true, () => new FindPackagesOptions(), cancellationToken);
         var packages = new List<MatchedPackage>(matches.Count);
         for (var i = 0; i < matches.Count; i++)
         {
@@ -250,19 +253,8 @@ public sealed class WinGetPackageService(CatalogConnection connection) : IPackag
 
     public string GetWinGetVersion() => connection.Manager.Version;
 
-    private static async Task<IReadOnlyList<MatchResult>> FindMatchesAsync(PackageCatalog catalog, FindPackagesOptions options, CancellationToken cancellationToken)
+    private List<PackageInfo> ToPackages(IReadOnlyList<MatchResult> matches)
     {
-        var result = await catalog.FindPackagesAsync(options).AsTask(cancellationToken);
-        if (result.Status != FindPackagesResultStatus.Ok)
-        {
-            throw new WinGetException(DescribeFindFailure(result.Status), result.ExtendedErrorCode);
-        }
-        return result.Matches;
-    }
-
-    private async Task<IReadOnlyList<PackageInfo>> FindAsync(PackageCatalog catalog, FindPackagesOptions options, CancellationToken cancellationToken)
-    {
-        var matches = await FindMatchesAsync(catalog, options, cancellationToken);
         var packages = new List<PackageInfo>(matches.Count);
         for (var i = 0; i < matches.Count; i++)
         {
@@ -394,4 +386,13 @@ public sealed class WinGetException : Exception
             HResult = extendedError.HResult;
         }
     }
+
+    public WinGetException(string message, int hresult)
+        : base(message)
+    {
+        HResult = hresult;
+    }
+
+    /// <summary>The kind of failure one bad source can cause, so testing each source may get past it (011 R1.3).</summary>
+    internal bool MayBeOneSource { get; init; }
 }

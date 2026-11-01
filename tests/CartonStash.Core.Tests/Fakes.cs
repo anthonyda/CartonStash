@@ -25,6 +25,8 @@ internal sealed class FakePackageService : IPackageService
 
     public List<SourceInfo> Sources { get; } = [];
 
+    public IReadOnlyList<SourceFailure> SourceFailures { get; set; } = [];
+
     public Dictionary<string, string?> RefreshErrors { get; } = [];
 
     public List<string> Refreshed { get; } = [];

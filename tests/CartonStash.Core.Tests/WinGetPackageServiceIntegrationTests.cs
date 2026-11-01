@@ -109,6 +109,31 @@ public class WinGetPackageServiceIntegrationTests
         }
     }
 
+    [Fact] // 011 R1.1, R1.5, R1.6
+    public async Task A_source_left_out_is_skipped_until_the_catalogs_reset()
+    {
+        var connection = new CatalogConnection();
+        var service = new WinGetPackageService(connection);
+        var sources = await service.GetSourcesAsync();
+
+        connection.LeaveOut([new SourceFailure("winget-font", "'winget-font' failed.", 0)]);
+        var found = await service.SearchAsync("Git.Git");
+
+        Assert.Contains(found, p => p.Id == "Git.Git");
+        Assert.Single(service.SourceFailures);
+
+        connection.Invalidate();
+
+        Assert.Empty(service.SourceFailures);
+        Assert.Equal(sources.Select(s => s.Name), (await service.GetSourcesAsync()).Select(s => s.Name));
+    }
+
+    [Fact]
+    public void WinGet_is_found_on_this_pc() // 011 R3.1
+    {
+        Assert.True(WinGetAvailability.IsInstalled());
+    }
+
     [Fact]
     public async Task Package_is_not_found_in_a_source_that_does_not_have_it() // 003 R1.2: no fallback to another source
     {
