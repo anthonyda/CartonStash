@@ -1,6 +1,6 @@
 # 006 – Settings: Requirements
 
-**Status:** Approved (2026-10-29). Amendment R5 (start page) approved 2026-10-30. Amendment R4.3 (safe diagnostics) approved 2026-10-30
+**Status:** Approved (2026-10-29). Amendment R5 (start page) approved 2026-10-30. Amendment R4.3 (safe diagnostics) approved 2026-10-30. Amendment R3.4 (source agreements) **Draft**, for review
 **Depends on:** 002, 003
 
 ## Problem
@@ -34,6 +34,49 @@ today. Users need one place to see and change them.
 | R5.2 | US5   | When the app starts, it shall open the chosen start page and show it as selected in the navigation. |
 | R5.3 | US5   | Changing the start page shall take effect the next time the app starts; it shall not navigate away from Settings. |
 | R5.4 | –     | If the saved start page is missing (settings from an older version), the app shall use Search without reporting a reset. |
+
+## Amendment R3.4: source agreements (Draft, 2026-11-01)
+
+R3.3 is not met today. `PackageCatalogReference.AcceptSourceAgreements` defaults to true, and `CatalogConnection` only ever
+sets it to true, so the app uses `msstore` whether the user accepts, declines or never opens the dialog. The R3.3 manual check
+tested the dialog, not that the source was held back.
+
+Measured on WinGet 1.29.380 in Windows Sandbox, region US, after `winget source reset --force`:
+
+| Step | Result |
+|------|--------|
+| COM, default reference, connect and search on `msstore` | Ok, no prompt |
+| `winget search` after that | Still prompts: COM doesn't record acceptance |
+| `winget search --accept-source-agreements`, then `winget search` | No prompt: the CLI records it |
+| COM with `AcceptSourceAgreements = false`, after the CLI recorded acceptance | `SourceAgreementsNotAccepted`: COM ignores WinGet's record, so the app can't read it |
+| Composite with one reference set to false | The whole connect fails, so a declined source must be left out |
+| `SourceAgreements` on `msstore` | 1 entry. The CLI's region notice isn't one, so the app's dialog doesn't show it |
+
+With region World, the search got HTTP 400 for market `ZZ` (spec 011 findings), so the region does reach the service with
+agreements reset.
+
+| ID   | Story | Criterion |
+|------|-------|-----------|
+| R3.4 | US3   | The app shall leave a source with agreements out of every catalog it connects to until the user has accepted them in the app, so nothing is sent to that source before then. This includes the installed list loaded at startup. |
+| R3.5 | US3   | The app shall save an acceptance per Windows user, keep it across restarts, and ask again if the source's agreement text changes. |
+| R3.6 | US3   | The agreement dialog shall say what the source receives. For `msstore`, that is the PC's 2-letter region. |
+| R3.7 | US3   | While a source is left out, Search, Installed and Updates shall keep working with the other sources and shall say which source is left out, with a way to review its agreements. |
+| R3.8 | US3   | When the user declines, the app shall leave the source out. The user can review the agreements again and accept later, or withdraw an acceptance in Settings. |
+| R3.9 | –     | Accepting in the app shall not change WinGet's own record: the `winget` command keeps asking for itself. The app shall say so in the dialog or its help text. |
+| R3.10 | –    | `PRIVACY.md` shall say that the Microsoft Store source receives the PC's region once the user accepts its agreements (007 R6.6). |
+
+Effects to review: a user who hasn't accepted gets no `msstore` results and no update information for Store packages. That
+includes everyone already on an earlier version, because an acceptance recorded by WinGet can't be read. Until this ships,
+`PRIVACY.md` is incomplete: it names the IP address only. Spec 010 must not run before this is decided, or background checks
+would reach `msstore` too. Spec 008's `--accept-source-agreements` records acceptance in WinGet for the user, so its decision of
+2026-10-30 needs another look before 008 resumes.
+
+Open questions for this amendment:
+
+- **When to ask?** Recommended: a notice in the app at first start, not a blocking dialog, so that declining or ignoring it costs nothing.
+  Alternative: ask on the first search.
+- **Should the amendment stay general or name `msstore`?** Recommended: general for R3.4, R3.5, R3.7 and R3.8, since any source can have
+  agreements. R3.6 needs fixed text per known source, because the COM API exposes only the agreement list.
 
 ## Out of scope
 
