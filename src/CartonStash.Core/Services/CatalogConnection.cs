@@ -1,4 +1,6 @@
+using System.Collections.Concurrent;
 using Microsoft.Management.Deployment;
+using CartonStash.Core.Models;
 
 namespace CartonStash.Core.Services;
 
@@ -12,18 +14,34 @@ public sealed class CatalogConnection
 {
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly HashSet<string> _acceptedSourceAgreements = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, SourceFailure> _failedSources = new(StringComparer.OrdinalIgnoreCase);
     private PackageCatalog? _remoteFirst;
     private PackageCatalog? _localFirst;
     private PackageCatalog? _installedOnly;
 
     internal PackageManager Manager { get; } = new();
 
-    /// <summary>Drops the cached catalogs; the next call reconnects and sees fresh data.</summary>
+    /// <summary>Sources left out of the catalogs until the next <see cref="Invalidate"/> (011 R1.5).</summary>
+    public IReadOnlyList<SourceFailure> SourceFailures => [.. _failedSources.Values.OrderBy(f => f.Source, StringComparer.OrdinalIgnoreCase)];
+
+    /// <summary>Drops the cached catalogs; the next call reconnects, sees fresh data and tries every source again.</summary>
     public void Invalidate()
     {
+        _failedSources.Clear();
         _remoteFirst = null;
         _localFirst = null;
         _installedOnly = null;
+    }
+
+    /// <summary>Leaves these sources out of the next connection. Memory only: the user's sources stay as they are (011 R1.6).</summary>
+    internal void LeaveOut(IReadOnlyList<SourceFailure> failures)
+    {
+        foreach (var failure in failures)
+        {
+            _failedSources[failure.Source] = failure;
+        }
+        _remoteFirst = null;
+        _localFirst = null;
     }
 
     /// <summary>The user accepted this source's agreements for this session (006 R3.3).</summary>
@@ -43,14 +61,6 @@ public sealed class CatalogConnection
             return _acceptedSourceAgreements.Contains(sourceName);
         }
     }
-
-    /// <summary>All remote sources merged with the installed catalog; results are remote packages (001).</summary>
-    internal Task<PackageCatalog> GetRemoteFirstAsync(CancellationToken cancellationToken) =>
-        GetAsync(localFirst: false, cancellationToken);
-
-    /// <summary>The installed catalog correlated with all remote sources; results are installed packages (002).</summary>
-    internal Task<PackageCatalog> GetLocalFirstAsync(CancellationToken cancellationToken) =>
-        GetAsync(localFirst: true, cancellationToken);
 
     /// <summary>
     /// The installed-only catalog: one package per installed program, not merged by package ID (002 R6.1).
@@ -72,6 +82,10 @@ public sealed class CatalogConnection
         return _installedOnly = connect.PackageCatalog;
     }
 
+    /// <param name="localFirst">
+    /// True: the installed catalog correlated with the remote sources; results are installed packages (002).
+    /// False: the remote sources merged with the installed catalog; results are remote packages (001).
+    /// </param>
     private async Task<PackageCatalog> GetAsync(bool localFirst, CancellationToken cancellationToken)
     {
         var cached = localFirst ? _localFirst : _remoteFirst;
@@ -89,7 +103,7 @@ public sealed class CatalogConnection
                 return cached;
             }
 
-            var catalog = await ConnectAsync(localFirst, cancellationToken);
+            var catalog = await ConnectAsync(localFirst, IsInUse, cancellationToken);
             if (localFirst)
             {
                 _localFirst = catalog;
@@ -106,7 +120,9 @@ public sealed class CatalogConnection
         }
     }
 
-    private async Task<PackageCatalog> ConnectAsync(bool localFirst, CancellationToken cancellationToken)
+    private bool IsInUse(string sourceName) => !_failedSources.ContainsKey(sourceName);
+
+    private async Task<PackageCatalog> ConnectAsync(bool localFirst, Func<string, bool> include, CancellationToken cancellationToken)
     {
         var options = new CreateCompositePackageCatalogOptions
         {
@@ -118,6 +134,10 @@ public sealed class CatalogConnection
         for (var i = 0; i < catalogs.Count; i++)
         {
             var reference = catalogs[i];
+            if (!include(reference.Info.Name))
+            {
+                continue;
+            }
             if (HasAcceptedSourceAgreements(reference.Info.Name))
             {
                 reference.AcceptSourceAgreements = true;
@@ -131,30 +151,77 @@ public sealed class CatalogConnection
         var connect = await composite.ConnectAsync().AsTask(cancellationToken);
         if (connect.Status != ConnectResultStatus.Ok)
         {
-            throw new WinGetException(WinGetPackageService.DescribeConnectFailure(connect.Status), connect.ExtendedErrorCode);
+            throw new WinGetException(WinGetPackageService.DescribeConnectFailure(connect.Status), connect.ExtendedErrorCode)
+            {
+                MayBeOneSource = connect.Status == ConnectResultStatus.CatalogError,
+            };
         }
         return connect.PackageCatalog;
+    }
+
+    /// <summary>
+    /// Searches a composite catalog; a source that fails is left out and named, and the others still answer (011 R1.1, R1.2).
+    /// </summary>
+    /// <param name="options">A factory: testing a source needs its own copy of the request.</param>
+    internal Task<IReadOnlyList<MatchResult>> FindAsync(bool localFirst, Func<FindPackagesOptions> options, CancellationToken cancellationToken) =>
+        SourceIsolation.RunAsync(
+            async () => await FindMatchesAsync(await GetAsync(localFirst, cancellationToken), options(), cancellationToken),
+            SourcesInUse,
+            () => SourceFailures,
+            source => Task.Run(() => ProbeAsync(source, localFirst, options, cancellationToken), cancellationToken),
+            (source, code) => new SourceFailure(source, SourceFailureMessages.Describe(source, code, WindowsRegion.IsCountry()), code),
+            LeaveOut);
+
+    private List<string> SourcesInUse()
+    {
+        var catalogs = Manager.GetPackageCatalogs();
+        var names = new List<string>(catalogs.Count);
+        for (var i = 0; i < catalogs.Count; i++)
+        {
+            var name = catalogs[i].Info.Name;
+            if (IsInUse(name))
+            {
+                names.Add(name);
+            }
+        }
+        return names;
+    }
+
+    /// <summary>Runs the request on one source alone. Returns WinGet's code, or null when the source works.</summary>
+    private async Task<int?> ProbeAsync(string source, bool localFirst, Func<FindPackagesOptions> options, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var catalog = await ConnectAsync(localFirst, name => string.Equals(name, source, StringComparison.OrdinalIgnoreCase), cancellationToken);
+            await FindMatchesAsync(catalog, options(), cancellationToken);
+            return null;
+        }
+        catch (WinGetException ex) when (ex.MayBeOneSource)
+        {
+            return ex.HResult;
+        }
+    }
+
+    internal static async Task<IReadOnlyList<MatchResult>> FindMatchesAsync(PackageCatalog catalog, FindPackagesOptions options, CancellationToken cancellationToken)
+    {
+        var result = await catalog.FindPackagesAsync(options).AsTask(cancellationToken);
+        if (result.Status != FindPackagesResultStatus.Ok)
+        {
+            throw new WinGetException(WinGetPackageService.DescribeFindFailure(result.Status), result.ExtendedErrorCode)
+            {
+                MayBeOneSource = result.Status is FindPackagesResultStatus.CatalogError or FindPackagesResultStatus.InternalError, // R1.3
+            };
+        }
+        return result.Matches;
     }
 
     /// <summary>Finds one installed program by its installed entry ID (<c>ARP\...</c>, <c>MSIX\...</c>) (002 R6.5).</summary>
     internal async Task<CatalogPackage> FindInstalledEntryAsync(string installedId, CancellationToken cancellationToken)
     {
         var catalog = await GetInstalledOnlyAsync(cancellationToken);
-        var options = new FindPackagesOptions();
-        options.Selectors.Add(new PackageMatchFilter
-        {
-            Field = PackageMatchField.Id,
-            Option = PackageFieldMatchOption.Equals,
-            Value = installedId,
-        });
-
-        var result = await catalog.FindPackagesAsync(options).AsTask(cancellationToken);
-        if (result.Status != FindPackagesResultStatus.Ok)
-        {
-            throw new WinGetException(WinGetPackageService.DescribeFindFailure(result.Status), result.ExtendedErrorCode);
-        }
-        return result.Matches.Count > 0
-            ? result.Matches[0].CatalogPackage
+        var matches = await FindMatchesAsync(catalog, ById(installedId), cancellationToken);
+        return matches.Count > 0
+            ? matches[0].CatalogPackage
             : throw new WinGetException("This program is no longer installed. Refresh the list and try again.", null);
     }
 
@@ -164,8 +231,7 @@ public sealed class CatalogConnection
     /// </summary>
     internal async Task<CatalogPackage> FindByIdAsync(string id, string? source, bool localFirst, CancellationToken cancellationToken)
     {
-        var catalog = localFirst ? await GetLocalFirstAsync(cancellationToken) : await GetRemoteFirstAsync(cancellationToken);
-        return await FindInCatalogAsync(catalog, id, source, cancellationToken) ?? throw NotFound(id);
+        return await FindByIdInCatalogAsync(localFirst, id, source, cancellationToken) ?? throw NotFound(id, source);
     }
 
     /// <summary>
@@ -175,27 +241,13 @@ public sealed class CatalogConnection
     /// </summary>
     internal async Task<CatalogPackage> FindForDetailsAsync(string id, string? source, bool installed, CancellationToken cancellationToken)
     {
-        var found = installed ? await FindInCatalogAsync(await GetLocalFirstAsync(cancellationToken), id, source, cancellationToken) : null;
-        return found ?? await FindInCatalogAsync(await GetRemoteFirstAsync(cancellationToken), id, source, cancellationToken) ?? throw NotFound(id);
+        var found = installed ? await FindByIdInCatalogAsync(localFirst: true, id, source, cancellationToken) : null;
+        return found ?? await FindByIdInCatalogAsync(localFirst: false, id, source, cancellationToken) ?? throw NotFound(id, source);
     }
 
-    private static async Task<CatalogPackage?> FindInCatalogAsync(PackageCatalog catalog, string id, string? source, CancellationToken cancellationToken)
+    private async Task<CatalogPackage?> FindByIdInCatalogAsync(bool localFirst, string id, string? source, CancellationToken cancellationToken)
     {
-        var options = new FindPackagesOptions();
-        options.Selectors.Add(new PackageMatchFilter
-        {
-            Field = PackageMatchField.Id,
-            Option = PackageFieldMatchOption.Equals,
-            Value = id,
-        });
-
-        var result = await catalog.FindPackagesAsync(options).AsTask(cancellationToken);
-        if (result.Status != FindPackagesResultStatus.Ok)
-        {
-            throw new WinGetException(WinGetPackageService.DescribeFindFailure(result.Status), result.ExtendedErrorCode);
-        }
-
-        var matches = result.Matches;
+        var matches = await FindAsync(localFirst, () => ById(id), cancellationToken);
         for (var i = 0; i < matches.Count; i++)
         {
             var package = matches[i].CatalogPackage;
@@ -207,8 +259,27 @@ public sealed class CatalogConnection
         return null;
     }
 
-    private static WinGetException NotFound(string id) =>
-        new($"WinGet can no longer find the package '{id}'. Refresh and try again.", null);
+    private static FindPackagesOptions ById(string id)
+    {
+        var options = new FindPackagesOptions();
+        options.Selectors.Add(new PackageMatchFilter
+        {
+            Field = PackageMatchField.Id,
+            Option = PackageFieldMatchOption.Equals,
+            Value = id,
+        });
+        return options;
+    }
+
+    private WinGetException NotFound(string id, string? source) =>
+        FailedSourceError(id, source, SourceFailures) ?? new($"WinGet can no longer find the package '{id}'. Refresh and try again.", null);
+
+    /// <summary>A package from a failed source isn't gone: say which source failed (011 R2.6). Null when none is involved.</summary>
+    internal static WinGetException? FailedSourceError(string id, string? source, IReadOnlyList<SourceFailure> failures)
+    {
+        var relevant = failures.Where(f => string.IsNullOrEmpty(source) || string.Equals(f.Source, source, StringComparison.OrdinalIgnoreCase)).ToList();
+        return relevant.Count == 0 ? null : new($"Couldn't look up '{id}'. {SourceFailureMessages.Join(relevant)}", relevant[0].HResult);
+    }
 
     internal static bool IsFromSource(string? requested, string? actual) =>
         string.IsNullOrEmpty(requested) || actual == requested;
