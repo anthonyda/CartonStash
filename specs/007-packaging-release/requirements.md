@@ -1,6 +1,6 @@
 # 007 – Packaging and release: Requirements
 
-**Status:** Approved (2026-10-30). Amendment R5 (release hardening) approved 2026-10-30. Amendment R6 (Microsoft Store) approved 2026-10-30. Amendment R7 (smaller packages) approved 2026-10-31
+**Status:** Approved (2026-10-30). Amendment R5 (release hardening) approved 2026-10-30. Amendment R6 (Microsoft Store) approved 2026-10-30. Amendment R7 (smaller packages) approved 2026-10-31. Amendment R8 (shared runtime on GitHub) approved 2026-10-31
 **Depends on:** 001–006 (can start in parallel once 003 is done)
 
 ## Problem
@@ -21,6 +21,7 @@ release path has to protect the key and let users check what they download.
 - **US5.** As the maintainer, I want the signing key to stay safe even if a build dependency is compromised.
 - **US6.** As a user, I want to install the app from the Microsoft Store, without trusting a certificate by hand. *(Amendment R6.)*
 - **US7.** As a user, I want a small download that doesn't fill my disk with parts the app never uses. *(Amendment R7.)*
+- **US8.** As a GitHub MSIX user, I want background update checks too (spec 010), and clear steps for the one extra thing they need. *(Amendment R8.)*
 
 ## Acceptance criteria (EARS)
 
@@ -53,15 +54,21 @@ release path has to protect the key and let users check what they download.
 | R6.1 | US6   | Each tagged release shall also produce an MSIX for the Microsoft Store, for x64 and ARM64, from the same code and version as the GitHub files. |
 | R6.2 | US6   | The Store MSIX shall carry the identity Partner Center assigned: name `51376anthonydapps.CartonStash`, publisher `CN=8E7BFF24-3095-4F83-84B3-2D4A3E780750`, publisher display name `anthonydapps`. |
 | R6.3 | US6   | The Store MSIX shall not be signed by the project, shall not be published on GitHub Releases, and shall never reach the signing job. Microsoft signs it after certification. |
-| R6.4 | US6   | The GitHub MSIX and portable zip shall stay as they are (R1.1, R1.4, R2.1, R5.x), with the `CN=Anthony` identity and certificate. |
+| R6.4 | US6   | The GitHub MSIX and portable zip shall stay as they are (R1.1, R1.4, R2.1, R5.x), with the `CN=Anthony` identity and certificate. *(R8.1 changes only the GitHub MSIX's runtime.)* |
 | R6.5 | US6   | The Store MSIX shall pass the Windows App Certification Kit before it's submitted. |
 | R6.6 | US6   | The Store's privacy policy text shall be kept in the repository as `PRIVACY.md`, and shall match what the app does. |
 | R7.1 | US7   | The app shall reference only the Windows App SDK parts it uses, so that every package leaves out the AI, machine learning, search and widget libraries, if the app works without them. |
 | R7.2 | US7   | The Store MSIX shall use the shared Windows App SDK runtime, which the Store installs with the app, instead of bundling its own copy. |
 | R7.3 | US7   | The .NET runtime shall stay bundled in every package, and the app shall not be trimmed. |
-| R7.4 | US7   | The GitHub MSIX and portable zip shall keep their own copy of the Windows App SDK, and shall still work on a PC with no Store access (R1.2, R1.4). |
+| R7.4 | US7   | **Replaced by R8.1 and R8.3.** ~~The GitHub MSIX and portable zip shall keep their own copy of the Windows App SDK, and shall still work on a PC with no Store access (R1.2, R1.4).~~ |
 | R7.5 | US7   | Every package shall pass the same checks as before: unit tests, the portable start check (R1.6), and search, install and uninstall on a real install (R1.3). |
 | R7.6 | US7   | A Store update shall install over the existing Store version and keep its settings and logs. |
+| R8.1 | US8   | The GitHub MSIX shall use the shared Windows App SDK runtime, as the Store MSIX does (R7.2). |
+| R8.2 | US8   | The README and release notes shall say that the GitHub MSIX needs the Windows App SDK runtime, link to Microsoft's download for it, and give the install order. They shall state which runtime version the release needs. |
+| R8.3 | US8   | The portable zip shall keep its own copy of the Windows App SDK, and shall work on a PC with no Store access and no runtime installed (R1.4, R1.6). |
+| R8.4 | US8   | With the runtime installed, the GitHub MSIX shall work on a PC with no Store access (R1.2). |
+| R8.5 | US8   | With the runtime installed, the new GitHub MSIX shall install over an existing one and keep its settings and logs. |
+| R8.6 | US8   | The first release under R8 shall tell existing GitHub MSIX users to install the runtime before updating. |
 
 ## Out of scope
 
@@ -87,10 +94,16 @@ release path has to protect the key and let users check what they download.
 - **Amendment R6: signing through the Store, decided 2026-10-30.** No certificate is bought. Store-only signing leaves the GitHub files self-signed, and
   R2.2 (winget-pkgs) stays deferred. Store users can install with `winget install 9MT37M7DBZRK --source msstore` once the app is listed.
 
+## Open questions (amendment R8)
+
+- **Keep the bundled GitHub MSIX and leave it without background checks?** **Decided 2026-10-31: no, move it** (maintainer). Spec 010's T1 showed background tasks crash with the SDK bundled. The cost is one more install step for GitHub MSIX users, on top of the certificate. Anyone who won't do that can use the portable zip, without background checks.
+- **What does a user see if the runtime is missing?** **Answered 2026-11-01 (T36):** App Installer shows **Install**, then "App Installer failed to install package dependencies." It doesn't fetch the runtime, and the message doesn't name it, so the README quotes the message.
+- **Does the runtime installer need administrator rights?** **Not answered.** T36 ran as Windows Sandbox's administrator account. The docs say Windows may ask for it.
+
 ## Open questions (amendment R7)
 
 - **What if a Store user's PC can't get the shared runtime?** **Decided 2026-10-31: accept it.** The Store delivers it with the app, so this should only affect managed PCs that block the Store's framework packages, and they can use the GitHub MSIX or portable zip.
-- **Link to the runtime in the README?** **Decided 2026-10-31: no.** Under R7.4 nobody needs it, and removing the runtime from the GitHub files would add a step to an already harder install.
+- **Link to the runtime in the README?** **Decided 2026-10-31: no.** Under R7.4 nobody needs it, and removing the runtime from the GitHub files would add a step to an already harder install. *Reversed by amendment R8.*
 - **Stop if the saving is small?** **Decided 2026-10-31: yes.** If T31 shows that R7.2 saves less than 50 MB, drop it and keep R7.1 only, because a separate runtime setup isn't worth a small gain.
 
 ## Open questions (amendment R6)
