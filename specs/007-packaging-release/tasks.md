@@ -101,14 +101,16 @@ After going public:
 - [x] **T40.** Rewrite the notes of v1.0.2 to v1.0.5 as changelog only. *(R9.4)*
   - Done 2026-11-01, on the maintainer's request and ahead of review. The files stayed, because GitHub refuses to remove them (see the requirements' open questions).
 - [x] **T41.** Mark the rows in "What amendment R9 replaces" and drop T37. Reword 010 R4.1 and T11. *(all)*
-- [ ] **T42.** `CHANGELOG.md`, with v1.0.2 to v1.0.5 and the unreleased work, and `tools/Get-Changelog.ps1`. *(R9.3)*
+- [x] **T42.** `CHANGELOG.md`, with v1.0.2 to v1.0.5 and the unreleased work, and `tools/Get-Changelog.ps1`. *(R9.3)*
   - Verify: prints a version's section; fails on a missing or empty one.
-- [ ] **T43.** `Publish-Release.ps1` without the GitHub MSIX and `.cer`. Delete `Sign-Release.ps1`, `New-SigningCert.ps1`, `CartonStash.cer` and `release-notes.md`. *(R9.1, R9.6, R9.9)*
+- [x] **T43.** `Publish-Release.ps1` without the GitHub MSIX and `.cer`. Delete `Sign-Release.ps1`, `New-SigningCert.ps1`, `CartonStash.cer` and `release-notes.md`. *(R9.1, R9.6, R9.9)*
   - Verify: a local run leaves only the portable zip in `artifacts\` and the Store MSIX in `store\`; the portable app opens with no crash logged (R1.6).
-- [ ] **T44.** `release.yml`: the two jobs in the design. *(R9.2, R9.3, R9.8, R9.9)*
+  - The first run failed this check, on a bug already on `main`. See "Clean builds" in the design, and the log.
+- [x] **T44.** `release.yml`: the two jobs in the design. *(R9.2, R9.3, R9.8, R9.9)*
   - Verify: review against R5.2 to R5.4; no secret, signing or attestation step is left. Checked for real by T46.
 - [ ] **T45.** README, `SECURITY.md`, `CLAUDE.md` and the note in `SettingsPage.xaml`. *(R9.5, R9.6, R9.7)*
   - Verify: review; a fresh clone builds and runs from the README alone; the certificate removal command works.
+  - Docs and the fresh build are done. Still to check: the certificate removal itself, as administrator, ideally in Windows Sandbox, and `winget install` from a PC without the app.
 - [ ] **T46.** With T33's tag: the release has its changelog and no files, and the `store` artifact is there. *(R9.2, R9.9)*
 - [ ] **T47.** Delete `SIGNING_PFX_BASE64` and `SIGNING_PFX_PASSWORD` from the `release` environment. *(R9.8)*
   - Verify: `gh secret list --env release` shows neither.
@@ -152,4 +154,9 @@ After going public:
 | Remake test | 2026-11-01 | Inconclusive | `gh release create v1.0.1 --verify-tag --draft` was accepted on the tag whose immutable release was deleted. It wasn't published, because that would add a public release nobody asked for, so it doesn't show that publishing works. The empty draft was then removed |
 | Remake on the same tag | 2026-11-01 | Refused | The maintainer deleted v1.0.2's release; the tag remains. `gh release create v1.0.2 --verify-tag`: HTTP 422, "tag_name was used by an immutable release". Nothing else changed |
 | R9.4 (T49) | 2026-11-01 | Pass | Created `1.0.2` to `1.0.5` with `gh release create --target <sha>`. Read back: each has 0 files, its notes match, and it's immutable and on the same commit as its `v` tag. Latest is `1.0.5`. No workflow ran. They show 2026-11-01 as the publish date. The first try was blocked by the app's permission check, and went through after the maintainer approved the new tags |
+| R9.3 (T42) | 2026-11-01 | Pass | `Get-Changelog.ps1` prints 1.0.2 to 1.0.6, with or without the `v`, and the last section of a file. Its text matches the four live releases, headings aside. A missing version and an empty section each stop it with a clear message, and a failure exits 1 |
+| R1.6, R9.6 (T43) | 2026-11-01 | Fail, fixed | First run, Store MSIX then portable: no window, `0xc000027b` in `Microsoft.UI.Xaml.dll`, `CartonStash.pri` 39 KB against 2.4 MB in a Debug build. The MSIX build's empty `pri.resfiles` was reused. `main`'s own script gives the same crash (x64, 39,344 bytes), so R9 didn't cause it; v1.0.5's zip is the good size, 72.8 MB, not the broken 72.2 MB. Fixed with a clean build each time and a stronger guard (see design) |
+| R1.6, R9.1, R9.6, R9.9 (T43) | 2026-11-01 | Pass (x64) | After the fix, `Publish-Release.ps1 -Version 1.0.6 -Runtimes win-x64` with `CI=true`: `artifacts\` has only the zip, 2.4 MB `CartonStash.pri`, and the app opens its window "CartonStash" with no crash logged. `store\` has only the MSIX: 45.2 MB, Store identity, version 1.0.6.0, unsigned, shared runtime. `Package.appxmanifest` is unchanged. 355 unit tests pass. The MSIX wasn't installed: T33 does that. ARM64 is confirmed by the next tag's build |
+| R5.2–R5.4, R9.8, R9.9 (T44) | 2026-11-01 | Pass (review) | Text checks on `release.yml`: no `secrets.`, signing or attestation, no `${{ }}` inside `run:`, all 4 actions pinned to a full SHA, `persist-credentials: false` on both checkouts, `release` environment kept. Not parsed by a YAML tool, because none is on this PC. The change is small and read as a diff. Its first real run is T46 |
+| R9.5, R9.6, R9.7 (T45) | 2026-11-01 | Partial | `winget show --id 9MT37M7DBZRK --source msstore` finds the listing. From a fresh worktree, `dotnet build` gives no warnings or errors, and `dotnet run` opens its window with no crash logged. The removal command's selection finds exactly the 1 certificate on this PC. The removal itself wasn't run, because it changes this PC's trusted certificates |
 | v1.0.1 release | 2026-11-01 | Note | `gh release view v1.0.1` says "release not found"; the tag remains. So `v1.0.2` is the oldest release page, and the design's rollout note that `v1.0.1` stays published is out of date |
