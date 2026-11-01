@@ -49,7 +49,7 @@ public partial class App : Application
 
     private void ShowSetup(bool startFailed)
     {
-        _window = new WinGetSetupWindow(new WinGetSetupViewModel(startFailed, WinGetAvailability.IsInstalled, TryOpenMainWindow));
+        _window = new WinGetSetupWindow(new WinGetSetupViewModel(startFailed, WinGetAvailability.IsInstalled, TryOpenMainWindow, WinGetAvailability.SetUpAsync));
         Services.GetRequiredService<ThemeService>().Attach(_window);
         _window.Activate();
     }

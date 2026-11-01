@@ -33,7 +33,7 @@
 
 Starts after 011 is merged. T12 to T16 and T18 don't depend on T11's result.
 
-- [ ] **T11.** Probe: install App Installer through `AddPackageByUriAsync`, unelevated, in a clean Sandbox, from the portable build and the MSIX. Record whether the MSIX needs `packageManagement`; update the design first if the plan changes. *(R3.7)*
+- [x] **T11.** Probe: install App Installer through `AddPackageByUriAsync`, unelevated, in a clean Sandbox, from the portable build and the MSIX. Record whether the MSIX needs `packageManagement`; update the design first if the plan changes. *(R3.7)*
   - Verify: results recorded in the log below.
 - [x] **T12.** `SourceAgreementAnswer`, `AppSettings.SourceAgreementAnswers`, `SourceAgreementPolicy`. *(R3.8, R3.9)*
   - Verify: `SourceAgreementPolicyTests` (every row of the design's table); store round trip; older file loads with no reset.
@@ -67,4 +67,5 @@ Starts after 011 is merged. T12 to T16 and T18 don't depend on T11's result.
 | R5.2 | 2026-10-30 | Pass | Restart → Updates page shown, Updates selected in navigation (screenshot). Reset to Search afterwards |
 | R5.4 | 2026-10-30 | Pass (unit) | `SettingsTests.File_from_before_start_page_opens_on_search_without_a_reset`; live file from before R5 also loaded without a notice |
 | R4.3 | 2026-10-30 | Pass | `Diagnostics_remove_secrets_from_source_addresses` covers a token, user:password and local paths; `Copied_diagnostics_hold_no_source_secrets` goes through the Copy command |
+| R3.7 (T11) | 2026-11-01 | Pass | Clean Sandbox per run, unelevated token, v1.29.380 bundle and x64 dependencies through `AddPackageByUriAsync`: unpackaged exe and test MSIX (`runFullTrust` only) both registered; `winget` v1.29.380 ran afterwards |
 | R1.1 (high contrast) | – | **Pending** | Check the app with a Windows contrast theme on (constitution Q5) |

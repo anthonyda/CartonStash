@@ -157,20 +157,20 @@ Search shows an `InfoBar` beside 011's notice, not inside it: "`msstore` isn't i
 
 `WinGetSetupWindow` gains **Set up for me** beside **Get App Installer** and **Check again**. Every step needs that click (P2).
 
-1. Download `Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle` and `DesktopAppInstaller_Dependencies.zip` from the latest
-   `microsoft/winget-cli` GitHub release. These are the files 011 installed in a clean Sandbox. Progress is shown (P3).
-2. Check that both are signed by Microsoft, and refuse anything else. Windows checks the signature again on install.
-3. Install the packages for this PC's architecture with `PackageManager.AddPackageByUriAsync`, then the bundle.
+1. Download `Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle` and `DesktopAppInstaller_Dependencies.zip` from one pinned
+   `microsoft/winget-cli` GitHub release, v1.29.380. These are the files 011 installed in a clean Sandbox. Progress is shown (P3).
+2. Check both against the SHA-256 hashes pinned in the code, and refuse anything else. Windows checks the signature again on install.
+   *Amended during T17:* the design said "the latest release, signed by Microsoft". Pinned hashes are stricter, need no signature
+   code in the app, and an old App Installer still updates itself. If the release is ever removed, setup fails and the link remains.
+3. Pass the dependencies for this PC's architecture and the bundle to `PackageManager.AddPackageByUriAsync`.
 4. Run the existing Check again step, which 011 showed works in the same process. If anything fails, show why and keep the link.
 
 Store policy, version 7.20: 10.2.3 forbids offering software that "does not enhance the functionality" of the product, and App
 Installer is what the app needs to work, so it should be allowed. 10.2.4 requires the dependency to be disclosed at the start of the Store
 description, so the listing needs checking. Store reviewers decide in the end.
 
-**Not tested yet, so task T11:** 011 installed with `Add-AppxPackage` in Sandbox, where the session is elevated. T11 must run
-the same install through the API, unelevated, from the portable build and the MSIX. `AddPackageByUriAsync` may need the restricted
-`packageManagement` capability in the MSIX. If so, the MSIX build drops **Set up for me** and keeps the link, as adding a restricted
-capability for a rare case isn't worth the Store review.
+T11 tested this in clean Sandboxes, unelevated: a test exe and a test MSIX with only `runFullTrust` both installed App Installer through
+`AddPackageByUriAsync`, and `winget` then ran. So the MSIX needs no `packageManagement` capability, and both builds offer **Set up for me**.
 
 ### Testing
 
