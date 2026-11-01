@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Window
+    x:Class="CartonStash.App.WinGetSetupWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:ui="using:CartonStash.App"
+    Title="CartonStash">
+
+    <Window.SystemBackdrop>
+        <MicaBackdrop />
+    </Window.SystemBackdrop>
+
+    <Grid x:Name="Root">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="40" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <StackPanel
+            x:Name="AppTitleBar"
+            Padding="12,0,0,0"
+            Orientation="Horizontal"
+            Spacing="10">
+            <Image
+                Width="18"
+                Height="18"
+                VerticalAlignment="Center"
+                AutomationProperties.AccessibilityView="Raw"
+                Source="ms-appx:///Assets/AppIcon.svg" />
+            <TextBlock
+                VerticalAlignment="Center"
+                Style="{StaticResource CaptionTextBlockStyle}"
+                Text="CartonStash" />
+        </StackPanel>
+
+        <!-- 011 R3.2, R3.6 -->
+        <StackPanel
+            Grid.Row="1"
+            MaxWidth="480"
+            Margin="24"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center"
+            Spacing="12">
+            <TextBlock
+                AutomationProperties.HeadingLevel="Level1"
+                Style="{StaticResource TitleTextBlockStyle}"
+                Text="{x:Bind ViewModel.Title}" />
+            <TextBlock Text="{x:Bind ViewModel.Message}" TextWrapping="Wrap" />
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <HyperlinkButton
+                    x:Name="GetAppInstaller"
+                    Content="Get App Installer"
+                    NavigateUri="https://apps.microsoft.com/detail/9NBLGGH4NNS1" />
+                <Button Command="{x:Bind ViewModel.CheckAgainCommand}" Content="Check again" />
+            </StackPanel>
+            <TextBlock
+                AutomationProperties.LiveSetting="Polite"
+                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                Text="{x:Bind ViewModel.Status, Mode=OneWay}"
+                TextWrapping="Wrap"
+                Visibility="{x:Bind ui:Ui.VisibleIf(ViewModel.Status), Mode=OneWay}" />
+        </StackPanel>
+    </Grid>
+</Window>
