@@ -31,16 +31,19 @@ public sealed partial class PackageDetailsViewModel(IPackageService packages) : 
     public partial PackageRowViewModel? Row { get; private set; }
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsLoading), nameof(PartialNote))]
+    [NotifyPropertyChangedFor(nameof(IsLoading), nameof(PartialNote), nameof(HasPartialNote))]
     public partial DetailsState State { get; private set; }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HomepageUri), nameof(PublisherUri), nameof(SupportUri), nameof(PrivacyUri),
         nameof(LicenseUri), nameof(ReleaseNotesUri), nameof(TagsText), nameof(VersionsText),
-        nameof(ReleaseNotesIsLong), nameof(HasReleaseNotes))]
+        nameof(ReleaseNotesIsLong), nameof(HasReleaseNotes), nameof(HasPublisher), nameof(HasShortDescription),
+        nameof(HasDescription), nameof(HasLicense), nameof(HasHomepageUri), nameof(HasPublisherUri), nameof(HasSupportUri),
+        nameof(HasPrivacyUri), nameof(HasLicenseUri), nameof(HasReleaseNotesUri), nameof(HasTags), nameof(HasVersions))]
     public partial PackageDetails? Details { get; private set; }
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasError))]
     public partial string? ErrorMessage { get; private set; }
 
     [ObservableProperty]
@@ -65,6 +68,22 @@ public sealed partial class PackageDetailsViewModel(IPackageService packages) : 
     public Uri? ReleaseNotesUri => SafeUri(Details?.ReleaseNotesUrl);
 
     public string? TagsText => Details is { Tags.Count: > 0 } d ? string.Join(" · ", d.Tags) : null;
+
+    // Plain bools for the view: x:Bind doesn't call a function again once its argument is null (011 T8).
+    public bool HasError => ErrorMessage is not null;
+    public bool HasPartialNote => PartialNote is not null;
+    public bool HasPublisher => !string.IsNullOrEmpty(Details?.Publisher);
+    public bool HasShortDescription => !string.IsNullOrEmpty(Details?.ShortDescription);
+    public bool HasDescription => !string.IsNullOrEmpty(Details?.Description);
+    public bool HasLicense => !string.IsNullOrEmpty(Details?.License);
+    public bool HasHomepageUri => HomepageUri is not null;
+    public bool HasPublisherUri => PublisherUri is not null;
+    public bool HasSupportUri => SupportUri is not null;
+    public bool HasPrivacyUri => PrivacyUri is not null;
+    public bool HasLicenseUri => LicenseUri is not null;
+    public bool HasReleaseNotesUri => ReleaseNotesUri is not null;
+    public bool HasTags => TagsText is not null;
+    public bool HasVersions => VersionsText is not null;
 
     public bool HasReleaseNotes => Details?.ReleaseNotes is not null;
 

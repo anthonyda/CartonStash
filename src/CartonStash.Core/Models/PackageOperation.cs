@@ -110,7 +110,11 @@ public sealed partial class PackageOperation : ObservableObject
 
     /// <summary>The outcome message once finished (success, failure reason, restart note).</summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasMessage))]
     public partial string? Message { get; internal set; }
+
+    /// <summary>A plain bool for the card: x:Bind doesn't call a function again once its argument is null (011 T8).</summary>
+    public bool HasMessage => Message is not null;
 
     public bool IsActive => Phase != OperationPhase.Done;
 

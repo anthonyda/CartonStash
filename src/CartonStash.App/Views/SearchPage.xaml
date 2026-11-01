@@ -4,7 +4,6 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:controls="using:CartonStash.App.Controls"
-    xmlns:ui="using:CartonStash.App"
     xmlns:vm="using:CartonStash.Core.ViewModels"
     NavigationCacheMode="Required">
 
@@ -55,14 +54,14 @@
                 <InfoBar
                     Title="Search failed"
                     IsClosable="False"
-                    IsOpen="{x:Bind ui:Ui.HasText(ViewModel.ErrorMessage), Mode=OneWay}"
+                    IsOpen="{x:Bind ViewModel.HasError, Mode=OneWay}"
                     Message="{x:Bind ViewModel.ErrorMessage, Mode=OneWay}"
                     Severity="Error" />
                 <!-- 011 R2.1 -->
                 <InfoBar
                     Title="Some sources are missing"
                     IsClosable="False"
-                    IsOpen="{x:Bind ui:Ui.HasText(ViewModel.SourceNotice), Mode=OneWay}"
+                    IsOpen="{x:Bind ViewModel.HasSourceNotice, Mode=OneWay}"
                     Message="{x:Bind ViewModel.SourceNotice, Mode=OneWay}"
                     Severity="Warning" />
             </StackPanel>
@@ -88,7 +87,7 @@
                     VerticalAlignment="Top"
                     Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                     Text="{x:Bind ViewModel.EmptyMessage, Mode=OneWay}"
-                    Visibility="{x:Bind ui:Ui.VisibleIf(ViewModel.EmptyMessage), Mode=OneWay}" />
+                    Visibility="{x:Bind ViewModel.HasEmptyMessage, Mode=OneWay}" />
             </Grid>
         </Grid>
 

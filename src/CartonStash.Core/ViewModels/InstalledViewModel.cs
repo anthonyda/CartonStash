@@ -82,6 +82,9 @@ public sealed partial class InstalledViewModel : ObservableObject
 
     public string? ErrorMessage => _store.ErrorMessage;
 
+    /// <summary>A plain bool for the InfoBar: x:Bind doesn't call a function again once its argument is null (011 T8).</summary>
+    public bool HasError => ErrorMessage is not null;
+
     public int TotalCount => _all.Count;
 
     /// <summary>"42 of 318 packages" (R2.2).</summary>
@@ -124,6 +127,7 @@ public sealed partial class InstalledViewModel : ObservableObject
                 break;
             case nameof(InstalledPackagesStore.ErrorMessage):
                 OnPropertyChanged(nameof(ErrorMessage));
+                OnPropertyChanged(nameof(HasError));
                 break;
             case nameof(InstalledPackagesStore.IsLoaded):
                 OnPropertyChanged(nameof(CountText));

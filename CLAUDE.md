@@ -32,6 +32,7 @@ dotnet run --project src/CartonStash.App             # run the app
 ## Gotchas
 
 - WinGet collections: index them, don't `foreach` (constitution W2).
+- Don't pass a value that can become null to an x:Bind function: the generated code skips the call and the target keeps its old value. Bind a plain bool from the view model.
 - Keep the repo at a short path. Long paths break the XAML compiler (error WMC1006 / WMC9999).
 - Package versions live only in `Directory.Packages.props`. After changing one, run `dotnet restore --force-evaluate` and
   commit the `packages.lock.json` files: CI refuses a restore that doesn't match them (error NU1004).
