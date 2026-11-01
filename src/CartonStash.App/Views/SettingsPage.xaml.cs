@@ -14,14 +14,18 @@ public sealed partial class SettingsPage : Page
     public SettingsPage()
     {
         ViewModel = App.Services.GetRequiredService<SettingsViewModel>();
+        Checks = App.Services.GetRequiredService<CheckSettingsViewModel>();
         InitializeComponent();
     }
 
     public SettingsViewModel ViewModel { get; }
 
+    public CheckSettingsViewModel Checks { get; }
+
     protected override async void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
+        Checks.Refresh();
         if (!_loaded)
         {
             _loaded = true;
@@ -35,6 +39,14 @@ public sealed partial class SettingsPage : Page
         if (sender is FrameworkElement { Tag: SourceInfo source })
         {
             ViewModel.ReviewAgreementsCommand.Execute(source);
+        }
+    }
+
+    private void RemoveExclusion_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { Tag: ExcludedPackageRow row })
+        {
+            Checks.RemoveExclusionCommand.Execute(row);
         }
     }
 }

@@ -5,6 +5,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:models="using:CartonStash.Core.Models"
     xmlns:ui="using:CartonStash.App"
+    xmlns:vm="using:CartonStash.Core.ViewModels"
     NavigationCacheMode="Required">
 
     <Page.Resources>
@@ -99,6 +100,119 @@
                 IsOpen="{x:Bind ViewModel.ShowScopeWarning, Mode=OneWay}"
                 Message="Installers for all users usually need administrator rights, so Windows may show a UAC prompt for each install."
                 Severity="Informational" />
+
+            <!-- Update checks (010 R3.1–R3.4, R3.8, R4.1) -->
+            <TextBlock Margin="0,12,0,0" AutomationProperties.HeadingLevel="Level2" Style="{StaticResource BodyStrongTextBlockStyle}" Text="Update checks" />
+            <Grid Style="{StaticResource CardStyle}">
+                <StackPanel Spacing="8">
+                    <RadioButtons
+                        AutomationProperties.Name="Background update checks"
+                        Header="Background update checks"
+                        IsEnabled="{x:Bind Checks.IsAvailable}"
+                        SelectedIndex="{x:Bind Checks.ModeIndex, Mode=TwoWay}">
+                        <x:String>Off</x:String>
+                        <x:String>Every</x:String>
+                        <x:String>Every day at</x:String>
+                    </RadioButtons>
+                    <ComboBox
+                        MinWidth="200"
+                        AutomationProperties.Name="Check every"
+                        Header="Check every"
+                        IsEnabled="{x:Bind Checks.IsIntervalMode, Mode=OneWay}"
+                        SelectedIndex="{x:Bind Checks.IntervalIndex, Mode=TwoWay}">
+                        <x:String>1 hour</x:String>
+                        <x:String>6 hours</x:String>
+                        <x:String>12 hours</x:String>
+                        <x:String>24 hours</x:String>
+                        <x:String>7 days</x:String>
+                    </ComboBox>
+                    <TimePicker
+                        AutomationProperties.Name="Check every day at"
+                        Header="Check every day at"
+                        IsEnabled="{x:Bind Checks.IsDailyMode, Mode=OneWay}"
+                        Time="{x:Bind Checks.CheckTime, Mode=TwoWay}" />
+                    <TextBlock
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Style="{StaticResource CaptionTextBlockStyle}"
+                        Text="Windows decides the exact moment, so a check can start up to 15 minutes before the chosen time, or later than it. A check missed while the PC was off or asleep runs when you come back."
+                        TextWrapping="Wrap" />
+                    <TextBlock IsTextSelectionEnabled="True" Text="{x:Bind Checks.LastCheckText, Mode=OneWay}" TextWrapping="Wrap" />
+                    <TextBlock
+                        IsTextSelectionEnabled="True"
+                        Text="{x:Bind Checks.NextCheckText, Mode=OneWay}"
+                        Visibility="{x:Bind ui:Ui.VisibleIf(Checks.NextCheckText), Mode=OneWay}" />
+                </StackPanel>
+            </Grid>
+            <InfoBar
+                IsClosable="False"
+                IsOpen="{x:Bind Checks.IsUnavailable}"
+                Message="Background update checks need the Microsoft Store or MSIX version of CartonStash."
+                Severity="Informational" />
+            <InfoBar
+                Title="Windows isn't allowing background checks"
+                IsClosable="False"
+                IsOpen="{x:Bind Checks.IsBlocked, Mode=OneWay}"
+                Message="Allow it in Windows Settings, under Apps, Installed apps, CartonStash, Advanced options, Background app permissions. Everything else keeps working."
+                Severity="Warning" />
+
+            <!-- Excluded packages (010 R5.4) -->
+            <TextBlock Margin="0,12,0,0" AutomationProperties.HeadingLevel="Level2" Style="{StaticResource BodyStrongTextBlockStyle}" Text="Excluded packages" />
+            <TextBlock
+                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                Text="No packages are excluded."
+                Visibility="{x:Bind Checks.HasNoExcluded, Mode=OneWay}" />
+            <ItemsControl ItemsSource="{x:Bind Checks.Excluded}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:ExcludedPackageRow">
+                        <Grid Margin="0,0,0,4" Style="{StaticResource CardStyle}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}" Text="{x:Bind Name}" />
+                                <TextBlock Foreground="{ThemeResource TextFillColorSecondaryBrush}" Style="{StaticResource CaptionTextBlockStyle}" Text="{x:Bind Id}" />
+                            </StackPanel>
+                            <Button
+                                Grid.Column="1"
+                                VerticalAlignment="Center"
+                                AutomationProperties.Name="{x:Bind RemoveLabel}"
+                                Click="RemoveExclusion_Click"
+                                Content="Remove"
+                                Tag="{x:Bind}" />
+                        </Grid>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <!-- Check history (010 R3.11) -->
+            <TextBlock Margin="0,12,0,0" AutomationProperties.HeadingLevel="Level2" Style="{StaticResource BodyStrongTextBlockStyle}" Text="Check history" />
+            <TextBlock
+                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                Text="No checks in the last 7 days."
+                Visibility="{x:Bind Checks.HasNoHistory, Mode=OneWay}" />
+            <ItemsControl ItemsSource="{x:Bind Checks.History}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:CheckHistoryRow">
+                        <Grid Margin="0,0,0,4" Style="{StaticResource CardStyle}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <FontIcon
+                                AutomationProperties.Name="Failed"
+                                FontSize="14"
+                                Glyph="&#xE783;"
+                                Visibility="{x:Bind IsFailed}" />
+                            <TextBlock
+                                Grid.Column="1"
+                                IsTextSelectionEnabled="True"
+                                Text="{x:Bind Text}"
+                                TextWrapping="Wrap" />
+                        </Grid>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
 
             <!-- Sources (R3.1–R3.3) -->
             <Grid Margin="0,12,0,0">

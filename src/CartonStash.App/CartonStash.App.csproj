@@ -18,6 +18,9 @@
     <!-- Day to day: unpackaged (plain .exe, F5 just works). -->
     <WindowsPackageType>None</WindowsPackageType>
     <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <!-- Program.cs is the entry point, so a background check can start without XAML (spec 010). -->
+    <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <!--
@@ -30,6 +33,7 @@
     <EnableMsixTooling>true</EnableMsixTooling>
     <SelfContained>true</SelfContained>
     <WindowsAppSDKSelfContained>false</WindowsAppSDKSelfContained>
+    <WindowsAppSDKBackgroundTask>true</WindowsAppSDKBackgroundTask>
     <GenerateAppxPackageOnBuild>true</GenerateAppxPackageOnBuild>
     <AppxPackageSigningEnabled>false</AppxPackageSigningEnabled>
     <AppxBundle>Never</AppxBundle>
