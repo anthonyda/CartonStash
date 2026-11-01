@@ -222,11 +222,11 @@ public sealed class SettingsTests : IDisposable
         var msstore = Source("msstore", new Agreement("Terms of Transaction", "…", "https://aka.ms/microsoft-store-terms-of-transaction"));
 
         await vm.ReviewAgreementsCommand.ExecuteAsync(msstore);
-        Assert.Empty(packages.AcceptedAgreements);
+        Assert.Equal([("msstore", false)], packages.AgreementAnswers); // R3.8: a decline is saved too
 
         dialogs.Answer = true;
         await vm.ReviewAgreementsCommand.ExecuteAsync(msstore);
-        Assert.Equal(["msstore"], packages.AcceptedAgreements);
+        Assert.Equal(("msstore", true), packages.AgreementAnswers[^1]);
     }
 
     [Fact]
@@ -276,5 +276,5 @@ public sealed class SettingsTests : IDisposable
     }
 
     private static SourceInfo Source(string name, params Agreement[] agreements) =>
-        new(name, "Microsoft.PreIndexed.Package", "https://cdn.winget.microsoft.com/cache", true, false, DateTimeOffset.Now, agreements);
+        new(name, name, "Microsoft.PreIndexed.Package", "https://cdn.winget.microsoft.com/cache", true, false, DateTimeOffset.Now, agreements);
 }

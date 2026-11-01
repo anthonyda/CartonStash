@@ -37,7 +37,7 @@ Starts after 011 is merged. T12 to T16 and T18 don't depend on T11's result.
   - Verify: results recorded in the log below.
 - [x] **T12.** `SourceAgreementAnswer`, `AppSettings.SourceAgreementAnswers`, `SourceAgreementPolicy`. *(R3.8, R3.9)*
   - Verify: `SourceAgreementPolicyTests` (every row of the design's table); store round trip; older file loads with no reset.
-- [ ] **T13.** `CatalogConnection` uses the saved answers and leaves sources out; `LeftOutSources`; `SourceInfo.Id` and `AgreementStatus`; replace the session `HashSet` and `AcceptSourceAgreements`. *(R3.8, R3.9)*
+- [x] **T13.** `CatalogConnection` uses the saved answers and leaves sources out; `LeftOutSources`; `SourceInfo.Id` and `AgreementStatus`; replace the session `HashSet` and `AcceptSourceAgreements`. *(R3.8, R3.9)*
   - Verify: integration test that an unanswered `msstore` isn't in the composite; `dotnet test`.
 - [ ] **T14.** `ShowSourceAgreementAsync`, `SourceAgreementCheck`, and move the installed preload behind the check. *(R3.4, R3.5, R3.6, R3.12)*
   - Verify: `SourceAgreementCheckTests` with fake dialogs (each answer; region line for `msstore` only).

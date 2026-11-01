@@ -115,15 +115,14 @@ public sealed partial class SettingsViewModel : ObservableObject
         await ReloadSourcesAsync();
     }
 
-    /// <summary>Shows a source's agreements; accepting lets the app use it this session (R3.3).</summary>
+    /// <summary>Shows a source's agreements; the answer decides whether the app uses it (R3.3, R3.8).</summary>
     [RelayCommand]
     private async Task ReviewAgreementsAsync(SourceInfo source)
     {
-        if (await _dialogs.ShowAgreementsAsync($"{source.Name}: source agreement", source.Agreements))
-        {
-            _packages.AcceptSourceAgreements(source.Name);
-            SourcesStatus = $"Agreements for {source.Name} accepted.";
-        }
+        var accepted = await _dialogs.ShowAgreementsAsync($"{source.Name}: source agreement", source.Agreements);
+        _packages.SetSourceAgreementAnswer(source, accepted);
+        SourcesStatus = accepted ? $"Agreements for {source.Name} accepted." : $"{source.Name} isn't in use.";
+        await ReloadSourcesAsync();
     }
 
     [RelayCommand]

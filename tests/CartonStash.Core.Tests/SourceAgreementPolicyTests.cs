@@ -26,6 +26,19 @@ public class SourceAgreementPolicyTests
     }
 
     [Fact]
+    public void Status_follows_the_answer_and_the_text() // R3.8, R3.9
+    {
+        Agreement[] agreements = [new("Terms", "Text", null)];
+        var hash = SourceAgreementPolicy.Hash(agreements);
+
+        Assert.Equal(AgreementStatus.None, SourceAgreementPolicy.Status([], null));
+        Assert.Equal(AgreementStatus.Unanswered, SourceAgreementPolicy.Status(agreements, null));
+        Assert.Equal(AgreementStatus.Accepted, SourceAgreementPolicy.Status(agreements, new(true, hash)));
+        Assert.Equal(AgreementStatus.Unanswered, SourceAgreementPolicy.Status(agreements, new(true, "old")));
+        Assert.Equal(AgreementStatus.Declined, SourceAgreementPolicy.Status(agreements, new(false, "old")));
+    }
+
+    [Fact]
     public void Hash_changes_with_any_part_of_the_agreements() // R3.9
     {
         var hash = SourceAgreementPolicy.Hash([new Agreement("Terms", "Text", "https://a")]);

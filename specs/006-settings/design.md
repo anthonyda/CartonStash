@@ -107,7 +107,7 @@ The preload has to move: today it connects before anything can ask (R3.8). Searc
 | Core/Models | `AppSettings.SourceAgreementAnswers` | Dictionary of source ID → `SourceAgreementAnswer(bool Accepted, string TextHash)`. Empty in older files, with no reset notice | New |
 | Core/Services | `SourceAgreementPolicy` | Pure: `Needs(answer, hash)` and `MayUse(answer, hash)`, the hash of the agreements, the notice text for a source | New |
 | Core/Services | `CatalogConnection` | Takes `ISettings`. `ConnectAsync` leaves out sources that `MayUse` refuses, and `LeftOutSources` lists them. The session `HashSet` goes | Changed |
-| Core/Services | `IPackageService` | `AcceptSourceAgreements(name)` becomes `SetSourceAgreementAnswer(source, accepted)`, plus `WithdrawSourceAgreement(source)` and `LeftOutSources`. `SourceInfo` gains `Id` and `AgreementStatus` | Changed |
+| Core/Services | `IPackageService` | `AcceptSourceAgreements(name)` becomes `SetSourceAgreementAnswer(source, accepted)`, plus `LeftOutSources`. Withdrawing saves a decline. `SourceInfo` gains `Id` and `AgreementStatus` | Changed |
 | Core/Services | `SourceAgreementCheck` | Runs the dialogs at start | New |
 | Core/Services | `AppInstallerSetup` | Downloads, checks and installs App Installer (R3.7). Uses `Windows.Management.Deployment`, not WinGet's API | New |
 | Core/ViewModels | `WinGetSetupViewModel` (011) | **Set up for me** command, progress and outcome | Changed |

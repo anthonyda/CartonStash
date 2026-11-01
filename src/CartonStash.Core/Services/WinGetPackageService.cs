@@ -22,10 +22,6 @@ public sealed class WinGetPackageService(CatalogConnection connection) : IPackag
     private readonly ConcurrentDictionary<string, string?> _iconUrls = new(StringComparer.OrdinalIgnoreCase);
     private readonly SemaphoreSlim _iconReads = new(4, 4);
 
-    public WinGetPackageService()
-        : this(new CatalogConnection())
-    {
-    }
 
     public async Task<IReadOnlyList<PackageInfo>> SearchAsync(string query, int maxResults = 50, CancellationToken cancellationToken = default)
     {
@@ -212,20 +208,17 @@ public sealed class WinGetPackageService(CatalogConnection connection) : IPackag
             {
                 var reference = catalogs[i];
                 var info = reference.Info;
-                var agreements = reference.SourceAgreements;
-                var list = new List<Agreement>(agreements.Count);
-                for (var j = 0; j < agreements.Count; j++)
-                {
-                    list.Add(new Agreement(agreements[j].Label, NullIfEmpty(agreements[j].Text), NullIfEmpty(agreements[j].Url)));
-                }
+                var list = CatalogConnection.ReadAgreements(reference);
                 sources.Add(new SourceInfo(
+                    info.Id,
                     info.Name,
                     info.Type,
                     info.Argument,
                     info.TrustLevel == PackageCatalogTrustLevel.Trusted,
                     info.Explicit,
                     info.LastUpdateTime.Year > 1601 ? info.LastUpdateTime : null,
-                    list));
+                    list,
+                    SourceAgreementPolicy.Status(list, connection.AnswerFor(info.Id))));
             }
             return sources;
         }, cancellationToken);
@@ -249,7 +242,10 @@ public sealed class WinGetPackageService(CatalogConnection connection) : IPackag
         };
     }
 
-    public void AcceptSourceAgreements(string sourceName) => connection.AcceptSourceAgreements(sourceName);
+    public IReadOnlyList<string> LeftOutSources => connection.LeftOutSources;
+
+    public void SetSourceAgreementAnswer(SourceInfo source, bool accepted) =>
+        connection.SetSourceAgreementAnswer(source.Id, SourceAgreementPolicy.Hash(source.Agreements), accepted);
 
     public string GetWinGetVersion() => connection.Manager.Version;
 
@@ -372,7 +368,7 @@ public sealed class WinGetPackageService(CatalogConnection connection) : IPackag
         };
     }
 
-    private static string? NullIfEmpty(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    internal static string? NullIfEmpty(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }
 
 /// <summary>A WinGet operation failed; <see cref="Exception.HResult"/> holds WinGet's extended error code.</summary>

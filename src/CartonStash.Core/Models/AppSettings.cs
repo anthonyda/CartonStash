@@ -52,15 +52,26 @@ public sealed record AppSettings
 /// <summary>What the user answered for a source's agreements, and which text they saw (006 R3.9).</summary>
 public sealed record SourceAgreementAnswer(bool Accepted, string TextHash);
 
+/// <summary>Where a source stands with its agreements (006 R3.8). <see cref="None"/>: it has none.</summary>
+public enum AgreementStatus
+{
+    None,
+    Unanswered,
+    Accepted,
+    Declined,
+}
+
 /// <summary>A configured WinGet source (006 R3.1).</summary>
 public sealed record SourceInfo(
+    string Id,
     string Name,
     string Type,
     string Argument,
     bool IsTrusted,
     bool IsExplicit,
     DateTimeOffset? LastUpdated,
-    IReadOnlyList<Agreement> Agreements)
+    IReadOnlyList<Agreement> Agreements,
+    AgreementStatus AgreementStatus = AgreementStatus.None)
 {
     public string TrustText => IsTrusted ? "Trusted" : "Not trusted";
 

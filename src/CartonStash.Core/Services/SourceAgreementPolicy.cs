@@ -18,6 +18,20 @@ public static class SourceAgreementPolicy
     public static bool NeedsAnswer(SourceAgreementAnswer? answer, string textHash) =>
         answer is null || (answer.Accepted && answer.TextHash != textHash);
 
+    /// <summary>A changed text puts an acceptance back to unanswered; a decline stays a decline.</summary>
+    public static AgreementStatus Status(IReadOnlyList<Agreement> agreements, SourceAgreementAnswer? answer)
+    {
+        if (agreements.Count == 0)
+        {
+            return AgreementStatus.None;
+        }
+        if (answer is { Accepted: false })
+        {
+            return AgreementStatus.Declined;
+        }
+        return MayUse(answer, Hash(agreements)) ? AgreementStatus.Accepted : AgreementStatus.Unanswered;
+    }
+
     /// <summary>Identifies the agreement text, so a change can be noticed without keeping the text.</summary>
     public static string Hash(IReadOnlyList<Agreement> agreements)
     {

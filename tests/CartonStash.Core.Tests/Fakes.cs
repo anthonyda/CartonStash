@@ -31,7 +31,9 @@ internal sealed class FakePackageService : IPackageService
 
     public List<string> Refreshed { get; } = [];
 
-    public List<string> AcceptedAgreements { get; } = [];
+    public List<(string Source, bool Accepted)> AgreementAnswers { get; } = [];
+
+    public IReadOnlyList<string> LeftOutSources { get; set; } = [];
 
     public int InstalledCalls { get; private set; }
 
@@ -70,7 +72,7 @@ internal sealed class FakePackageService : IPackageService
         return Task.FromResult(RefreshErrors.GetValueOrDefault(sourceName));
     }
 
-    public void AcceptSourceAgreements(string sourceName) => AcceptedAgreements.Add(sourceName);
+    public void SetSourceAgreementAnswer(SourceInfo source, bool accepted) => AgreementAnswers.Add((source.Name, accepted));
 
     public string GetWinGetVersion() => "1.29.380";
 }
