@@ -14,14 +14,14 @@ App services, and Task 1 is a probe that proves those Windows parts before anyth
 
 | Layer | Type | Responsibility | New / changed |
 |-------|------|----------------|---------------|
-| Core/Models | `AppSettings` | `CheckMode` (Off, Interval, DailyTime), `CheckIntervalHours`, `CheckTime`, `ExcludedPackageIds` | changed |
+| Core/Models | `AppSettings` | `CheckMode` (Off, Interval, DailyTime), `CheckIntervalHours`, `CheckTime`, `CheckScheduleSetAt`, `ExcludedPackageIds` | changed |
 | Core/Models | `CheckResult`, `CheckRecord` | Trigger, time, outcome (Updates, None, SkippedBusy, SkippedMetered, Failed), counts, names, reason | new |
 | Core/Services | `CheckSchedule` | Pure: next due time for each mode, delay for a one-time timer, `IsDue` | new |
 | Core/Services | `BackgroundCheckRunner` | One check: skip rules, refresh, read installed, filter exclusions, record, notify (R1.x, R2.x, R5.2) | new |
 | Core/Services | `CheckHistoryStore` | `check-history.json` in the data folder: append, read, prune to 7 days (R3.11–R3.13) | new |
 | Core/Services | `INotifier`, `IAppActivity`, `INetworkState` | Interfaces that keep the runner free of Windows APIs (A1) | new |
 | Core/ViewModels | `UpdatesViewModel` | Excluded rows below the rest; `Count` and Update all ignore them (R5.5, R5.7, R5.9, R5.10) | changed |
-| Core/ViewModels | `SettingsViewModel` | Mode, interval, time, exclusions, last check, history, availability notes | changed |
+| Core/ViewModels | `CheckSettingsViewModel` | Mode, interval, time, exclusions, last check, history, availability notes, beside `SettingsViewModel` | new |
 | Core/ViewModels | `PackageRowViewModel` | Exclude command and excluded state (R5.1, R5.5) | changed |
 | App/Services | `BackgroundCheckScheduler` | Registers and replaces tasks with the Windows App SDK's `BackgroundTaskBuilder`; `RequestAccessAsync` (R3.2, R3.4) | new |
 | App/Services | `WindowsNotifier` | `AppNotificationManager`, one fixed tag so a new notification replaces the old (R2.3) | new |
@@ -44,6 +44,7 @@ keeps working with exclusions, which also affect its Updates page.
 
 - **Every trigger goes through `IsDue`.** Windows can fire early or late, and T1 saw triggers run close together, so no trigger is trusted to mean a check is due. A run that isn't due writes no history entry and exits at once.
 - `IsDue` is true from 15 minutes before the scheduled time onwards, as long as no check has run since the previous scheduled time, so several missed checks count as one.
+- What counts as missed starts from the later of the last check and `CheckScheduleSetAt`, the time the schedule was last changed. Without it, nothing could be measured before the first check, and a sign-in right after turning checks on would run one (R3.10).
 - **An early daily timer:** a run that isn't due registers a new one-time timer for the time still left. The 15-minute window in `IsDue` means that time is never below Windows' minimum.
 - A timer can't be under 15 minutes. If the daily time is closer than that, the check waits for tomorrow's, and Settings says when the next one is.
 - Opening the app re-registers the schedule if it's missing, which repairs a broken daily chain and covers app updates (R3.7).
@@ -71,7 +72,7 @@ it to that copy, which shows the Updates page (R2.2).
 
 **Settings → Check history:** a list, newest first: "Today 10:03 PM · Schedule · 3 updates, 1 excluded · Git, Node.js, Python". A failed entry shows its reason in words and an icon, never color alone. Empty state: "No checks in the last 7 days."
 
-**Updates page:** each row's overflow menu has **Exclude from update checks** ("Exclude Git from update checks" as its accessible name). Excluded rows appear under an "Excluded" heading, with **Update** and **Include again**. All of it works by keyboard and in high contrast (Q5).
+**Updates page:** each row has an **Exclude** button, beside **Update** ("Exclude Git from update checks" as its accessible name and tooltip), because rows have no overflow menu. Excluded rows appear under an "Excluded" heading, with **Update** and **Include again**. All of it works by keyboard and in high contrast (Q5).
 
 **Notification:** "3 updates available, 1 ignored", then "Git, Node.js, Python". With more than three: "and 2 more".
 

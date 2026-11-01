@@ -19,20 +19,20 @@ Keeping software current with `winget upgrade` means reading a table, then runni
 
 | ID   | Story | Criterion |
 |------|-------|-----------|
-| R1.1 | US1   | The Updates page shall list installed packages for which WinGet reports an available update (`IsUpdateAvailable`), showing name, ID, installed version → available version, source. |
+| R1.1 | US1   | The Updates page shall list installed packages for which WinGet reports an available update (`IsUpdateAvailable`), showing name, ID, installed version → available version, source. Packages excluded from update checks appear below the rest (010 R5.5). |
 | R1.2 | US1   | The list shall come from the same cached data as the Installed page (002), and refresh with it. |
 | R2.1 | US2   | Each row shall offer **Update**, which upgrades that package through the operation queue (003). |
 | R2.2 | US2   | The user shall be able to select rows with checkboxes and press **Update selected**. |
-| R2.3 | US2   | When the user presses **Update all**, the app shall show a confirmation listing the number of packages, then queue them (constitution P2). |
+| R2.3 | US2   | When the user presses **Update all**, the app shall show a confirmation listing the number of packages, then queue them (constitution P2). Excluded packages are left out (010 R5.9). |
 | R2.4 | US2   | When an update finishes successfully, the package shall leave the Updates list after the refresh. |
 | R3.1 | US3   | **Deferred, see Open questions.** ~~When WinGet requires explicit targeting for a package (pinned, or a version scheme it can't compare), its row shall show "Manual update only" with the reason.~~ |
 | R3.2 | US3   | **Deferred.** ~~"Update all" shall exclude "Manual update only" packages. They can still be updated individually.~~ |
-| R4.1 | US4   | The Updates navigation item shall show a count badge of available updates once the installed data is loaded. |
+| R4.1 | US4   | The Updates navigation item shall show a count badge of available updates once the installed data is loaded, leaving out excluded packages (010 R5.7). |
 | R5.1 | –     | If nothing needs updating, then the page shall show "Everything is up to date". |
 
 ## Out of scope
 
-- Scheduled / automatic background updates.
+- Automatic background updates, meaning installs. Background *checks* are spec 010, and installing without the user is ruled out by constitution P2.
 - Pin management (pin, unpin, pin to version). Possible later spec.
 - Updating unmanaged (non-WinGet) apps.
 

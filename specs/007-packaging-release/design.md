@@ -159,6 +159,7 @@ also covers `*.p12`, `*.pem`, `*.key`, `*.snk`, `*.pfx.*` and `.env.*`.
 - **Size.** The GitHub MSIX should match the Store one, about 46 MB against 69 MB on x64. T34 records it.
 - **Docs.** The README's Requirements line and install steps, and `tools/release-notes.md`, link to Microsoft's [Windows App SDK downloads](https://learn.microsoft.com/windows/apps/windows-app-sdk/downloads) and name the version. Install order: runtime, certificate, MSIX. The portable zip needs neither.
 - **Runtime version.** It's the SDK version in `Directory.Packages.props`, so an SDK update can change what users need. Each release's notes state it (R8.2).
+- **Spec 010.** The manifest gains the background task and COM server entries, and every MSIX sets `WindowsAppSDKBackgroundTask`. `PRIVACY.md` covers the checks and their 7-day history.
 - **Rollout.** The first R8 release needs a note for existing users at the top of its release notes (R8.6). Without the runtime, the update fails and the installed version keeps working.
 
 ## Testing strategy
