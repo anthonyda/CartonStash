@@ -224,6 +224,8 @@ internal sealed class TestApp
 
     public InstalledPackagesStore Store { get; }
 
+    public FakeSettings Settings { get; } = new();
+
     public void SetInstalled(params PackageInfo[] packages) =>
         Packages.Installed = _ => Task.FromResult<IReadOnlyList<PackageInfo>>(packages);
 }

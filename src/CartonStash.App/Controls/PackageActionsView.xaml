@@ -36,6 +36,18 @@
                 Command="{x:Bind Row.UninstallCommand, Mode=OneWay}"
                 Content="Uninstall"
                 Visibility="{x:Bind Row.ShowUninstall, Mode=OneWay}" />
+            <!-- 010 R5.1, R5.5 -->
+            <Button
+                AutomationProperties.Name="{x:Bind ui:Ui.Format('Exclude {0} from update checks', Row.Name), Mode=OneWay}"
+                Command="{x:Bind Row.ExcludeCommand, Mode=OneWay}"
+                Content="Exclude"
+                ToolTipService.ToolTip="{x:Bind ui:Ui.Format('Exclude {0} from update checks', Row.Name), Mode=OneWay}"
+                Visibility="{x:Bind Row.ShowExclude, Mode=OneWay}" />
+            <Button
+                AutomationProperties.Name="{x:Bind ui:Ui.Format('Include {0} in update checks again', Row.Name), Mode=OneWay}"
+                Command="{x:Bind Row.IncludeAgainCommand, Mode=OneWay}"
+                Content="Include again"
+                Visibility="{x:Bind Row.ShowIncludeAgain, Mode=OneWay}" />
         </StackPanel>
 
         <StackPanel

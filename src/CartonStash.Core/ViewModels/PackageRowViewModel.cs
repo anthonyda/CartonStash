@@ -2,6 +2,7 @@ using System.ComponentModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CartonStash.Core.Models;
+using CartonStash.Core.Services;
 
 namespace CartonStash.Core.ViewModels;
 
@@ -23,13 +24,16 @@ public sealed partial class PackageRowViewModel : ObservableObject
 {
     private readonly PackageActions _actions;
     private readonly RowActions _allowed;
+    private readonly ISettings? _exclusions;
     private Task? _iconLoad;
 
-    public PackageRowViewModel(PackageInfo package, PackageActions actions, RowActions allowed)
+    /// <param name="exclusions">Given where a row can be excluded from update checks: the Updates page (010 R5.1).</param>
+    public PackageRowViewModel(PackageInfo package, PackageActions actions, RowActions allowed, ISettings? exclusions = null)
     {
         Package = package;
         _actions = actions;
         _allowed = allowed;
+        _exclusions = exclusions;
         Operation = actions.Queue.Find(package);
     }
 
@@ -89,6 +93,12 @@ public sealed partial class PackageRowViewModel : ObservableObject
     public bool ShowUninstall => _allowed.HasFlag(RowActions.Uninstall) && Package.IsInstalled && Package.IsManaged
         && !IsBusy && !Succeeded(OperationKind.Uninstall);
 
+    public bool IsExcluded => _exclusions?.Current.IsExcluded(Id) == true;
+
+    public bool ShowExclude => _exclusions is not null && !IsExcluded;
+
+    public bool ShowIncludeAgain => IsExcluded;
+
     /// <summary>"Installed", "Failed"… after the last operation ended; null otherwise or when cancelled.</summary>
     public string? ResultText => Operation is { IsActive: false, Result: not OperationResult.Cancelled } op ? op.StatusText : null;
 
@@ -102,6 +112,12 @@ public sealed partial class PackageRowViewModel : ObservableObject
 
     [RelayCommand]
     private void Update() => _actions.Update(Package);
+
+    [RelayCommand]
+    private void Exclude() => _exclusions?.Update(s => s.WithExcluded(Id));
+
+    [RelayCommand]
+    private void IncludeAgain() => _exclusions?.Update(s => s.WithoutExcluded(Id));
 
     private bool Succeeded(OperationKind kind) => Operation is { IsSuccess: true } op && op.Kind == kind;
 

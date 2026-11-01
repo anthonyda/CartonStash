@@ -10,7 +10,7 @@ public class UpdatesViewModelTests
     {
         var app = new TestApp();
         app.SetInstalled(installed);
-        var vm = new UpdatesViewModel(app.Store, app.Actions, app.Packages);
+        var vm = new UpdatesViewModel(app.Store, app.Actions, app.Packages, app.Settings);
         await vm.LoadAsync();
         return (app, vm);
     }
@@ -30,12 +30,71 @@ public class UpdatesViewModelTests
     }
 
     [Fact]
+    public async Task Excluded_rows_move_below_and_leave_the_count_and_update_all() // 010 R5.5, R5.7, R5.9, R5.10
+    {
+        var (app, vm) = await CreateLoaded(Pkg.Installed("A", "alpha", update: true), Pkg.Installed("B", "beta", update: true));
+
+        vm.Updates[0].ExcludeCommand.Execute(null);
+
+        Assert.Equal(["beta"], vm.Updates.Select(r => r.Name));
+        Assert.Equal(["alpha"], vm.Excluded.Select(r => r.Name));
+        Assert.True(vm.HasExcluded);
+        Assert.Equal(1, vm.Count);
+        Assert.Equal("Updates (1)", vm.Title);
+        Assert.Equal(["A"], app.Settings.Current.ExcludedPackageIds);
+
+        await vm.UpdateAllCommand.ExecuteAsync(null);
+
+        Assert.Equal(["B"], app.Installer.Calls.Select(c => c.Id));
+    }
+
+    [Fact]
+    public async Task An_excluded_row_can_still_be_updated_and_included_again() // 010 R5.3, R5.5
+    {
+        var (app, vm) = await CreateLoaded(Pkg.Installed("A", update: true));
+        vm.Updates[0].ExcludeCommand.Execute(null);
+        var row = vm.Excluded[0];
+
+        Assert.True(row.ShowUpdate);
+        Assert.True(row.ShowIncludeAgain);
+        Assert.False(row.ShowExclude);
+
+        row.IncludeAgainCommand.Execute(null);
+
+        Assert.Single(vm.Updates);
+        Assert.Empty(vm.Excluded);
+        Assert.Empty(app.Settings.Current.ExcludedPackageIds);
+    }
+
+    [Fact]
+    public async Task Only_excluded_updates_shows_up_to_date() // 010 R5.7
+    {
+        var (_, vm) = await CreateLoaded(Pkg.Installed("A", update: true));
+
+        vm.Updates[0].ExcludeCommand.Execute(null);
+
+        Assert.True(vm.IsUpToDate);
+        Assert.Equal("Updates", vm.Title);
+    }
+
+    [Fact]
+    public async Task Other_settings_changes_keep_the_selection()
+    {
+        var (app, vm) = await CreateLoaded(Pkg.Installed("A", update: true));
+        vm.SetSelection([vm.Updates[0]]);
+
+        app.Settings.Update(s => s with { Theme = AppTheme.Dark });
+
+        Assert.True(vm.HasSelection);
+    }
+
+    [Fact]
     public async Task Shares_the_installed_list() // R1.2
     {
         var app = new TestApp();
         app.SetInstalled(Pkg.Installed("A", update: true));
         var installed = new InstalledViewModel(app.Store, app.Actions, app.Packages);
-        var updates = new UpdatesViewModel(app.Store, app.Actions, app.Packages);
+        var updates = new UpdatesViewModel(app.Store, app.Actions, app.Packages, app.Settings);
 
         await installed.LoadAsync();
         await updates.LoadAsync();
@@ -133,7 +192,7 @@ public class UpdatesViewModelTests
     public void Not_up_to_date_before_loading() // R4.1: no badge, no empty state until loaded
     {
         var app = new TestApp();
-        var vm = new UpdatesViewModel(app.Store, app.Actions, app.Packages);
+        var vm = new UpdatesViewModel(app.Store, app.Actions, app.Packages, app.Settings);
 
         Assert.Null(vm.Count);
         Assert.False(vm.IsUpToDate);

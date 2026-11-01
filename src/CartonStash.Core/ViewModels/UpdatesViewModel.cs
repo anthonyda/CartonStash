@@ -14,19 +14,28 @@ public sealed partial class UpdatesViewModel : ObservableObject
 {
     private readonly InstalledPackagesStore _store;
     private readonly PackageActions _actions;
+    private readonly ISettings _settings;
+    private IReadOnlyList<string> _excludedIds = [];
     private IReadOnlyList<PackageRowViewModel> _selected = [];
 
-    public UpdatesViewModel(InstalledPackagesStore store, PackageActions actions, IPackageService packages)
+    public UpdatesViewModel(InstalledPackagesStore store, PackageActions actions, IPackageService packages, ISettings settings)
     {
         _store = store;
         _actions = actions;
+        _settings = settings;
         Details = new PackageDetailsViewModel(packages);
         _store.PropertyChanged += OnStoreChanged;
-        RowOperationTracker.Track(actions, () => Updates);
+        _settings.Changed += OnSettingsChanged;
+        RowOperationTracker.Track(actions, () => Updates.Concat(Excluded));
         Rebuild();
     }
 
     public ObservableCollection<PackageRowViewModel> Updates { get; } = [];
+
+    /// <summary>Updates the user left out of checks: still listed, and still updatable one at a time (010 R5.5).</summary>
+    public ObservableCollection<PackageRowViewModel> Excluded { get; } = [];
+
+    public bool HasExcluded => Excluded.Count > 0;
 
     public PackageDetailsViewModel Details { get; }
 
@@ -92,14 +101,26 @@ public sealed partial class UpdatesViewModel : ObservableObject
     private void Rebuild()
     {
         Updates.Clear();
+        Excluded.Clear();
+        _excludedIds = _settings.Current.ExcludedPackageIds;
         foreach (var package in _store.Packages
                      .Where(p => p.HasUpdate && p.IsManaged)
                      .OrderBy(p => p.Name, StringComparer.CurrentCultureIgnoreCase))
         {
-            Updates.Add(new PackageRowViewModel(package, _actions, RowActions.Update));
+            var row = new PackageRowViewModel(package, _actions, RowActions.Update, _settings);
+            (row.IsExcluded ? Excluded : Updates).Add(row);
         }
+        OnPropertyChanged(nameof(HasExcluded));
         SetSelection([]);
         NotifyCount();
+    }
+
+    private void OnSettingsChanged(object? sender, EventArgs e)
+    {
+        if (!_excludedIds.SequenceEqual(_settings.Current.ExcludedPackageIds))
+        {
+            Rebuild();
+        }
     }
 
     private void NotifyCount()
