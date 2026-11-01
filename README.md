@@ -27,7 +27,7 @@ It talks to WinGet directly through its official API, so what you see is exactly
 
 ## Features
 
-- **Search and install apps** from the WinGet community repository and the Microsoft Store source, with the package
+- **Search and install apps** from the WinGet community repository and, once you accept its agreements, the Microsoft Store source, with the package
   description, license, publisher links, tags, release notes and every available version.
 - **See every installed program**, including apps WinGet didn't install, one row per program, the same list as
   `winget list`. Filter by name, ID or status.

@@ -32,7 +32,7 @@ installed catalog), so one call returns both the available and the installed ver
    *Amended during implementation:* WinGet decides "update available" (constitution P1). Comparing version
    strings ourselves gets `2.10` vs `2.9` and `Unknown` wrong.
 5. Status → message mapping (R3.4): `CatalogError` → "Couldn't reach the package sources…",
-   `SourceAgreementsNotAccepted` → "accept source agreements…", `BlockedByPolicy` → "blocked by policy…",
+   `SourceAgreementsNotAccepted` → "accept source agreements…" (*since 006 R3.4 a safety net:* an unaccepted source is left out instead), `BlockedByPolicy` → "blocked by policy…",
    anything else → "WinGet reported *status*". The HRESULT stays on `WinGetException.HResult` for logs, not in the UI.
 
 Collections are read by index (constitution W2).

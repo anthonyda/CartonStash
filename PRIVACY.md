@@ -1,6 +1,6 @@
 # CartonStash Privacy Policy
 
-Last updated: October 30, 2026
+Last updated: November 1, 2026
 
 CartonStash is a free, open source Windows app for managing software through Microsoft WinGet. It has no accounts, advertising, analytics or telemetry. The developer does not collect, receive, sell or share your personal data.
 
@@ -8,7 +8,7 @@ CartonStash is a free, open source Windows app for managing software through Mic
 
 CartonStash keeps the following only on your PC:
 
-- Your settings, such as theme, install scope and start page.
+- Your settings, such as theme, install scope and start page, and your answers to source agreements.
 - Logs of install, update and uninstall operations. It keeps the 50 newest. Logs can include your user name, PC name and file paths.
 
 CartonStash does not send these to the developer. If you copy a log or diagnostic details, for example into a bug report, you choose what to share. Please check them first, because bug reports can be public.
@@ -16,6 +16,7 @@ CartonStash does not send these to the developer. If you copy a log or diagnosti
 ## Internet connections
 
 - **WinGet:** searches, downloads and installs are carried out by Microsoft WinGet, using the sources configured on your PC, and packages are downloaded from their publishers. Those services receive your IP address and handle data under their own privacy policies.
+- **Microsoft Store source:** CartonStash uses this source only after you accept its agreements. It then also receives your PC's 2-letter region, such as US. You can withdraw your acceptance in Settings.
 - **Package icons:** CartonStash loads icons over https from the addresses listed in package manifests. Those hosts can see your IP address.
 - **Links:** links you open, such as a package's home page, open in your default browser.
 

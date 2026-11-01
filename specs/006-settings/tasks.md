@@ -47,8 +47,8 @@ Starts after 011 is merged. T12 to T16 and T18 don't depend on T11's result.
   - Verify: unit test, plus T19.
 - [ ] **T17.** `AppInstallerSetup` and **Set up for me**, as T11 decided: download, signature check, install, Check again, fallback to the link. *(R3.5, R3.7)*
   - Verify: unit tests for the signature refusal and the outcomes; T19.
-- [ ] **T18.** Update `PRIVACY.md` and its date, the README, and specs 001 and 010 where they mention agreements. Reopen the 2026-10-30 decision in 008's design. Check that the Store listing discloses WinGet at the start of its description (Store policy 10.2.4). *(R3.13)*
-  - Verify: review; the Store listing change is the maintainer's.
+- [x] **T18.** Update `PRIVACY.md` and its date, the README, and specs 001 and 010 where they mention agreements. Reopen the 2026-10-30 decision in 008's design. Check that the Store listing discloses WinGet at the start of its description (Store policy 10.2.4). *(R3.13)*
+  - Verify: review. Done in the repo; the Store listing is the maintainer's to check and change, and `PRIVACY.md` must go live with the release.
 - [ ] **T19.** Manual in Windows Sandbox: agreements unanswered with the Store endpoint blocked or captured, then each answer; `winget search` still prompts after Accept; clean Sandbox setup with portable and MSIX, including a failed download; keyboard, light, dark and high contrast. *(R3.4 to R3.12, Q5)*
   - Verify: results recorded in the log below.
 
