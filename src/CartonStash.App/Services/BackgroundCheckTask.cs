@@ -60,7 +60,7 @@ public sealed class BackgroundCheckTask : IBackgroundTask
 
         var settings = new SettingsService(new JsonSettingsStore());
         var runner = new BackgroundCheckRunner(
-            new WinGetPackageService(),
+            new WinGetPackageService(new CatalogConnection(settings)), // leaves out sources not accepted (006 R3.8)
             settings,
             new CheckHistoryStore(AppPackage.LocalFolder!),
             new WindowsNotifier(),

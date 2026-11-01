@@ -81,7 +81,7 @@ public class MessageFlagTests
     {
         var app = new TestApp();
         app.Packages.Installed = _ => throw new WinGetException("Couldn't list packages.", null);
-        var vm = new UpdatesViewModel(app.Store, app.Actions, app.Packages);
+        var vm = new UpdatesViewModel(app.Store, app.Actions, app.Packages, app.Settings);
         await vm.LoadAsync();
         Assert.True(vm.HasError);
 

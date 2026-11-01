@@ -140,7 +140,7 @@
                     <TextBlock
                         IsTextSelectionEnabled="True"
                         Text="{x:Bind Checks.NextCheckText, Mode=OneWay}"
-                        Visibility="{x:Bind ui:Ui.VisibleIf(Checks.NextCheckText), Mode=OneWay}" />
+                        Visibility="{x:Bind Checks.HasNextCheck, Mode=OneWay}" />
                 </StackPanel>
             </Grid>
             <InfoBar

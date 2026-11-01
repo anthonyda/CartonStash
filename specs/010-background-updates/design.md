@@ -53,7 +53,7 @@ keeps working with exclusions, which also affect its Updates page.
 
 ## WinGet API usage
 
-No new COM use. The runner calls existing `IPackageService` methods: `GetSourcesAsync`, `RefreshSourceAsync` for each source that isn't explicit, then `GetInstalledAsync` with
+No new COM use. The runner calls existing `IPackageService` methods: `GetSourcesAsync`, `RefreshSourceAsync` for each source that isn't explicit and has no agreements or accepted ones (006 R3.8), then `GetInstalledAsync` with
 the same filter as the Updates page. A 30-second budget limits the refresh: when it runs out, the check goes on with WinGet's current data (R1.9). T1's slowest refresh took 10 s, just after waking from sleep. A task cancelled by Windows
 records `Failed`, reason "Windows stopped the check". Other failures record `WinGetException`'s message, with paths removed (R3.13).
 

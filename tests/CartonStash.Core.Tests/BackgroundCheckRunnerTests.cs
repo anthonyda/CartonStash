@@ -38,7 +38,8 @@ public sealed class BackgroundCheckRunnerTests : IDisposable
     private void Installed(params PackageInfo[] packages) =>
         _packages.Installed = _ => Task.FromResult<IReadOnlyList<PackageInfo>>(packages);
 
-    private static SourceInfo Source(string name, bool isExplicit = false) => new(name, "", "", false, isExplicit, null, []);
+    private static SourceInfo Source(string name, bool isExplicit = false, AgreementStatus agreements = AgreementStatus.None) =>
+        new(name, name, "", "", false, isExplicit, null, [], agreements);
 
     private Task<CheckRecord?> Run() => _runner.RunAsync(CheckTrigger.Schedule);
 
@@ -165,6 +166,29 @@ public sealed class BackgroundCheckRunnerTests : IDisposable
         await Run();
 
         Assert.Equal(["winget", "msstore"], _packages.Refreshed);
+    }
+
+    [Theory]
+    [InlineData(AgreementStatus.Unanswered)]
+    [InlineData(AgreementStatus.Declined)]
+    [InlineData(AgreementStatus.Unknown)]
+    public async Task A_source_not_accepted_is_never_refreshed(AgreementStatus status) // 006 R3.8
+    {
+        _packages.Sources.AddRange([Source("winget"), Source("msstore", agreements: status)]);
+
+        await Run();
+
+        Assert.Equal(["winget"], _packages.Refreshed);
+    }
+
+    [Fact]
+    public async Task An_accepted_source_is_refreshed() // 006 R3.8
+    {
+        _packages.Sources.Add(Source("msstore", agreements: AgreementStatus.Accepted));
+
+        await Run();
+
+        Assert.Equal(["msstore"], _packages.Refreshed);
     }
 
     [Fact]

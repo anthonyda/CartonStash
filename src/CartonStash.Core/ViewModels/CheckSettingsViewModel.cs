@@ -83,7 +83,10 @@ public sealed partial class CheckSettingsViewModel : ObservableObject
     public partial string LastCheckText { get; private set; } = "";
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasNextCheck))]
     public partial string NextCheckText { get; private set; } = "";
+
+    public bool HasNextCheck => NextCheckText.Length > 0;
 
     public ObservableCollection<CheckHistoryRow> History { get; } = [];
 
