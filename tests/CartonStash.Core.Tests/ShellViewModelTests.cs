@@ -9,7 +9,7 @@ public class ShellViewModelTests
     private static (TestApp App, ShellViewModel Shell, UpdatesViewModel Updates) Create(bool settingsReset = false)
     {
         var app = new TestApp();
-        var updates = new UpdatesViewModel(app.Store, app.Actions, app.Packages);
+        var updates = new UpdatesViewModel(app.Store, app.Actions, app.Packages, app.Settings);
         var shell = new ShellViewModel(app.Queue, updates, app.Dialogs, new FakeSettings { WasReset = settingsReset });
         return (app, shell, updates);
     }
