@@ -9,6 +9,10 @@
 </p>
 
 <p align="center">
+  <a href="https://apps.microsoft.com/detail/9MT37M7DBZRK"><img alt="Get it from Microsoft" src="https://get.microsoft.com/images/en-us%20dark.svg" width="280" /></a>
+</p>
+
+<p align="center">
   <a href="https://github.com/anthonyda/CartonStash/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/anthonyda/CartonStash?label=download" /></a>
   <a href="https://github.com/anthonyda/CartonStash/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/anthonyda/CartonStash/actions/workflows/ci.yml/badge.svg" /></a>
   <img alt="Windows 10 and 11" src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4" />
@@ -50,11 +54,20 @@ It talks to WinGet directly through its official API, so what you see is exactly
 
 ## Download and install
 
-Get the latest version from **[Releases](https://github.com/anthonyda/CartonStash/releases/latest)**:
+The easiest way is the **[Microsoft Store](https://apps.microsoft.com/detail/9MT37M7DBZRK)**: Windows handles everything,
+including updates.
 
-- **Installer (MSIX)**, recommended: `CartonStash_<version>_x64.msix` (or `_arm64` for Arm PCs). Adds CartonStash to
+Or get the latest version from **[Releases](https://github.com/anthonyda/CartonStash/releases/latest)**:
+
+- **Installer (MSIX)**: `CartonStash_<version>_x64.msix` (or `_arm64` for Arm PCs). Adds CartonStash to
   Start and uninstalls cleanly from Settings → Apps.
 - **Portable (zip)**: `CartonStash_<version>_x64_portable.zip`. Unzip anywhere and run `CartonStash.exe`. Nothing to install.
+
+The steps below are for the GitHub MSIX. It needs Microsoft's Windows App SDK runtime, so install that first, for your PC:
+[x64](https://aka.ms/windowsappsdk/2.6/2.6.4/windowsappruntimeinstall-x64.exe) or
+[Arm64](https://aka.ms/windowsappsdk/2.6/2.6.4/windowsappruntimeinstall-arm64.exe) (version 2.6.4, from
+[Microsoft's downloads page](https://learn.microsoft.com/windows/apps/windows-app-sdk/downloads)). If the install stops
+with "App Installer failed to install package dependencies", this runtime is missing.
 
 The MSIX is signed with CartonStash's own certificate, which Windows doesn't trust out of the box yet. Before you trust
 it, check that `CartonStash.cer` is the real one. This must print `99EE388A0F4388D0118678B7043D8626AA904441`:
@@ -80,8 +93,8 @@ From v1.0.2 on, the portable zip's `CartonStash.exe`, `CartonStash.dll` and `Car
 certificate. Windows still shows an unknown publisher for them, so compare the thumbprint if you want to check them.
 
 **Requirements:** Windows 10 version 2004 (build 19041) or later, or Windows 11, with
-[App Installer](https://apps.microsoft.com/detail/9NBLGGH4NNS1) (WinGet) 1.29 or later. Nothing else: .NET and the
-Windows App SDK are included.
+[App Installer](https://apps.microsoft.com/detail/9NBLGGH4NNS1) (WinGet) 1.29 or later. .NET is included. The Windows App
+SDK runtime comes with the Store version and the portable zip; the GitHub MSIX needs it installed first (see above).
 
 ## FAQ
 

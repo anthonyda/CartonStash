@@ -22,12 +22,14 @@
 
   <!--
     Spec 007: `dotnet publish -c Release -r win-x64 -p:PackageMsix=true` produces an unsigned MSIX in AppPackages\
-    (signed afterwards with signtool, locally or in CI). .NET and the Windows App SDK are bundled, so users need neither.
+    (signed afterwards with signtool, locally or in CI). .NET is bundled; the Windows App SDK is the shared runtime
+    (R7.2, R8.1), because background tasks crash with it bundled (spec 010 T1). The portable app keeps its own copy (R8.3).
   -->
   <PropertyGroup Condition="'$(PackageMsix)' == 'true'">
     <WindowsPackageType>MSIX</WindowsPackageType>
     <EnableMsixTooling>true</EnableMsixTooling>
     <SelfContained>true</SelfContained>
+    <WindowsAppSDKSelfContained>false</WindowsAppSDKSelfContained>
     <GenerateAppxPackageOnBuild>true</GenerateAppxPackageOnBuild>
     <AppxPackageSigningEnabled>false</AppxPackageSigningEnabled>
     <AppxBundle>Never</AppxBundle>
