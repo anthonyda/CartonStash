@@ -29,7 +29,7 @@ Tick a task only when its verification passes. Keep tasks small enough for one c
   - Verify: manual.
 - [x] **T10.** Update specs 003, 004, 006 and 007, and `PRIVACY.md`.
   - Verify: review against the requirements' last section.
-- [ ] **T11.** Manual end to end on the Store and GitHub MSIX: each mode, a missed check after sleep and after a shutdown, metered, Windows-blocked, uninstall, and an app update. Includes T1's two gaps: `UserPresent` at sign-in after a shutdown, and a daily timer across sleep. *(all)*
+- [ ] **T11.** Manual end to end on the Store version (007 R9 ended the GitHub MSIX): each mode, a missed check after sleep and after a shutdown, metered, Windows-blocked, uninstall, and an app update. Includes T1's two gaps: `UserPresent` at sign-in after a shutdown, and a daily timer across sleep. *(all)*
   - If sign-in after a shutdown starts nothing, use the startup-task fallback in the design's risks, and update the spec first.
 - [ ] **T12.** Mark `Done`; close #14.
 

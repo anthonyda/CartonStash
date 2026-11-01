@@ -1,6 +1,6 @@
 # 007 – Packaging and release: Tasks
 
-**Status:** In progress (Windows Sandbox check and winget-pkgs pending). Amendment R5: done 2026-10-30
+**Status:** In progress (Windows Sandbox check, T33 and R9's first tag pending). Amendment R5: done 2026-10-30
 **Design:** [design.md](design.md)
 
 - [x] **T1.** `Package.appxmanifest` (Anthony.CartonStash, CN=Anthony) + logo set rendered from `AppIcon.svg` (`tools/Render-Logos.ps1`). *(R1.2)*
@@ -94,7 +94,30 @@ After going public:
   - Verify: the open questions in the requirements are answered and recorded.
   - Done 2026-11-01 on x64 in Windows Sandbox, with the 1.0.6 test build signed by a throwaway certificate. Without the runtime, App Installer offers **Install**, then fails with "App Installer failed to install package dependencies", and PowerShell gives `0x80073CF3` naming `Microsoft.WindowsAppRuntime.2` 2.6.4.0. The 119 MB runtime installer then finishes in seconds, the MSIX installs, and `jq` installed and uninstalled. The portable app opens with no runtime installed.
   - Found, not caused by R8: on a PC without WinGet the app crashes at start (`0xc0000409` in `Microsoft.Management.Deployment.dll`). With `msstore` failing, every search fails with an internet message, in the portable app too: search only worked here after `winget source remove msstore`. Both are fixed by spec 011.
-- [ ] **T37.** Tag a release and update a real GitHub install over the previous version, with settings and logs kept. *(R8.5)*
+- ~~**T37.** Tag a release and update a real GitHub install over the previous version, with settings and logs kept. *(R8.5)*~~ *Dropped by R9: there's no GitHub MSIX any more.*
+
+### Amendment R9: Microsoft Store only (approved 2026-11-01)
+
+- [x] **T40.** Rewrite the notes of v1.0.2 to v1.0.5 as changelog only. *(R9.4)*
+  - Done 2026-11-01, on the maintainer's request and ahead of review. The files stayed, because GitHub refuses to remove them (see the requirements' open questions).
+- [x] **T41.** Mark the rows in "What amendment R9 replaces" and drop T37. Reword 010 R4.1 and T11. *(all)*
+- [ ] **T42.** `CHANGELOG.md`, with v1.0.2 to v1.0.5 and the unreleased work, and `tools/Get-Changelog.ps1`. *(R9.3)*
+  - Verify: prints a version's section; fails on a missing or empty one.
+- [ ] **T43.** `Publish-Release.ps1` without the GitHub MSIX and `.cer`. Delete `Sign-Release.ps1`, `New-SigningCert.ps1`, `CartonStash.cer` and `release-notes.md`. *(R9.1, R9.6, R9.9)*
+  - Verify: a local run leaves only the portable zip in `artifacts\` and the Store MSIX in `store\`; the portable app opens with no crash logged (R1.6).
+- [ ] **T44.** `release.yml`: the two jobs in the design. *(R9.2, R9.3, R9.8, R9.9)*
+  - Verify: review against R5.2 to R5.4; no secret, signing or attestation step is left. Checked for real by T46.
+- [ ] **T45.** README, `SECURITY.md`, `CLAUDE.md` and the note in `SettingsPage.xaml`. *(R9.5, R9.6, R9.7)*
+  - Verify: review; a fresh clone builds and runs from the README alone; the certificate removal command works.
+- [ ] **T46.** With T33's tag: the release has its changelog and no files, and the `store` artifact is there. *(R9.2, R9.9)*
+- [ ] **T47.** Delete `SIGNING_PFX_BASE64` and `SIGNING_PFX_PASSWORD` from the `release` environment. *(R9.8)*
+  - Verify: `gh secret list --env release` shows neither.
+- [ ] **T48. Maintainer.** Decide the private key and carry that out (see the requirements' open questions). *(R5.11)*
+- [x] **T49.** Remake v1.0.2 to v1.0.5 on tags `1.0.2` to `1.0.5` with the changelog and no files, the last one marked latest. *(R9.2, R9.4)*
+  - Verify: `gh release view` shows the notes and no files, and each tag is on the same commit as its `v` tag.
+  - Done 2026-11-01, on the maintainer's approval and ahead of review (see the log).
+- [x] **T50. Maintainer.** Delete the releases of v1.0.3 to v1.0.5, keeping the tags, after T49. *(R9.4)*
+  - Done 2026-11-01, with v1.0.2's before it. Read back: `gh release list` shows only `1.0.2` to `1.0.5`, `1.0.5` is latest, and every `v` tag remains.
 
 ## Manual verification log
 
@@ -124,3 +147,9 @@ After going public:
 | R5.7 (T17) | 2026-10-30 | Pass | Re-ran only the `attest` job of run 41083988419: passed. `gh attestation verify` passes on the x64 MSIX, x64 portable zip and `SHA256SUMS.txt`, and rejects a changed file |
 | R5.3, R5.9, R5.10, R5.13 (T15a) | 2026-10-30 | Pass | Tried every setting on the private repo. Read back with `gh api`: Actions `selected`, GitHub-owned only; security updates on; immutable releases on; `release` environment limited to `v*` tags. Refused: required reviewer, rulesets, secret scanning, private reporting, outside-contributor approval (T15b) |
 | Repo recreated | 2026-10-30 | Done | Fresh repo at the same URL with history rewritten to the GitHub noreply address, so the personal address isn't published. `v1.0.0` and its release stayed in the old repo, so the first release here is `v1.0.1`. Commit SHAs and run IDs earlier in this log refer to the old repo |
+| R9.4 (T40) | 2026-11-01 | Pass | `gh release edit --notes-file` on v1.0.2 to v1.0.5. Read back: each body matches its text and has no install steps; titles unchanged, each still immutable with its 6 files, latest still v1.0.5 |
+| Immutable files | 2026-11-01 | Refused | `gh release delete-asset v1.0.2 CartonStash.cer`: HTTP 422, "Cannot delete asset from an immutable release". The file is still there. Only this one was tried |
+| Remake test | 2026-11-01 | Inconclusive | `gh release create v1.0.1 --verify-tag --draft` was accepted on the tag whose immutable release was deleted. It wasn't published, because that would add a public release nobody asked for, so it doesn't show that publishing works. The empty draft was then removed |
+| Remake on the same tag | 2026-11-01 | Refused | The maintainer deleted v1.0.2's release; the tag remains. `gh release create v1.0.2 --verify-tag`: HTTP 422, "tag_name was used by an immutable release". Nothing else changed |
+| R9.4 (T49) | 2026-11-01 | Pass | Created `1.0.2` to `1.0.5` with `gh release create --target <sha>`. Read back: each has 0 files, its notes match, and it's immutable and on the same commit as its `v` tag. Latest is `1.0.5`. No workflow ran. They show 2026-11-01 as the publish date. The first try was blocked by the app's permission check, and went through after the maintainer approved the new tags |
+| v1.0.1 release | 2026-11-01 | Note | `gh release view v1.0.1` says "release not found"; the tag remains. So `v1.0.2` is the oldest release page, and the design's rollout note that `v1.0.1` stays published is out of date |
