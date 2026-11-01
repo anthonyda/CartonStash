@@ -50,10 +50,17 @@ public sealed partial class SettingsViewModel : ObservableObject
     public partial bool IsBusy { get; private set; }
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasSourcesStatus))]
     public partial string? SourcesStatus { get; private set; }
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasSourcesError))]
     public partial string? SourcesError { get; private set; }
+
+    // Plain bools for the view: x:Bind doesn't call a function again once its argument is null (011 T8).
+    public bool HasSourcesStatus => SourcesStatus is not null;
+
+    public bool HasSourcesError => SourcesError is not null;
 
     public string AppVersion { get; } = ReadAppVersion();
 

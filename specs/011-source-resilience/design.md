@@ -144,6 +144,16 @@ throws, the window says a restart is needed (R3.4).
 On Search, an `InfoBar` with `Severity="Warning"` sits above the results. It stays until the next search and doesn't take focus.
 `ErrorMessage` still handles the case where every source failed.
 
+### Messages that clear
+
+The notice has to close at the next search (R2.1), and 006 T19 showed a bar staying open with no text once its string went null. The
+cause is in the code the XAML compiler generates for `{x:Bind ui:Ui.HasText(ViewModel.Text)}`: the call sits inside `if (obj != null)`, so a
+null argument leaves the target with its last value. An empty string would get through; null doesn't.
+
+So a view never passes a value that can become null to a function. It binds a plain bool on the view model, as the release notes
+section already did with `HasReleaseNotes`. `Ui.HasText` and `Ui.VisibleIf` are removed, so the pattern can't come back unnoticed. The
+details pane had the most visible case: a section or link from one package stayed on screen for the next package that lacked it.
+
 ## Error handling and edge cases
 
 - **A source recovers:** it's tried again after the next `Invalidate()`, which also runs after each install, update and uninstall.

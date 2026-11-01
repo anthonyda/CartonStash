@@ -3,7 +3,6 @@
     x:Class="CartonStash.App.WinGetSetupWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:ui="using:CartonStash.App"
     Title="CartonStash">
 
     <Window.SystemBackdrop>
@@ -58,7 +57,7 @@
                 Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                 Text="{x:Bind ViewModel.Status, Mode=OneWay}"
                 TextWrapping="Wrap"
-                Visibility="{x:Bind ui:Ui.VisibleIf(ViewModel.Status), Mode=OneWay}" />
+                Visibility="{x:Bind ViewModel.HasStatus, Mode=OneWay}" />
         </StackPanel>
     </Grid>
 </Window>

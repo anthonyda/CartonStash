@@ -18,6 +18,9 @@ Tick a task only when its verification passes. Keep tasks small enough for one c
 - [x] **T6.** After merging with the 007 R8 work, update the note on 007's T36 and the roadmap.
 - [ ] **T7.** Check the setup window and the notice in high contrast (R3.6). Check R3.5 if a catchable WinGet start failure can be produced. Then mark `Done`.
 
+- [ ] **T8.** Bind plain bools instead of x:Bind functions for anything that can become null, on every page. Found in 006 T19; it reaches the `SourceNotice` InfoBar (R2.1) and the setup window's status (R3.4), and the same pattern in the pages of specs 001, 002, 004, 005, 006 and 009. See "Messages that clear" in the design.
+  - Verify: `MessageFlagTests`; before and after builds in Windows Sandbox, in the log below.
+
 ## Manual verification log
 
 All runs 2026-11-01, Windows Sandbox, WinGet 1.29.380, version 1.0.99 built from this branch. S3 ran first in each clean Sandbox, so WinGet was really absent.
