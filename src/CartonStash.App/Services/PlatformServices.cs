@@ -12,7 +12,7 @@ using CartonStash.Core.ViewModels;
 
 namespace CartonStash.App.Services;
 
-/// <summary>ContentDialogs for confirmations and agreements (003 R1.3, R2.2, R6.2; 004 R2.3; 006 R3.3).</summary>
+/// <summary>ContentDialogs for confirmations and agreements (003 R1.3, R2.2, R6.2; 004 R2.3; 006 R3.3, R3.6).</summary>
 public sealed class DialogService(IClipboardService clipboard) : IDialogService
 {
     // WinUI allows only one open ContentDialog at a time.
@@ -36,6 +36,44 @@ public sealed class DialogService(IClipboardService clipboard) : IDialogService
 
     public async Task<bool> ShowAgreementsAsync(string title, IReadOnlyList<Agreement> agreements)
     {
+        var dialog = new ContentDialog
+        {
+            Title = title,
+            Content = new ScrollViewer { Content = AgreementsPanel(agreements), MaxHeight = 400 },
+            PrimaryButtonText = "Accept",
+            CloseButtonText = "Decline",
+            DefaultButton = ContentDialogButton.Close,
+        };
+        return await ShowAsync(dialog) == ContentDialogResult.Primary;
+    }
+
+    public async Task<AgreementAnswer> ShowSourceAgreementAsync(SourceInfo source, string? receivesNotice)
+    {
+        var panel = AgreementsPanel(source.Agreements);
+        if (receivesNotice is not null)
+        {
+            panel.Children.Add(new TextBlock { Text = receivesNotice, TextWrapping = TextWrapping.Wrap });
+        }
+        panel.Children.Add(new TextBlock { Text = "The winget command asks for its own acceptance.", TextWrapping = TextWrapping.Wrap });
+
+        // No close button: Escape leaves the question unanswered (R3.9).
+        var dialog = new ContentDialog
+        {
+            Title = $"{source.Name}: source agreement",
+            Content = new ScrollViewer { Content = panel, MaxHeight = 400 },
+            PrimaryButtonText = "Accept",
+            SecondaryButtonText = "Decline",
+        };
+        return await ShowAsync(dialog) switch
+        {
+            ContentDialogResult.Primary => AgreementAnswer.Accepted,
+            ContentDialogResult.Secondary => AgreementAnswer.Declined,
+            _ => AgreementAnswer.Dismissed,
+        };
+    }
+
+    private static StackPanel AgreementsPanel(IReadOnlyList<Agreement> agreements)
+    {
         var panel = new StackPanel { Spacing = 12 };
         foreach (var agreement in agreements)
         {
@@ -51,16 +89,7 @@ public sealed class DialogService(IClipboardService clipboard) : IDialogService
                 panel.Children.Add(link);
             }
         }
-
-        var dialog = new ContentDialog
-        {
-            Title = title,
-            Content = new ScrollViewer { Content = panel, MaxHeight = 400 },
-            PrimaryButtonText = "Accept",
-            CloseButtonText = "Decline",
-            DefaultButton = ContentDialogButton.Close,
-        };
-        return await ShowAsync(dialog) == ContentDialogResult.Primary;
+        return panel;
     }
 
     /// <summary>The operation log: read-only plain text, with Copy and Open folder (009 R2.2, R2.4, R2.6, R2.7).</summary>

@@ -51,7 +51,7 @@ Reason: pins are a core WinGet feature users rely on with "update all", and WinG
 
 ## WinGet CLI usage
 
-Every call adds `--disable-interactivity --accept-source-agreements` so nothing can prompt and hang. *Decided 2026-10-30:* keep `--accept-source-agreements`, even though 006 R3.3 otherwise leaves accepting to the user.
+Every call adds `--disable-interactivity --accept-source-agreements` so nothing can prompt and hang. *Decided 2026-10-30:* keep `--accept-source-agreements`, even though 006 R3.3 otherwise leaves accepting to the user. **Reopen before 008 resumes:** this flag records acceptance in WinGet for the user, and 006 amendment R3.4 now leaves `msstore` out until the user accepts in the app.
 
 | Action | Command |
 |--------|---------|

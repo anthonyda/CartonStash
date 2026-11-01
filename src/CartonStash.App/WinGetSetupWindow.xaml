@@ -46,6 +46,12 @@
                 Text="{x:Bind ViewModel.Title}" />
             <TextBlock Text="{x:Bind ViewModel.Message}" TextWrapping="Wrap" />
             <StackPanel Orientation="Horizontal" Spacing="8">
+                <!-- 006 R3.7 -->
+                <Button
+                    Command="{x:Bind ViewModel.SetUpCommand}"
+                    Content="Set up for me"
+                    Style="{StaticResource AccentButtonStyle}"
+                    Visibility="{x:Bind ViewModel.CanSetUp}" />
                 <HyperlinkButton
                     x:Name="GetAppInstaller"
                     Content="Get App Installer"

@@ -20,4 +20,8 @@ public static class WinGetAvailability
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
     private static extern int GetPackagesByPackageFamily(string packageFamilyName, ref uint count, IntPtr packageFullNames,
         ref uint bufferLength, IntPtr buffer);
+
+    /// <summary>Installs App Installer (006 R3.7). Returns null, or a readable reason.</summary>
+    public static Task<string?> SetUpAsync(IProgress<string> progress, CancellationToken cancellationToken) =>
+        AppInstallerSetup.Default().RunAsync(progress, cancellationToken);
 }

@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CartonStash.Core.Models;
 using CartonStash.Core.Services;
 
 namespace CartonStash.Core.ViewModels;
@@ -10,12 +11,16 @@ public sealed partial class SearchViewModel : ObservableObject
 {
     private readonly IPackageService _packages;
     private readonly PackageActions _actions;
+    private readonly SourceAgreementCheck _agreements;
     private CancellationTokenSource? _currentSearch;
 
-    public SearchViewModel(IPackageService packages, PackageActions actions)
+    public SearchViewModel(IPackageService packages, PackageActions actions, SourceAgreementCheck agreements)
     {
         _packages = packages;
         _actions = actions;
+        _agreements = agreements;
+        agreements.Changed += (_, _) => NotInUseNotice = DescribeNotInUse(agreements.NotAccepted);
+        NotInUseNotice = DescribeNotInUse(agreements.NotAccepted);
         Details = new PackageDetailsViewModel(packages);
         RowOperationTracker.Track(actions, () => Results);
     }
@@ -45,6 +50,11 @@ public sealed partial class SearchViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(HasSourceNotice))]
     public partial string? SourceNotice { get; set; }
 
+    /// <summary>Names the sources not accepted, shown with Read and accept (006 R3.10); null when there are none.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasNotInUseNotice))]
+    public partial string? NotInUseNotice { get; private set; }
+
     // Plain bools for the view: x:Bind doesn't call a function again once its argument is null (011 T8).
     public bool HasError => ErrorMessage is not null;
 
@@ -52,7 +62,24 @@ public sealed partial class SearchViewModel : ObservableObject
 
     public bool HasSourceNotice => SourceNotice is not null;
 
+    public bool HasNotInUseNotice => NotInUseNotice is not null;
+
     private bool CanSearch() => !string.IsNullOrWhiteSpace(Query);
+
+    internal static string? DescribeNotInUse(IReadOnlyList<SourceInfo> sources) =>
+        sources.Count == 0 ? null
+        : sources.Count == 1 ? $"'{sources[0].Name}' isn't in use, so results leave it out."
+        : $"{string.Join(", ", sources.Select(s => $"'{s.Name}'"))} aren't in use, so results leave them out.";
+
+    /// <summary>Asks about each source not in use, then repeats the search with what was accepted (R3.10).</summary>
+    [RelayCommand]
+    private async Task ReadAndAcceptAsync()
+    {
+        if (await _agreements.ReadAndAcceptAsync() && CanSearch())
+        {
+            await SearchCommand.ExecuteAsync(null);
+        }
+    }
 
     // Concurrent executions are allowed so a new search can supersede a running one (R3.2).
     [RelayCommand(CanExecute = nameof(CanSearch), AllowConcurrentExecutions = true)]

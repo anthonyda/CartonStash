@@ -10,11 +10,11 @@ namespace CartonStash.Core.Services;
 /// Call <see cref="Invalidate"/> after anything that changes the system or the sources.
 /// </summary>
 /// <remarks>One instance per app (singleton). Shared by every WinGet service so they reuse connections.</remarks>
-public sealed class CatalogConnection
+public sealed class CatalogConnection(ISettings settings)
 {
     private readonly SemaphoreSlim _gate = new(1, 1);
-    private readonly HashSet<string> _acceptedSourceAgreements = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, SourceFailure> _failedSources = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, byte> _leftOutSources = new(StringComparer.OrdinalIgnoreCase);
     private PackageCatalog? _remoteFirst;
     private PackageCatalog? _localFirst;
     private PackageCatalog? _installedOnly;
@@ -24,10 +24,14 @@ public sealed class CatalogConnection
     /// <summary>Sources left out of the catalogs until the next <see cref="Invalidate"/> (011 R1.5).</summary>
     public IReadOnlyList<SourceFailure> SourceFailures => [.. _failedSources.Values.OrderBy(f => f.Source, StringComparer.OrdinalIgnoreCase)];
 
+    /// <summary>Sources left out of the last connection because their agreements aren't accepted (006 R3.8).</summary>
+    public IReadOnlyList<string> LeftOutSources => [.. _leftOutSources.Keys.Order(StringComparer.OrdinalIgnoreCase)];
+
     /// <summary>Drops the cached catalogs; the next call reconnects, sees fresh data and tries every source again.</summary>
     public void Invalidate()
     {
         _failedSources.Clear();
+        _leftOutSources.Clear();
         _remoteFirst = null;
         _localFirst = null;
         _installedOnly = null;
@@ -44,22 +48,31 @@ public sealed class CatalogConnection
         _localFirst = null;
     }
 
-    /// <summary>The user accepted this source's agreements for this session (006 R3.3).</summary>
-    public void AcceptSourceAgreements(string sourceName)
+    /// <summary>Saves the user's answer for this agreement text and reconnects with it (006 R3.9).</summary>
+    public void SetSourceAgreementAnswer(string sourceId, string textHash, bool accepted)
     {
-        lock (_acceptedSourceAgreements)
+        settings.Update(s => s with
         {
-            _acceptedSourceAgreements.Add(sourceName);
-        }
+            SourceAgreementAnswers = new Dictionary<string, SourceAgreementAnswer>(s.SourceAgreementAnswers)
+            {
+                [sourceId] = new(accepted, textHash),
+            },
+        });
         Invalidate();
     }
 
-    internal bool HasAcceptedSourceAgreements(string sourceName)
+    internal SourceAgreementAnswer? AnswerFor(string sourceId) => settings.Current.SourceAgreementAnswers.GetValueOrDefault(sourceId);
+
+    /// <summary>The source's agreements, read by index (W2).</summary>
+    internal static List<Agreement> ReadAgreements(PackageCatalogReference reference)
     {
-        lock (_acceptedSourceAgreements)
+        var agreements = reference.SourceAgreements;
+        var list = new List<Agreement>(agreements.Count);
+        for (var i = 0; i < agreements.Count; i++)
         {
-            return _acceptedSourceAgreements.Contains(sourceName);
+            list.Add(new Agreement(agreements[i].Label, WinGetPackageService.NullIfEmpty(agreements[i].Text), WinGetPackageService.NullIfEmpty(agreements[i].Url)));
         }
+        return list;
     }
 
     /// <summary>
@@ -86,7 +99,8 @@ public sealed class CatalogConnection
     /// True: the installed catalog correlated with the remote sources; results are installed packages (002).
     /// False: the remote sources merged with the installed catalog; results are remote packages (001).
     /// </param>
-    private async Task<PackageCatalog> GetAsync(bool localFirst, CancellationToken cancellationToken)
+    /// <returns>Null when no source may be used and <paramref name="localFirst"/> is false (006 R3.10).</returns>
+    private async Task<PackageCatalog?> GetAsync(bool localFirst, CancellationToken cancellationToken)
     {
         var cached = localFirst ? _localFirst : _remoteFirst;
         if (cached is not null)
@@ -120,9 +134,9 @@ public sealed class CatalogConnection
         }
     }
 
-    private bool IsInUse(string sourceName) => !_failedSources.ContainsKey(sourceName);
+    private bool IsInUse(string sourceName) => !_failedSources.ContainsKey(sourceName) && !_leftOutSources.ContainsKey(sourceName);
 
-    private async Task<PackageCatalog> ConnectAsync(bool localFirst, Func<string, bool> include, CancellationToken cancellationToken)
+    private async Task<PackageCatalog?> ConnectAsync(bool localFirst, Func<string, bool> include, CancellationToken cancellationToken)
     {
         var options = new CreateCompositePackageCatalogOptions
         {
@@ -130,19 +144,52 @@ public sealed class CatalogConnection
                 ? CompositeSearchBehavior.LocalCatalogs
                 : CompositeSearchBehavior.RemotePackagesFromAllCatalogs,
         };
-        var catalogs = Manager.GetPackageCatalogs();
-        for (var i = 0; i < catalogs.Count; i++)
+        // Off the UI thread: each read is a call into WinGet's process (A4).
+        await Task.Run(() =>
         {
-            var reference = catalogs[i];
-            if (!include(reference.Info.Name))
+            var catalogs = Manager.GetPackageCatalogs();
+            for (var i = 0; i < catalogs.Count; i++)
             {
-                continue;
+                var reference = catalogs[i];
+                if (!include(reference.Info.Name))
+                {
+                    continue;
+                }
+                var name = reference.Info.Name;
+                if (AnswerFor(reference.Info.Id) is { Accepted: false })
+                {
+                    _leftOutSources[name] = 0; // not even read: reading reaches the source (R3.8)
+                    continue;
+                }
+
+                List<Agreement> agreements;
+                try
+                {
+                    agreements = ReadAgreements(reference);
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    // The text comes from the source. Unread means not accepted, and the others carry on (R3.8, 011 R1.1).
+                    _failedSources[name] = new SourceFailure(name, SourceFailureMessages.Describe(name, ex.HResult, WindowsRegion.IsCountry()), ex.HResult);
+                    continue;
+                }
+
+                if (agreements.Count > 0)
+                {
+                    // Not set to false: one refused reference fails the whole composite, so it's left out instead (R3.8).
+                    if (!SourceAgreementPolicy.MayUse(AnswerFor(reference.Info.Id), SourceAgreementPolicy.Hash(agreements)))
+                    {
+                        _leftOutSources[name] = 0;
+                        continue;
+                    }
+                    reference.AcceptSourceAgreements = true;
+                }
+                options.Catalogs.Add(reference);
             }
-            if (HasAcceptedSourceAgreements(reference.Info.Name))
-            {
-                reference.AcceptSourceAgreements = true;
-            }
-            options.Catalogs.Add(reference);
+        }, cancellationToken);
+        if (options.Catalogs.Count == 0)
+        {
+            return localFirst ? await GetInstalledOnlyAsync(cancellationToken) : null; // R3.10
         }
         // A composite always includes the installed catalog; adding it explicitly makes WinGet reject the
         // search with InvalidOptions. CompositeSearchBehavior decides which side the results come from.
@@ -165,7 +212,9 @@ public sealed class CatalogConnection
     /// <param name="options">A factory: testing a source needs its own copy of the request.</param>
     internal Task<IReadOnlyList<MatchResult>> FindAsync(bool localFirst, Func<FindPackagesOptions> options, CancellationToken cancellationToken) =>
         SourceIsolation.RunAsync(
-            async () => await FindMatchesAsync(await GetAsync(localFirst, cancellationToken), options(), cancellationToken),
+            async () => await GetAsync(localFirst, cancellationToken) is { } catalog
+                ? await FindMatchesAsync(catalog, options(), cancellationToken)
+                : [],
             SourcesInUse,
             () => SourceFailures,
             source => Task.Run(() => ProbeAsync(source, localFirst, options, cancellationToken), cancellationToken),
@@ -192,8 +241,10 @@ public sealed class CatalogConnection
     {
         try
         {
-            var catalog = await ConnectAsync(localFirst, name => string.Equals(name, source, StringComparison.OrdinalIgnoreCase), cancellationToken);
-            await FindMatchesAsync(catalog, options(), cancellationToken);
+            if (await ConnectAsync(localFirst, name => string.Equals(name, source, StringComparison.OrdinalIgnoreCase), cancellationToken) is { } catalog)
+            {
+                await FindMatchesAsync(catalog, options(), cancellationToken);
+            }
             return null;
         }
         catch (WinGetException ex) when (ex.MayBeOneSource)
@@ -272,7 +323,15 @@ public sealed class CatalogConnection
     }
 
     private WinGetException NotFound(string id, string? source) =>
-        FailedSourceError(id, source, SourceFailures) ?? new($"WinGet can no longer find the package '{id}'. Refresh and try again.", null);
+        LeftOutSourceError(source, LeftOutSources)
+        ?? FailedSourceError(id, source, SourceFailures)
+        ?? new($"WinGet can no longer find the package '{id}'. Refresh and try again.", null);
+
+    /// <summary>A package from a source not in use isn't gone: say how to use it (006 R3.10). Null when that isn't the case.</summary>
+    internal static WinGetException? LeftOutSourceError(string? source, IReadOnlyList<string> leftOut) =>
+        leftOut.Contains(source, StringComparer.OrdinalIgnoreCase)
+            ? new($"'{source}' isn't in use. Read and accept its agreements in Settings, then try again.", null)
+            : null;
 
     /// <summary>A package from a failed source isn't gone: say which source failed (011 R2.6). Null when none is involved.</summary>
     internal static WinGetException? FailedSourceError(string id, string? source, IReadOnlyList<SourceFailure> failures)

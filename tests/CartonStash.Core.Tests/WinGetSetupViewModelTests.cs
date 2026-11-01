@@ -55,4 +55,46 @@ public class WinGetSetupViewModelTests
 
         Assert.Contains("Restart", vm.Status);
     }
+
+    [Fact] // 006 R3.5, R3.7
+    public async Task Set_up_runs_only_on_request_and_opens_the_app()
+    {
+        var installed = false;
+        var calls = 0;
+        var opened = false;
+        var vm = new WinGetSetupViewModel(false, () => installed, () => opened = true, (_, _) =>
+        {
+            calls++;
+            installed = true;
+            return Task.FromResult<string?>(null);
+        });
+        Assert.True(vm.CanSetUp);
+        Assert.Contains("set it up", vm.Message);
+        Assert.Equal(0, calls);
+
+        await vm.SetUpCommand.ExecuteAsync(null);
+
+        Assert.Equal(1, calls);
+        Assert.True(opened);
+    }
+
+    [Fact] // 006 R3.7
+    public async Task Failed_set_up_gives_the_reason_and_keeps_the_link()
+    {
+        var vm = new WinGetSetupViewModel(false, () => false, () => true, (_, _) => Task.FromResult<string?>("No network."));
+
+        await vm.SetUpCommand.ExecuteAsync(null);
+
+        Assert.Contains("No network.", vm.Status);
+        Assert.Contains("Get App Installer", vm.Status);
+        Assert.False(vm.IsSettingUp);
+    }
+
+    [Fact] // 011 R3.5
+    public void Set_up_is_not_offered_for_a_broken_install()
+    {
+        var vm = new WinGetSetupViewModel(true, () => true, () => false, (_, _) => Task.FromResult<string?>(null));
+
+        Assert.False(vm.CanSetUp);
+    }
 }

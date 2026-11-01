@@ -25,7 +25,7 @@ public class MessageFlagTests
     {
         var app = new TestApp();
         app.Packages.Search = (_, _) => throw new WinGetException("Couldn't search.", null);
-        var vm = new SearchViewModel(app.Packages, app.Actions) { Query = "git" };
+        var vm = new SearchViewModel(app.Packages, app.Actions, app.Agreements) { Query = "git" };
         await vm.SearchCommand.ExecuteAsync(null);
         Assert.True(vm.HasError);
 
@@ -43,7 +43,7 @@ public class MessageFlagTests
         var app = new TestApp();
         app.Packages.Search = (_, _) => Task.FromResult<IReadOnlyList<PackageInfo>>([]);
         app.Packages.SourceFailures = [new SourceFailure("msstore", "'msstore' can't be reached.", 0)];
-        var vm = new SearchViewModel(app.Packages, app.Actions) { Query = "nothing" };
+        var vm = new SearchViewModel(app.Packages, app.Actions, app.Agreements) { Query = "nothing" };
         await vm.SearchCommand.ExecuteAsync(null);
         Assert.True(vm.HasEmptyMessage);
         Assert.True(vm.HasSourceNotice);
@@ -97,9 +97,11 @@ public class MessageFlagTests
     public async Task Sources_error_and_status_clear()
     {
         var packages = new FakePackageService();
-        packages.Sources.Add(new SourceInfo("winget", "", "", true, false, null, []));
+        packages.Sources.Add(new SourceInfo("winget", "winget", "", "", true, false, null, []));
         packages.RefreshErrors["winget"] = "Couldn't reach the source.";
-        var vm = new SettingsViewModel(new FakeSettings(), packages, new FakeDialogs(), new FakeClipboard());
+        var queue = new PackageOperationQueue(new ScriptedInstaller());
+        var agreements = new SourceAgreementCheck(packages, new FakeDialogs(), new InstalledPackagesStore(packages, queue));
+        var vm = new SettingsViewModel(new FakeSettings(), packages, agreements, new FakeClipboard());
         await vm.LoadCommand.ExecuteAsync(null);
         await vm.RefreshSourcesCommand.ExecuteAsync(null);
         Assert.True(vm.HasSourcesError);

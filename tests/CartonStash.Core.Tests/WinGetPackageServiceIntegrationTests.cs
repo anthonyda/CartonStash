@@ -11,7 +11,47 @@ namespace CartonStash.Core.Tests;
 [Trait("Category", "Integration")]
 public class WinGetPackageServiceIntegrationTests
 {
-    private readonly WinGetPackageService _service = new();
+    private readonly WinGetPackageService _service = new(new CatalogConnection(new FakeSettings()));
+
+    [Fact]
+    public async Task Source_is_left_out_until_its_agreements_are_accepted() // 006 R3.8, R3.10
+    {
+        var search = await _service.SearchAsync("git");
+
+        Assert.NotEmpty(search);
+        Assert.Contains("msstore", _service.LeftOutSources);
+        Assert.DoesNotContain(search, p => p.Source == "msstore");
+
+        var store = (await _service.GetSourcesAsync()).Single(s => s.Name == "msstore");
+        Assert.Equal(AgreementStatus.Unanswered, store.AgreementStatus);
+        _service.SetSourceAgreementAnswer(store, accepted: true);
+
+        await _service.SearchAsync("git");
+        Assert.Empty(_service.LeftOutSources);
+        Assert.Equal(AgreementStatus.Accepted, (await _service.GetSourcesAsync()).Single(s => s.Name == "msstore").AgreementStatus);
+    }
+
+    [Fact]
+    public void Search_works_when_it_starts_on_a_ui_thread() // 006 R3.8, A4: WinUI starts a search on an STA thread
+    {
+        Exception? failure = null;
+        var thread = new Thread(() =>
+        {
+            try
+            {
+                Assert.NotEmpty(_service.SearchAsync("git").GetAwaiter().GetResult());
+            }
+            catch (Exception ex)
+            {
+                failure = ex;
+            }
+        });
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        thread.Join();
+
+        Assert.Null(failure);
+    }
 
     [Fact]
     public async Task Search_finds_git()
@@ -79,7 +119,7 @@ public class WinGetPackageServiceIntegrationTests
     [Fact]
     public async Task Installed_package_is_found_in_its_own_source() // 003 R1.2: update and details look it up this way
     {
-        var connection = new CatalogConnection();
+        var connection = new CatalogConnection(new FakeSettings());
         var installed = await new WinGetPackageService(connection).GetInstalledAsync();
         var git = Assert.Single(installed, p => p.Id == "Git.Git");
 
@@ -112,7 +152,7 @@ public class WinGetPackageServiceIntegrationTests
     [Fact] // 011 R1.1, R1.5, R1.6
     public async Task A_source_left_out_is_skipped_until_the_catalogs_reset()
     {
-        var connection = new CatalogConnection();
+        var connection = new CatalogConnection(new FakeSettings());
         var service = new WinGetPackageService(connection);
         var sources = await service.GetSourcesAsync();
 
@@ -137,7 +177,7 @@ public class WinGetPackageServiceIntegrationTests
     [Fact]
     public async Task Package_is_not_found_in_a_source_that_does_not_have_it() // 003 R1.2: no fallback to another source
     {
-        var connection = new CatalogConnection();
+        var connection = new CatalogConnection(new FakeSettings());
 
         await Assert.ThrowsAsync<WinGetException>(
             () => connection.FindByIdAsync("Git.Git", "no-such-source", localFirst: false, CancellationToken.None));

@@ -35,8 +35,14 @@ public interface IPackageService
     /// <summary>Refreshes one source. Returns null on success, or a readable error (006 R3.2).</summary>
     Task<string?> RefreshSourceAsync(string sourceName, CancellationToken cancellationToken = default);
 
-    /// <summary>Accepts a source's agreements for this session (006 R3.3).</summary>
-    void AcceptSourceAgreements(string sourceName);
+    /// <summary>Sources not in use because their agreements aren't accepted (006 R3.10). Known after the first connection.</summary>
+    IReadOnlyList<string> LeftOutSources { get; }
+
+    /// <summary>Reads a source's agreements, which reaches the source. Returns it unchanged if they can't be read (006 R3.8).</summary>
+    Task<SourceInfo> ReadSourceAgreementsAsync(SourceInfo source, CancellationToken cancellationToken = default);
+
+    /// <summary>Saves the user's answer for the agreements shown. Withdrawing is declining (006 R3.9, R3.11).</summary>
+    void SetSourceAgreementAnswer(SourceInfo source, bool accepted);
 
     /// <summary>The WinGet (App Installer) version (006 R4.1).</summary>
     string GetWinGetVersion();

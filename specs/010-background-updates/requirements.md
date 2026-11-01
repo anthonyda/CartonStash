@@ -113,4 +113,5 @@ If the probe fails, this spec returns for review before any more work.
 - **004:** the "Scheduled / automatic background updates" line narrows to automatic installs, and R1.1, R2.3 and R4.1 gain the exclusions (R5.5, R5.7, R5.9, R5.10).
 - **003:** the "Windows toast when minimized?" decision is replaced by R2.1.
 - **006:** gains the setting and the last check line.
+- **006 amendment R3.4:** background checks use `CatalogConnection`, so a source that isn't accepted stays out of them too. The check at start doesn't run in the background task, so an unanswered source stays out until the user opens the app.
 - **007:** the manifest gains the background task entries, and `PRIVACY.md` must mention the checks, which WinGet carries out, and the 7-day history kept on the PC.

@@ -21,9 +21,10 @@ public sealed partial class MainWindow : Window
     };
 
     private bool _closeConfirmed;
+    private bool _checkedAgreements;
 
     public MainWindow(ShellViewModel shell, ActivityViewModel activity, DialogService dialogs, ThemeService theme,
-        InstalledPackagesStore installed, ISettings settings)
+        SourceAgreementCheck agreements, ISettings settings)
     {
         Shell = shell;
         Activity = activity;
@@ -39,6 +40,13 @@ public sealed partial class MainWindow : Window
         {
             dialogs.XamlRoot = Root.XamlRoot;
             ApplyActivityPin();
+
+            // Asks about source agreements first, then loads installed data so the Updates badge appears (006 R3.4, 004 R4.1).
+            if (!_checkedAgreements)
+            {
+                _checkedAgreements = true;
+                _ = agreements.RunAsync();
+            }
         };
         Root.SizeChanged += (_, _) => ApplyActivityPin();
         ActivitySplit.PaneClosing += (_, e) => e.Cancel = ActivitySplit.DisplayMode == SplitViewDisplayMode.Inline; // 009 R3.2
@@ -52,9 +60,6 @@ public sealed partial class MainWindow : Window
         theme.Attach(this);
 
         OpenStartPage(settings.Current.StartPage);
-
-        // Load installed data in the background so the Updates badge appears (004 R4.1).
-        _ = installed.EnsureLoadedAsync();
     }
 
     public ShellViewModel Shell { get; }

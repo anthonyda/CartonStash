@@ -64,6 +64,17 @@
                     IsOpen="{x:Bind ViewModel.HasSourceNotice, Mode=OneWay}"
                     Message="{x:Bind ViewModel.SourceNotice, Mode=OneWay}"
                     Severity="Warning" />
+                <!-- 006 R3.10 -->
+                <InfoBar
+                    Title="A source isn't in use"
+                    IsClosable="False"
+                    IsOpen="{x:Bind ViewModel.HasNotInUseNotice, Mode=OneWay}"
+                    Message="{x:Bind ViewModel.NotInUseNotice, Mode=OneWay}"
+                    Severity="Informational">
+                    <InfoBar.ActionButton>
+                        <Button Command="{x:Bind ViewModel.ReadAndAcceptCommand}" Content="Read and accept" />
+                    </InfoBar.ActionButton>
+                </InfoBar>
             </StackPanel>
 
             <Grid Grid.Row="3">

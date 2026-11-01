@@ -159,7 +159,7 @@
                                 VerticalAlignment="Center"
                                 AutomationProperties.Name="{x:Bind ui:Ui.Format('Review agreements for {0}', Name)}"
                                 Click="ReviewAgreements_Click"
-                                Content="Agreements"
+                                Content="{x:Bind AgreementButtonText}"
                                 Tag="{x:Bind}"
                                 Visibility="{x:Bind HasAgreements}" />
                         </Grid>

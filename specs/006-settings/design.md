@@ -1,6 +1,6 @@
 # 006 – Settings: Design
 
-**Status:** Approved (2026-10-29), amended during implementation. Amendment R4.3 approved 2026-10-30
+**Status:** Approved (2026-10-29), amended during implementation. Amendment R4.3 approved 2026-10-30. Amendment R3.4 approved 2026-11-01
 **Requirements:** [requirements.md](requirements.md)
 
 ## Overview
@@ -80,6 +80,121 @@ Settings
 - `SettingsViewModel.BuildDiagnosticText` prints a cleaned address from a new pure helper, `SafeSourceAddress(string)`.
 - Web URLs drop user name, password, query and fragment. Anything that isn't an http(s) URL becomes `(local source)`, because local paths can hold the user name.
 - Only the copied text changes. The Settings page still shows the full address to the user.
+
+## Amendment R3.4: startup check and source agreements (approved 2026-11-01)
+
+Requires 011 merged first: it brings `WinGetAvailability`, `WinGetSetupWindow`, `_failedSources` and `SourceNotice`.
+
+### Startup order
+
+```
+App.OnLaunched
+  WinGetAvailability.IsInstalled()        011, nothing activates WinGet before this
+    no  → WinGetSetupWindow               R3.5, R3.7
+    yes → MainWindow
+Root.Loaded (dialogs can show)
+  SourceAgreementCheck.RunAsync()         R3.4: GetPackageCatalogs reads the list, it doesn't connect
+    for each source needing an answer → dialog (R3.5, R3.6)
+  installed.EnsureLoadedAsync()           moved here from the MainWindow constructor
+```
+
+The preload has to move: today it connects before anything can ask (R3.8). Search stays behind the modal dialog until it closes.
+
+### Components
+
+| Layer | Type | Responsibility | New / changed |
+|-------|------|----------------|---------------|
+| Core/Models | `AppSettings.SourceAgreementAnswers` | Dictionary of source ID → `SourceAgreementAnswer(bool Accepted, string TextHash)`. Empty in older files, with no reset notice | New |
+| Core/Services | `SourceAgreementPolicy` | Pure: `Needs(answer, hash)` and `MayUse(answer, hash)`, the hash of the agreements, the notice text for a source | New |
+| Core/Services | `CatalogConnection` | Takes `ISettings`. `ConnectAsync` leaves out sources that `MayUse` refuses, and `LeftOutSources` lists them. The session `HashSet` goes | Changed |
+| Core/Services | `IPackageService` | `AcceptSourceAgreements(name)` becomes `SetSourceAgreementAnswer(source, accepted)`, plus `LeftOutSources`. Withdrawing saves a decline. `SourceInfo` gains `Id` and `AgreementStatus` | Changed |
+| Core/Services | `SourceAgreementCheck` | Runs the dialogs at start and for each button, keeps the list of sources not in use for the pages, and reloads the installed list after an acceptance | New |
+| Core/Services | `AppInstallerSetup` | Downloads, checks and installs App Installer (R3.7). Uses `Windows.Management.Deployment`, not WinGet's API | New |
+| Core/ViewModels | `WinGetSetupViewModel` (011) | **Set up for me** command, progress and outcome | Changed |
+| Core/ViewModels | `SearchViewModel`, `SettingsViewModel` | **Read and accept** command, withdrawal | Changed |
+| App | `IDialogService.ShowSourceAgreementAsync` | Returns Accepted, Declined or Dismissed. Escape counts as Dismissed, so it asks again at the next start (R3.9) | New |
+| App | `WinGetSetupWindow`, `SearchPage`, `SettingsPage` | The buttons | Changed |
+
+### Which sources are used (R3.8, R3.9)
+
+- The key is `PackageCatalogInfo.Id` (`StoreEdgeFD` for `msstore`), so a renamed source keeps its answer.
+- The hash is SHA-256 over each agreement's label, text and URL, read by index (W2).
+- `ConnectAsync`, for each reference: declined → leave it out without reading its agreements, so nothing reaches the source. Otherwise read
+  them: no agreements → add it. Accepted with a matching hash → set `AcceptSourceAgreements = true` and add it. Anything else → leave
+  it out, because one refused reference fails the whole connect.
+- The read reaches the source and throws when it can't (T19). The source then joins 011's failed sources until the next `Invalidate()`,
+  so Search names it and the others keep working. `GetSourcesAsync` reports it as `AgreementStatus.Unknown`, which isn't asked about.
+- `GetSourcesAsync` doesn't read a declined source either. **Read and accept** reads it through `ReadSourceAgreementsAsync`, and says
+  so if it can't be reached.
+- Answers change through `ISettings`, then `Invalidate()` drops the catalogs. This also meets 011 R1.5.
+- If every source is left out, Search shows its usual empty message with the **Read and accept** notice above it, and no catalog is
+  connected. The Installed list keeps working through `GetInstalledOnlyAsync`.
+- A row whose package is from a left-out source gets the message "`msstore` isn't in use. Read and accept its agreements in Settings."
+  This extends 011's `NotFound` check of `_failedSources`.
+
+| Answer | Connect | Dialog at start | Button |
+|--------|---------|-----------------|--------|
+| None, or Dismissed | Left out | Yes | Read and accept |
+| Accepted, same text | Used | No | Withdraw (Settings) |
+| Accepted, text changed | Left out | Yes | Read and accept |
+| Declined, same text | Left out | No | Read and accept |
+| Declined, text changed | Left out | No | Read and accept |
+
+### Dialog (R3.6, R3.12)
+
+```
+  msstore: source agreement
+  Terms of Transaction                     (text or link from WinGet)
+  This source receives your PC's 2-letter region, such as US.
+  The winget command asks for its own acceptance.
+                                [Decline]  [Accept]
+```
+
+The region line is fixed text for ID `StoreEdgeFD`. Other sources show only the agreements and the `winget` line.
+
+### Search and Settings (R3.10, R3.11)
+
+Search shows an `InfoBar` beside 011's notice, not inside it: "`msstore` isn't in use, so results leave it out." with
+**Read and accept**. A failed source and a source not yet accepted are different problems. Settings shows the same button on the source row, or
+**Withdraw** once accepted. Installed and Updates get no banner, as R3.10 requires only that they keep working.
+
+### Installing App Installer (R3.7)
+
+`WinGetSetupWindow` gains **Set up for me** beside **Get App Installer** and **Check again**. Every step needs that click (P2).
+
+1. Download `Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle` and `DesktopAppInstaller_Dependencies.zip` from one pinned
+   `microsoft/winget-cli` GitHub release, v1.29.380. These are the files 011 installed in a clean Sandbox. Progress is shown (P3).
+2. Check both against the SHA-256 hashes pinned in the code, and refuse anything else. Windows checks the signature again on install.
+   *Amended during T17:* the design said "the latest release, signed by Microsoft". Pinned hashes are stricter, need no signature
+   code in the app, and an old App Installer still updates itself. If the release is ever removed, setup fails and the link remains.
+3. Pass the dependencies for this PC's architecture and the bundle to `PackageManager.AddPackageByUriAsync`.
+4. Run the existing Check again step, which 011 showed works in the same process. If anything fails, show why and keep the link.
+
+Store policy, version 7.20: 10.2.3 forbids offering software that "does not enhance the functionality" of the product, and App
+Installer is what the app needs to work, so it should be allowed. 10.2.4 requires the dependency to be disclosed at the start of the Store
+description, so the listing needs checking. Store reviewers decide in the end.
+
+T11 tested this in clean Sandboxes, unelevated: a test exe and a test MSIX with only `runFullTrust` both installed App Installer through
+`AddPackageByUriAsync`, and `winget` then ran. So the MSIX needs no `packageManagement` capability, and both builds offer **Set up for me**.
+
+### Testing
+
+| Criteria | How |
+|----------|-----|
+| R3.8, R3.9 | `SourceAgreementPolicyTests`: every row of the table |
+| R3.9 | `JsonSettingsStore` round trip; older file without answers loads with no reset |
+| R3.5, R3.6 | `SourceAgreementCheckTests` with fake dialogs: each answer, region line for `msstore` only |
+| R3.10, R3.11 | `SearchViewModelTests`, `SettingsTests` |
+| R3.4, R3.8 | Integration in Sandbox: agreements unanswered, then no connection to the Store endpoint at start or on search, checked with a network capture or by blocking it |
+| R3.12 | Manual: after Accept in the app, `winget search` still prompts |
+| R3.7 | Manual in a clean Sandbox: portable and MSIX; fail the download too |
+| R3.13 | Review of `PRIVACY.md` |
+
+### Risks
+
+- **The agreement text can change often:** each change asks accepted users again, by design (R3.9).
+- **A GitHub release could lack the expected file names:** setup fails with the link as fallback, and nothing else depends on it.
+- **Withdrawing leaves Store packages without update information:** this is the same as Decline, and the requirements state that effect.
 
 ## Testing strategy
 

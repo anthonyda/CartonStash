@@ -14,14 +14,14 @@ public sealed partial class SettingsViewModel : ObservableObject
 {
     private readonly ISettings _settings;
     private readonly IPackageService _packages;
-    private readonly IDialogService _dialogs;
+    private readonly SourceAgreementCheck _agreements;
     private readonly IClipboardService _clipboard;
 
-    public SettingsViewModel(ISettings settings, IPackageService packages, IDialogService dialogs, IClipboardService clipboard)
+    public SettingsViewModel(ISettings settings, IPackageService packages, SourceAgreementCheck agreements, IClipboardService clipboard)
     {
         _settings = settings;
         _packages = packages;
-        _dialogs = dialogs;
+        _agreements = agreements;
         _clipboard = clipboard;
         ThemeIndex = (int)settings.Current.Theme;
         ScopeIndex = (int)settings.Current.InstallScope;
@@ -90,7 +90,8 @@ public sealed partial class SettingsViewModel : ObservableObject
     {
         IsBusy = true;
         SourcesError = null;
-        var names = Sources.Select(s => s.Name).ToList();
+        // A source that isn't accepted stays out of this too (R3.8).
+        var names = Sources.Where(s => s.AgreementStatus is AgreementStatus.None or AgreementStatus.Accepted).Select(s => s.Name).ToList();
         var errors = new List<string>();
         try
         {
@@ -122,15 +123,26 @@ public sealed partial class SettingsViewModel : ObservableObject
         await ReloadSourcesAsync();
     }
 
-    /// <summary>Shows a source's agreements; accepting lets the app use it this session (R3.3).</summary>
+    /// <summary>Read and accept, or Withdraw once accepted (R3.3, R3.10, R3.11).</summary>
     [RelayCommand]
     private async Task ReviewAgreementsAsync(SourceInfo source)
     {
-        if (await _dialogs.ShowAgreementsAsync($"{source.Name}: source agreement", source.Agreements))
+        if (source.AgreementStatus == AgreementStatus.Accepted)
         {
-            _packages.AcceptSourceAgreements(source.Name);
-            SourcesStatus = $"Agreements for {source.Name} accepted.";
+            await _agreements.WithdrawAsync(source);
+            SourcesStatus = $"{source.Name} isn't in use.";
         }
+        else
+        {
+            var answer = await _agreements.ReadAndAcceptAsync(source);
+            SourcesStatus = answer switch
+            {
+                AgreementAnswer.Accepted => $"Agreements for {source.Name} accepted.",
+                AgreementAnswer.Declined => $"{source.Name} isn't in use.",
+                _ => SourcesStatus,
+            };
+        }
+        await ReloadSourcesAsync();
     }
 
     [RelayCommand]

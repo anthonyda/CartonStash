@@ -1,6 +1,6 @@
 # 006 – Settings: Requirements
 
-**Status:** Approved (2026-10-29). Amendment R5 (start page) approved 2026-10-30. Amendment R4.3 (safe diagnostics) approved 2026-10-30
+**Status:** Approved (2026-10-29). Amendment R5 (start page) approved 2026-10-30. Amendment R4.3 (safe diagnostics) approved 2026-10-30. Amendment R3.4 (startup check and source agreements) approved 2026-11-01
 **Depends on:** 002, 003
 
 ## Problem
@@ -34,6 +34,74 @@ today. Users need one place to see and change them.
 | R5.2 | US5   | When the app starts, it shall open the chosen start page and show it as selected in the navigation. |
 | R5.3 | US5   | Changing the start page shall take effect the next time the app starts; it shall not navigate away from Settings. |
 | R5.4 | –     | If the saved start page is missing (settings from an older version), the app shall use Search without reporting a reset. |
+
+## Amendment R3.4: startup check and source agreements (approved 2026-11-01)
+
+R3.3 is not met today. `PackageCatalogReference.AcceptSourceAgreements` defaults to true, and `CatalogConnection` only ever
+sets it to true, so the app uses `msstore` whether the user accepts, declines or never opens the dialog. The R3.3 manual check
+tested the dialog, not that the source was held back.
+
+Measured on WinGet 1.29.380 in Windows Sandbox, region US, after `winget source reset --force`:
+
+| Step | Result |
+|------|--------|
+| COM, default reference, connect and search on `msstore` | Ok, no prompt |
+| `winget search` after that | Still prompts: COM doesn't record acceptance |
+| `winget search --accept-source-agreements`, then `winget search` | No prompt: the CLI records it |
+| COM with `AcceptSourceAgreements = false`, after the CLI recorded acceptance | `SourceAgreementsNotAccepted`: COM ignores WinGet's record, so the app can't read it |
+| Composite with one reference set to false | The whole connect fails, so a declined source must be left out |
+| `SourceAgreements` on `msstore` | 1 entry. The CLI's region notice isn't one, so the app's dialog doesn't show it |
+
+With region World, the search got HTTP 400 for market `ZZ` (spec 011 findings), so the region does reach the service with
+agreements reset.
+
+| ID   | Story | Criterion |
+|------|-------|-----------|
+**Maintainer's direction, 2026-11-01:** don't quietly hide a source. Check the prerequisites when the app starts, and if one is
+missing, offer to set it up, showing the licence so the user can read and accept it.
+
+| ID   | Story | Criterion |
+|------|-------|-----------|
+| R3.4 | US6   | When the app starts, it shall check that WinGet is installed and that the agreements of every source that has them are accepted, before it connects to any source. |
+| R3.5 | US6   | If a prerequisite is missing, then the app shall list what's missing and offer to set it up. Nothing shall be installed or accepted until the user chooses to. |
+| R3.6 | US6   | When the user chooses to set up a source's agreements, the app shall show the agreement text or link and what the source receives, with Accept and Decline. For `msstore`, it receives the PC's 2-letter region. |
+| R3.7 | US6   | If WinGet is missing and the user chooses to set it up, then the app shall install App Installer from Microsoft, show progress and the outcome, and carry on without a restart where it can. If that fails, it shall offer the link from 011 R3.2. |
+| R3.8 | US6   | Until the user has accepted a source's agreements in the app, the app shall contact that source only to fetch the agreements it shows, and shall not search it. After Decline, it shall not contact the source until the user chooses to read the agreements again. If the agreements can't be read, the source shall stay out and the other sources shall keep working. *(Changed 2026-11-01 during T19: the first wording, "shall not connect", can't be met, because the text comes from the source. See the note below.)* |
+| R3.9 | US6   | The app shall save the user's answer per Windows user and keep it across restarts. It shall ask again at start if the user hasn't answered, or if the agreement text has changed, and shall not ask again after Decline. |
+| R3.10 | US6  | While a source is not accepted, Search, Installed, Updates and Settings shall keep working with the other sources, and Search and Settings shall show a visible **Read and accept** button naming the source. |
+| R3.11 | US6  | The user shall be able to withdraw an acceptance in Settings. |
+| R3.12 | –    | Accepting in the app shall not change WinGet's own record: the `winget` command keeps asking for itself. The dialog shall say so. |
+| R3.13 | –    | `PRIVACY.md` shall say that the Microsoft Store source receives the PC's region once the user accepts its agreements (007 R6.6). |
+
+**US6.** As a user, I want the app to check what it needs when it starts and offer to set it up, so that I can read and accept a
+licence myself and nothing is hidden from me.
+
+**Reading the agreements contacts the source (T19, 2026-11-01).** With the Store's address sent to a local listener, reading
+`SourceAgreements` for `msstore` made a connection attempt, and threw a WinGet error when it failed. After one successful read WinGet keeps a
+copy. `winget` has to fetch them too before it can prompt. 011 saw the market in the `manifestSearch` request; the encrypted agreement
+request itself wasn't inspected, so what it carries beyond the IP address isn't confirmed.
+
+Links to other specs:
+
+- **011 (in progress):** its `WinGetAvailability` check and `WinGetSetupWindow` are the WinGet half of R3.4 and R3.5. R3.7 adds
+  a button to that window. It reverses two 011 decisions, "the app never installs it itself" and installing App Installer being
+  out of scope. P2 allows it, because the user asks for it. 011 can ship first with the link alone.
+- **010:** must not run before this ships, or background checks would reach `msstore` without acceptance.
+- **008:** `--accept-source-agreements` records acceptance in WinGet for the user, so its decision of 2026-10-30 needs another
+  look before 008 resumes.
+
+Effects to review: a user who declines gets no `msstore` results and no update information for Store packages. Until this ships,
+`PRIVACY.md` is incomplete: it names the IP address only.
+
+Open questions for this amendment:
+
+- **Where does acceptance live?** **Decided 2026-11-01: in the app's settings.** Everyone already on an earlier version is asked once, even if
+  they accepted in `winget`, because COM can't read that record. No `winget.exe` calls, so exception A6 isn't needed.
+- **How does the app install App Installer?** To settle in the design with a Sandbox test, since 011 found WinGet can be absent on real
+  installs. Candidates: the Windows package API with Microsoft's `aka.ms/getwinget` address, or the Store page. The design must also
+  check that the Store edition of the app is allowed to do this.
+- **Should the amendment stay general or name `msstore`?** Recommended: general, since any source can have agreements. R3.6 needs
+  fixed text per known source, because the COM API exposes only the agreement list.
 
 ## Out of scope
 
