@@ -91,7 +91,9 @@ public sealed class JsonSettingsStore(string path) : ISettingsStore
             var settings = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(path), JsonOptions)
                 ?? throw new JsonException("Empty settings file.");
             if (!Enum.IsDefined(settings.Theme) || !Enum.IsDefined(settings.InstallScope) || !Enum.IsDefined(settings.StartPage)
-                || settings.SourceAgreementAnswers is null)
+                || settings.SourceAgreementAnswers is null
+                || !Enum.IsDefined(settings.CheckMode) || !AppSettings.CheckIntervals.Contains(settings.CheckIntervalHours)
+                || settings.ExcludedPackageIds is null)
             {
                 throw new JsonException("Unknown setting value.");
             }

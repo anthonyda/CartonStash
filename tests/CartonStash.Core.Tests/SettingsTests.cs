@@ -75,6 +75,10 @@ public sealed class SettingsTests : IDisposable
     [InlineData("null")]
     [InlineData("""{ "StartPage": "Purple" }""")]
     [InlineData("""{ "SourceAgreementAnswers": null }""")]
+    [InlineData("""{ "CheckMode": "Purple" }""")]
+    [InlineData("""{ "CheckIntervalHours": 5 }""")]
+    [InlineData("""{ "CheckTime": "soon" }""")]
+    [InlineData("""{ "ExcludedPackageIds": null }""")]
     public void Corrupt_file_gives_defaults_and_keeps_a_backup(string content)
     {
         Directory.CreateDirectory(_dir);
@@ -99,6 +103,59 @@ public sealed class SettingsTests : IDisposable
         Assert.Equal(AppTheme.Dark, loaded.Theme);
         Assert.Empty(loaded.SourceAgreementAnswers); // R3.9: counts as unanswered
         Assert.False(reset);
+    }
+
+    [Fact]
+    public void File_from_before_background_checks_keeps_them_off_without_a_reset() // 010 R3.5
+    {
+        Directory.CreateDirectory(_dir);
+        File.WriteAllText(SettingsPath, """{ "Theme": "Dark", "InstallScope": "User", "StartPage": "Updates" }""");
+
+        var (loaded, reset) = new JsonSettingsStore(SettingsPath).Load();
+
+        Assert.Equal(CheckMode.Off, loaded.CheckMode);
+        Assert.Equal(new TimeOnly(22, 0), loaded.CheckTime);
+        Assert.Empty(loaded.ExcludedPackageIds);
+        Assert.False(reset);
+    }
+
+    [Fact]
+    public void Check_settings_and_exclusions_round_trip() // 010 R3.1, R5.6
+    {
+        var store = new JsonSettingsStore(SettingsPath);
+
+        var saved = new AppSettings
+        {
+            CheckMode = CheckMode.DailyTime,
+            CheckIntervalHours = 168,
+            CheckTime = new TimeOnly(6, 30),
+            ExcludedPackageIds = ["Git.Git", "Mozilla.Firefox"],
+        };
+        store.Save(saved);
+
+        Assert.Equal(saved, new JsonSettingsStore(SettingsPath).Load().Settings);
+    }
+
+    [Fact]
+    public void An_exclusion_matches_the_id_in_any_case() // 010 R5.3
+    {
+        var settings = new AppSettings { ExcludedPackageIds = ["Git.Git"] };
+
+        Assert.True(settings.IsExcluded("git.git"));
+        Assert.False(settings.IsExcluded("Git.Lfs"));
+    }
+
+    [Fact]
+    public void Changing_the_exclusions_counts_as_a_change_and_an_equal_list_does_not() // 010 R5.4
+    {
+        var service = new SettingsService(new JsonSettingsStore(SettingsPath));
+        var changed = 0;
+        service.Changed += (_, _) => changed++;
+
+        service.Update(s => s with { ExcludedPackageIds = ["Git.Git"] });
+        service.Update(s => s with { ExcludedPackageIds = ["Git.Git"] }); // no-op
+
+        Assert.Equal(1, changed);
     }
 
     [Fact]
