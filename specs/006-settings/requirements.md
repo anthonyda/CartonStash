@@ -1,6 +1,6 @@
 # 006 – Settings: Requirements
 
-**Status:** Approved (2026-10-29). Amendment R5 (start page) approved 2026-10-30. Amendment R4.3 (safe diagnostics) approved 2026-10-30. Amendment R3.4 (startup check and source agreements) **Draft**, for review
+**Status:** Approved (2026-10-29). Amendment R5 (start page) approved 2026-10-30. Amendment R4.3 (safe diagnostics) approved 2026-10-30. Amendment R3.4 (startup check and source agreements) approved 2026-11-01
 **Depends on:** 002, 003
 
 ## Problem
@@ -35,7 +35,7 @@ today. Users need one place to see and change them.
 | R5.3 | US5   | Changing the start page shall take effect the next time the app starts; it shall not navigate away from Settings. |
 | R5.4 | –     | If the saved start page is missing (settings from an older version), the app shall use Search without reporting a reset. |
 
-## Amendment R3.4: startup check and source agreements (Draft, 2026-11-01)
+## Amendment R3.4: startup check and source agreements (approved 2026-11-01)
 
 R3.3 is not met today. `PackageCatalogReference.AcceptSourceAgreements` defaults to true, and `CatalogConnection` only ever
 sets it to true, so the app uses `msstore` whether the user accepts, declines or never opens the dialog. The R3.3 manual check
