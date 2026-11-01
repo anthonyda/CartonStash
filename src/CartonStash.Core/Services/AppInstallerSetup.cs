@@ -57,7 +57,8 @@ internal sealed class AppInstallerSetup(
         }
         catch (Exception ex) when (ex is HttpRequestException or IOException or InvalidDataException or UnauthorizedAccessException or TaskCanceledException)
         {
-            return $"App Installer couldn't be downloaded: {ex.Message}";
+            // Readable text only: the exception's own message is network jargon (001 R3.4).
+            return "App Installer couldn't be downloaded. Check your internet connection and try again.";
         }
         finally
         {
