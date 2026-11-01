@@ -35,6 +35,8 @@ today. Users need one place to see and change them.
 | R5.3 | US5   | Changing the start page shall take effect the next time the app starts; it shall not navigate away from Settings. |
 | R5.4 | –     | If the saved start page is missing (settings from an older version), the app shall use Search without reporting a reset. |
 
+Spec 010 adds the Update checks, Excluded packages and Check history sections, with the last check line (010 R3.1, R3.3, R3.11, R5.4).
+
 ## Amendment R3.4: startup check and source agreements (approved 2026-11-01)
 
 R3.3 is not met today. `PackageCatalogReference.AcceptSourceAgreements` defaults to true, and `CatalogConnection` only ever

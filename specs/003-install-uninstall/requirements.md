@@ -42,4 +42,4 @@ Users can find and list packages but still need a terminal to install or remove 
 
 ## Open questions
 
-- Windows toast when minimized? **Decided: in-app only for v1.**
+- Windows toast when minimized? **Decided: in-app only for v1.** *Operations still are. Spec 010 adds a notification for background update checks (010 R2.1).*

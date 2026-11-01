@@ -37,6 +37,7 @@ It talks to WinGet directly through its official API, so what you see is exactly
 - **Uninstall programs** cleanly, with a confirmation that names exactly what will be removed.
 - **Progress for everything**: downloads, installs and uninstalls run one at a time in a queue, with cancel (while
   downloading), retry, and a clear success or error message. Pin the Activity pane to keep it open beside the page.
+- **Background update checks**, optional and off by default: on a schedule you choose, Windows runs a short check, even with the app closed, and a notification tells you what's waiting. It never installs anything by itself. Exclude any package you don't want to hear about. Microsoft Store and MSIX versions only.
 - **Logs when something fails**: every operation keeps a log with WinGet's result and the installer's own output, ready
   to read or copy into a bug report.
 - **Runs without admin rights.** When an installer needs administrator access, Windows asks for that installer only.
