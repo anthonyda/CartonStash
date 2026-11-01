@@ -41,3 +41,6 @@ All runs 2026-11-01, Windows Sandbox, WinGet 1.29.380, version 1.0.99 built from
 | R1.5 | 2026-11-01 | Pass | S2: the left-out list empties after each install and uninstall, and refills on the next read while the Store stays blocked |
 | R1.6 | 2026-11-01 | Pass | Review, plus the integration test comparing the source list before and after |
 | Test setup | 2026-11-01 | Note | Writing `HKCU\Control Panel\International\Geo` doesn't change the region in a clean Sandbox, so S2 and S4 were repeated after `Set-WinHomeLocation -GeoId 244`. The app's notice exposed this |
+| T8, details pane | 2026-11-01 | Pass | Sandbox, region US, UI Automation and screenshots: PowerToys, then `jq`, which has no privacy URL. Before the fix, `jq` kept a "Privacy policy" link; after it, the link is gone |
+| T8, source notice | 2026-11-01 | Pass | Sandbox, region World then US, with Refresh sources between two searches. Before the fix, "Some sources are missing" stayed open with no message (screenshot); after it, the bar opens under World and closes under US. The fixed build needed its own fresh Sandbox, because a second pass in the same one never opened the notice |
+| T8, other messages | | Unit test only | `MessageFlagTests`. The same generated `if (obj != null)` applies to each. A search failing on every source wasn't produced: blocking hosts in Sandbox had no effect |
