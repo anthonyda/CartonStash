@@ -49,8 +49,8 @@ Starts after 011 is merged. T12 to T16 and T18 don't depend on T11's result.
   - Verify: unit tests for the signature refusal and the outcomes; T19.
 - [x] **T18.** Update `PRIVACY.md` and its date, the README, and specs 001 and 010 where they mention agreements. Reopen the 2026-10-30 decision in 008's design. Check that the Store listing discloses WinGet at the start of its description (Store policy 10.2.4). *(R3.13)*
   - Verify: review. Done in the repo; the Store listing is the maintainer's to check and change, and `PRIVACY.md` must go live with the release.
-- [ ] **T19.** Manual in Windows Sandbox: agreements unanswered with the Store endpoint blocked or captured, then each answer; `winget search` still prompts after Accept; clean Sandbox setup with portable and MSIX, including a failed download; keyboard, light, dark and high contrast. *(R3.4 to R3.12, Q5)*
-  - Verify: results recorded in the log below. **Still open:** a failed download in the real app, Withdraw in the real app, dark and high contrast. The portable flow ran before the two T19 fixes.
+- [x] **T19.** Manual in Windows Sandbox: agreements unanswered with the Store endpoint blocked or captured, then each answer; `winget search` still prompts after Accept; clean Sandbox setup with portable and MSIX, including a failed download; keyboard, light, dark and high contrast. *(R3.4 to R3.12, Q5)*
+  - Verify: results recorded in the log below.
 
 ## Manual verification log
 
@@ -72,6 +72,9 @@ Starts after 011 is merged. T12 to T16 and T18 don't depend on T11's result.
 | R3.4, R3.6, R3.9 | 2026-11-01 | Pass | Portable: dialog at start, with the Terms link and region line (screenshot). Escape: not in use, asked again next start. Decline: not asked again. MSIX: accepted start shows no dialog, process responding at +8 s and +33 s |
 | R3.8 | 2026-11-01 | Pass | MSIX, Store address sent to a local listener (self-test 2 hits). Declined, through start and search: **0** attempts. Unread, Store unreachable: search still returns `winget` results and names `msstore` (found a bug: the read failure failed every search; fixed). After Accept on the real network, `msstore` results appear |
 | R3.10 | 2026-11-01 | Pass | Search notice with Read and accept, after start and after search; accepted: notice gone (found a bug: it stayed open with no text, because x:Bind doesn't re-run a function for a null argument; fixed) |
-| R3.8 | 2026-11-01 | Note | After one real read, Read and accept showed the dialog with the Store unreachable and 0 attempts: WinGet keeps a copy. So the "can't be reached" message is covered by unit test only |
+| R3.8 | 2026-11-01 | Pass | After one real read, WinGet keeps a copy: Read and accept showed the dialog with the Store unreachable and 0 attempts. With that copy deleted and the source declined: 0 attempts at start, then 1 on Read and accept, and the "can't be reached" message with OK |
+| R3.7 | 2026-11-01 | Pass | Portable, `github.com` blocked: the reason and "You can still use Get App Installer" shown, nothing installed. Unblocked: Set up for me in the same window worked. The message was then reworded to drop network jargon |
+| R3.11 | 2026-11-01 | Pass | Portable: Withdraw in Settings → status "msstore isn't in use", button back to Read and accept, Search notice back, no dialog at next start. Focus moves to Copy diagnostic info afterwards, because the list reloads |
+| Q5, R3.5, R3.10 | 2026-11-01 | Pass | Final portable build, keyboard: dialog opens on the Terms link, Tab reaches Accept, Enter accepts. From the Search box, Tab reaches Read and accept, Enter opens the dialog. Dark and high contrast (High Contrast Black, confirmed on): notice, dialog and Settings are readable (screenshots) |
 | R3.12 | 2026-11-01 | Pass | Portable: after Accept in the app, `winget search --source msstore` still prompted |
 | R1.1 (high contrast) | – | **Pending** | Check the app with a Windows contrast theme on (constitution Q5) |
