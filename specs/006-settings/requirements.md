@@ -90,10 +90,8 @@ Effects to review: a user who declines gets no `msstore` results and no update i
 
 Open questions for this amendment:
 
-- **Where does acceptance live?** Recommended: in the app's settings. Everyone already on an earlier version is asked once, even if they
-  accepted in `winget`, because COM can't read that record, and the constitution stays as it is. Alternative: use `winget.exe` to read and
-  record it, so one answer covers both and existing users aren't asked. That needs exception A6 (undecided, 008), and reading the
-  record that way is untested.
+- **Where does acceptance live?** **Decided 2026-11-01: in the app's settings.** Everyone already on an earlier version is asked once, even if
+  they accepted in `winget`, because COM can't read that record. No `winget.exe` calls, so exception A6 isn't needed.
 - **How does the app install App Installer?** To settle in the design with a Sandbox test, since 011 found WinGet can be absent on real
   installs. Candidates: the Windows package API with Microsoft's `aka.ms/getwinget` address, or the Store page. The design must also
   check that the Store edition of the app is allowed to do this.
