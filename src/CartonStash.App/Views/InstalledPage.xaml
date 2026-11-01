@@ -191,7 +191,7 @@
                 <InfoBar
                     Title="Couldn't load installed packages"
                     IsClosable="False"
-                    IsOpen="{x:Bind ui:Ui.HasText(ViewModel.ErrorMessage), Mode=OneWay}"
+                    IsOpen="{x:Bind ViewModel.HasError, Mode=OneWay}"
                     Message="{x:Bind ViewModel.ErrorMessage, Mode=OneWay}"
                     Severity="Error">
                     <InfoBar.ActionButton>

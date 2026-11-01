@@ -117,7 +117,7 @@
                     Style="{StaticResource CaptionTextBlockStyle}"
                     Text="{x:Bind Operation.Message, Mode=OneWay}"
                     TextWrapping="Wrap"
-                    Visibility="{x:Bind ui:Ui.VisibleIf(Operation.Message), Mode=OneWay}" />
+                    Visibility="{x:Bind Operation.HasMessage, Mode=OneWay}" />
             </StackPanel>
 
             <!-- Actions (R1.6, R2.1) -->

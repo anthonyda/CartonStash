@@ -121,11 +121,11 @@
                 AutomationProperties.LiveSetting="Polite"
                 Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                 Text="{x:Bind ViewModel.SourcesStatus, Mode=OneWay}"
-                Visibility="{x:Bind ui:Ui.VisibleIf(ViewModel.SourcesStatus), Mode=OneWay}" />
+                Visibility="{x:Bind ViewModel.HasSourcesStatus, Mode=OneWay}" />
             <InfoBar
                 Title="Some sources couldn't be refreshed"
                 IsClosable="False"
-                IsOpen="{x:Bind ui:Ui.HasText(ViewModel.SourcesError), Mode=OneWay}"
+                IsOpen="{x:Bind ViewModel.HasSourcesError, Mode=OneWay}"
                 Message="{x:Bind ViewModel.SourcesError, Mode=OneWay}"
                 Severity="Warning" />
             <ItemsControl ItemsSource="{x:Bind ViewModel.Sources}">

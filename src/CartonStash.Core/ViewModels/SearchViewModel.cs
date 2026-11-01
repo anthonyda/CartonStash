@@ -37,14 +37,17 @@ public sealed partial class SearchViewModel : ObservableObject
     public partial bool IsSearching { get; set; }
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasError))]
     public partial string? ErrorMessage { get; set; }
 
     /// <summary>Set when a finished search found nothing (R3.3); null otherwise.</summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasEmptyMessage))]
     public partial string? EmptyMessage { get; set; }
 
     /// <summary>Names the sources missing from a finished search, and why (011 R2.1); null when none are.</summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasSourceNotice))]
     public partial string? SourceNotice { get; set; }
 
     /// <summary>Names the sources not accepted, shown with Read and accept (006 R3.10); null when there are none.</summary>
@@ -52,7 +55,13 @@ public sealed partial class SearchViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(HasNotInUseNotice))]
     public partial string? NotInUseNotice { get; private set; }
 
-    /// <summary>A plain bool for the InfoBar: x:Bind doesn't call a function again once its argument is null.</summary>
+    // Plain bools for the view: x:Bind doesn't call a function again once its argument is null (011 T8).
+    public bool HasError => ErrorMessage is not null;
+
+    public bool HasEmptyMessage => EmptyMessage is not null;
+
+    public bool HasSourceNotice => SourceNotice is not null;
+
     public bool HasNotInUseNotice => NotInUseNotice is not null;
 
     private bool CanSearch() => !string.IsNullOrWhiteSpace(Query);

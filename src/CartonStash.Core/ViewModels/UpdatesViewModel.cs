@@ -34,6 +34,9 @@ public sealed partial class UpdatesViewModel : ObservableObject
 
     public string? ErrorMessage => _store.ErrorMessage;
 
+    /// <summary>A plain bool for the InfoBar: x:Bind doesn't call a function again once its argument is null (011 T8).</summary>
+    public bool HasError => ErrorMessage is not null;
+
     /// <summary>For the navigation badge (R4.1); null until the installed data is loaded.</summary>
     public int? Count => _store.IsLoaded && _store.ErrorMessage is null ? Updates.Count : null;
 
@@ -79,6 +82,7 @@ public sealed partial class UpdatesViewModel : ObservableObject
             case nameof(InstalledPackagesStore.ErrorMessage):
             case nameof(InstalledPackagesStore.IsLoaded):
                 OnPropertyChanged(nameof(ErrorMessage));
+                OnPropertyChanged(nameof(HasError));
                 NotifyCount();
                 break;
         }
