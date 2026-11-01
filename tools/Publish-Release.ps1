@@ -1,9 +1,8 @@
 <#
 .SYNOPSIS
-    Builds CartonStash's release files (spec 007), unsigned: MSIX + portable zip per architecture and the public
-    certificate. Used by the release workflow and for local test releases. Signing is a separate step, so the
-    key is never around while build code runs (R5.1): see tools\Sign-Release.ps1.
-    The Microsoft Store MSIX goes to its own folder, because Microsoft signs those files, not the project (R6.3).
+    Builds CartonStash's release files (spec 007) per architecture: the Microsoft Store MSIX and a portable zip.
+    Used by the release workflow and for local builds. Nothing here is signed: Microsoft signs the Store MSIX after
+    certification (R6.3), and the portable zip is for local use only (R9.1, R9.6).
 
 .PARAMETER Version
     Release version, e.g. 1.2.3 or v1.2.3 (from the git tag, 007 R3.2). Becomes the MSIX version 1.2.3.0.
@@ -32,7 +31,17 @@ foreach ($folder in $Output, $StoreOutput) {
 $Output = (Resolve-Path $Output).Path
 $StoreOutput = (Resolve-Path $StoreOutput).Path
 
+# Each build starts clean. An MSIX leaves an empty resource list, because the shared runtime supplies WinUI's resources,
+# and a portable build straight after it would reuse that list and crash at start (R1.6).
+function Clear-Build {
+    foreach ($folder in 'bin\Release', 'obj\Release') {
+        $path = Join-Path $app $folder
+        if (Test-Path $path) { Remove-Item $path -Recurse -Force }
+    }
+}
+
 function Build-Msix([string]$Rid, [string]$Arch, [string]$Destination) {
+    Clear-Build
     $packages = Join-Path $app 'AppPackages'
     if (Test-Path $packages) { Remove-Item $packages -Recurse -Force }
     dotnet publish $app -c Release -r $Rid -p:PackageMsix=true -p:Version=$semver -p:Platform=$Arch
@@ -55,10 +64,6 @@ try {
     foreach ($rid in $Runtimes) {
         $arch = $rid.Split('-')[1]
 
-        # MSIX for GitHub.
-        Set-Content $manifestPath $versioned -NoNewline
-        Build-Msix $rid $arch (Join-Path $Output "CartonStash_${semver}_$arch.msix")
-
         # MSIX for the Store (R6.1).
         Set-Content $manifestPath $store -NoNewline
         Build-Msix $rid $arch (Join-Path $StoreOutput "CartonStash_${semver}_$arch.msix")
@@ -68,9 +73,13 @@ try {
         # CartonStash.pri, the app's compiled XAML; without it the app crashes at start (R1.6).
         $portable = Join-Path ([IO.Path]::GetTempPath()) "cartonstash-portable-$arch"
         if (Test-Path $portable) { Remove-Item $portable -Recurse -Force }
+        Clear-Build
         dotnet publish $app -c Release -r $rid --self-contained true -p:EnableMsixTooling=true -p:Version=$semver -p:Platform=$arch -o $portable
         if ($LASTEXITCODE) { throw "Portable build failed for $rid." }
-        if (-not (Test-Path (Join-Path $portable 'CartonStash.pri'))) { throw "Portable build for $rid has no CartonStash.pri: the app would crash at start." }
+        $pri = Join-Path $portable 'CartonStash.pri'
+        if (-not (Test-Path $pri)) { throw "Portable build for $rid has no CartonStash.pri: the app would crash at start." }
+        # A complete file holds WinUI's resources too, about 2.4 MB. Without them the app crashes the same way.
+        if ((Get-Item $pri).Length -lt 1MB) { throw "Portable build for $rid has an incomplete CartonStash.pri: the app would crash at start." }
         Get-ChildItem $portable -Filter *.pdb | Remove-Item
         Compress-Archive -Path (Join-Path $portable '*') -DestinationPath (Join-Path $Output "CartonStash_${semver}_${arch}_portable.zip")
         Remove-Item $portable -Recurse -Force
@@ -80,6 +89,4 @@ finally {
     Set-Content $manifestPath $manifest -NoNewline
 }
 
-Copy-Item (Join-Path $PSScriptRoot 'CartonStash.cer') $Output
-
-Get-ChildItem $Output | Select-Object Name, @{ n = 'MB'; e = { [math]::Round($_.Length / 1MB, 1) } } | Format-Table -AutoSize
+Get-ChildItem $Output, $StoreOutput | Select-Object Name, @{ n = 'MB'; e = { [math]::Round($_.Length / 1MB, 1) } } | Format-Table -AutoSize
