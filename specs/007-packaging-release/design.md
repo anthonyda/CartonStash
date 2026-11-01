@@ -162,6 +162,36 @@ also covers `*.p12`, `*.pem`, `*.key`, `*.snk`, `*.pfx.*` and `.env.*`.
 - **Spec 010.** The manifest gains the background task and COM server entries, and every MSIX sets `WindowsAppSDKBackgroundTask`. `PRIVACY.md` covers the checks and their 7-day history.
 - **Rollout.** The first R8 release needs a note for existing users at the top of its release notes (R8.6). Without the runtime, the update fails and the installed version keeps working.
 
+## Amendment R9: Microsoft Store only (approved 2026-11-01)
+
+- **Why.** The Store build is signed by Microsoft and updates itself. The GitHub files need a certificate trusted by hand and, since R8, a runtime installed first, and they never update themselves. They were barely used: 0 to 4 downloads per file across v1.0.2 to v1.0.5 on 2026-11-01.
+- **Release workflow.** Two jobs. `attest` goes, with its `id-token` and `attestations` permissions, and so do the `unsigned` and `signed` artifacts. No job holds a secret. R5.2 to R5.4 still apply.
+
+| Job | Token | Secrets | Steps |
+|-----|-------|---------|-------|
+| `build` | `contents: read` | None | Check the tag format, check `CHANGELOG.md` has the version, unit tests, `Publish-Release.ps1`, upload `store\` (kept 7 days) |
+| `release` | `contents: write` | None. The `release` environment asks for the maintainer's approval | Read the version's section, `gh release create` with those notes and no files |
+
+- **Changelog.** `CHANGELOG.md`, newest first, one `## 1.2.3` heading per version, written for users. New `tools/Get-Changelog.ps1 -Version` prints a version's section and fails if it's missing or empty. `build` runs it first, so a missing entry stops the release before anything builds, and `release` uses it for the notes. v1.0.2 to v1.0.5 are copied from their release notes.
+- **Scripts.** `Publish-Release.ps1` drops the GitHub MSIX build and the `.cer` copy, and still builds the portable zip, so every tag still runs R1.6's guard and developers keep one command for a local build. `Package.appxmanifest` keeps the `CN=Anthony` identity: the script swaps in the Store's (R6). Deleted: `tools/Sign-Release.ps1`, `tools/New-SigningCert.ps1`, `tools/CartonStash.cer`, `tools/release-notes.md`.
+- **Clean builds (found in T43).** `Publish-Release.ps1` clears the App project's `bin\Release` and `obj\Release` before each build. An MSIX build leaves `pri.resfiles` empty, because the shared runtime supplies WinUI's resources. A portable build straight after it reuses that list, so `CartonStash.pri` is 39 KB instead of 2.4 MB, and the app crashes at start (`0xc000027b` in `Microsoft.UI.Xaml.dll`). R1.6's guard only checked that the file existed, so it now also fails below 1 MB.
+- **README.**
+  - *Download and install* keeps the Store link, `winget install 9MT37M7DBZRK --source msstore` and the requirements. The MSIX, portable, runtime, certificate and checksum text goes.
+  - The release badge says `version`, not `download`.
+  - *Build from source* stays, and says `Publish-Release.ps1` gives a portable zip with no background checks.
+  - The features list, the settings FAQ and "How it's built" stop mentioning GitHub files and our certificate.
+- **App text.** The note at `SettingsPage.xaml` becomes "Background update checks need the Microsoft Store version of CartonStash.", and 010 R4.1 and T11 are reworded to match.
+- **`SECURITY.md`.** Keeps the thumbprint and says v1.0.5 was the last release signed with it, so a newer file signed with it isn't ours. It gives the steps below for GitHub installs.
+- **Existing GitHub installs.** They keep working, with no more updates. The Store and GitHub builds have different identities (R6), so the move is: uninstall the GitHub build, install from the Store, then remove the certificate as administrator. Settings and logs don't carry over.
+
+```powershell
+Get-ChildItem Cert:\LocalMachine\TrustedPeople | Where-Object Thumbprint -eq 99EE388A0F4388D0118678B7043D8626AA904441 | Remove-Item
+```
+
+- **GitHub settings.** `SIGNING_PFX_BASE64` and `SIGNING_PFX_PASSWORD` are deleted from `release` after the first R9 tag passes. The environment, required reviewer, rulesets and immutable releases all stay.
+- **Old release notes.** R9.4 was done on the maintainer's request, ahead of this review. Until T45, the README is the only place with the thumbprint and install steps for those files (R5.8).
+- **Rollout.** 1. Merge the code and docs. 2. Tag the next release: notes only on GitHub, and the `store` artifact goes to Partner Center (T33). 3. Delete the secrets. 4. Carry out the decisions on the old files and the key.
+
 ## Testing strategy
 
 | Criteria | How |
@@ -184,7 +214,12 @@ also covers `*.p12`, `*.pem`, `*.key`, `*.snk`, `*.pfx.*` and `.env.*`.
 
 *Amendment R8:* R8.1 by reading the built package's dependencies and contents; R8.2 and R8.6 by review of the docs and following them; R8.3 with the portable start check on a PC without the runtime; R8.4 with a search, an install and an uninstall after installing the runtime in Windows Sandbox; R8.5 by updating a real GitHub install.
 
+*Amendment R9:* R9.2 and R9.3 on the next tag: `gh release view` shows the notes and no files, and `Get-Changelog.ps1` fails on a version with no section. R9.4 by reading back all four releases. R9.5 and R9.7 by review and by following the steps. R9.6 from a fresh clone, using only the README: `dotnet run` works, and the zip's app opens with no crash logged. R9.8 and R9.9 by review of `release.yml` and `gh secret list --env release`.
+
 ## Risks and alternatives considered
+
+- **The Store as the only route (amendment R9).** A rejected or slow certification holds up every fix, with no GitHub build to fall back on, and PCs that block the Store can only build from source. Accepted by the maintainer's decision.
+- **Links to old files (amendment R9).** Deleting the old releases breaks any link to their files. The README's GitHub install steps describe files that no longer exist until T45 replaces them.
 
 - **Missing SDK parts (amendment R7).** A removed part might only fail at runtime, so R7.5's real installs are required, not just a build.
 - **Alternative: trimming .NET (amendment R7).** Rejected by R7.3: it can break WinUI and the WinGet COM calls in ways that only show at runtime.

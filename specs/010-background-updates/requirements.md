@@ -55,7 +55,7 @@ background work.
 | R3.11 | US6  | Settings shall offer **Check history**, listing each background check of the last 7 days, newest first, with its date and time, what started it (schedule, or a missed check at sign-in), and its result: updates found with their number and names, no updates, skipped (operations running, or metered connection), or failed with a readable reason. |
 | R3.12 | US6  | The app shall delete history entries older than 7 days, whether or not checks are still running. Turning checks off shall keep the history until it ages out. |
 | R3.13 | US6  | The history shall stay on the PC, hold no user name or file paths, and be plain text in the UI. A failure to write it shall never fail a check (009 R2.5). |
-| R4.1 | US4   | In the portable app, the setting shall be unavailable, with a short note that it needs the Microsoft Store or MSIX version. |
+| R4.1 | US4   | In the portable app, the setting shall be unavailable, with a short note that it needs the Microsoft Store version. *(Reworded by 007 R9.)* |
 | R5.1 | US5  | Each row on the Updates page shall offer **Exclude from update checks**, keyboard reachable with an accessible name (constitution Q5). |
 | R5.2 | US5  | A background check shall leave excluded packages out of the notification's count and names (R2.1), and the message shall state how many were ignored ("3 updates available, 1 ignored"). If only excluded packages have updates, then it shall show no notification. |
 | R5.3 | US5  | Excluding a package shall apply to it by package ID, for every future version, until the user removes it. |

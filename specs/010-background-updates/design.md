@@ -115,7 +115,7 @@ Notifications also work from the background process, with no extra setup. Clicki
 ## Risks and alternatives considered
 
 - **If sign-in after a shutdown fails (T11):** a hidden check through the MSIX's startup task, as the requirements say. It covers sign-in only, and unlock already works.
-- **Runtime:** `UniversalBGTask` needs the shared runtime, so GitHub MSIX users must install it themselves (007 R8.2).
+- **Runtime:** `UniversalBGTask` needs the shared runtime, which the Store installs with the app.
 - **Startup cost:** a custom `Main` runs for every launch, so it must stay small, and the portable path must not change. R1.6 from spec 007 still applies.
 - **WinGet log noise:** each check adds a `WinGetCOM-*.log` file in WinGet's folder. The exact-match rule in 009 R2.9 stays safe, because the queue and a check can't run at once (R1.5).
 - **Alternative: a separate small exe for checks.** Rejected: it would bundle its own .NET runtime or share the app's folder, and Core's WinGet code needs W1's files next to it anyway.
