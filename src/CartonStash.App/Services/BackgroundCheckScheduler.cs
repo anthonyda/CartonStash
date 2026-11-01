@@ -1,0 +1,85 @@
+using Windows.ApplicationModel.Background;
+using CartonStash.Core.Models;
+using CartonStash.Core.Services;
+using BackgroundTaskBuilder = Microsoft.Windows.ApplicationModel.Background.BackgroundTaskBuilder;
+
+namespace CartonStash.App.Services;
+
+/// <summary>Registers the chosen schedule with Windows (010 R3.2). MSIX only: the portable app has no background checks (R4.1).</summary>
+public sealed class BackgroundCheckScheduler : ICheckScheduler
+{
+    public bool IsAvailable => AppPackage.IsPackaged;
+
+    public const string TimerTaskName = "CartonStash check timer";
+
+    /// <summary>Runs when the user comes back, to catch up on a missed check (R3.10). Windows' UserPresent trigger (T1).</summary>
+    public const string ReturnTaskName = "CartonStash check on return";
+
+    /// <summary>Replaces every task with the chosen schedule. Returns false when Windows doesn't allow background work (R3.4).</summary>
+    public async Task<bool> ApplyAsync(AppSettings settings, DateTimeOffset? nextDue)
+    {
+        RemoveAll();
+        if (settings.CheckMode == CheckMode.Off)
+        {
+            return true;
+        }
+
+        var access = await BackgroundExecutionManager.RequestAccessAsync();
+        if (access is BackgroundAccessStatus.DeniedByUser or BackgroundAccessStatus.DeniedBySystemPolicy or BackgroundAccessStatus.Unspecified)
+        {
+            return false;
+        }
+
+        if (settings.CheckMode == CheckMode.Interval)
+        {
+            Register(TimerTaskName, new TimeTrigger((uint)settings.CheckIntervalHours * 60, oneShot: false));
+        }
+        else if (nextDue is { } next)
+        {
+            RegisterDailyTimer(next);
+        }
+        Register(ReturnTaskName, new SystemTrigger(SystemTriggerType.UserPresent, oneShot: false));
+        return true;
+    }
+
+    /// <summary>True when the chosen schedule has lost a task: repairs a broken daily chain (R3.7).</summary>
+    public static bool IsMissing(AppSettings settings)
+    {
+        if (settings.CheckMode == CheckMode.Off)
+        {
+            return false;
+        }
+        var names = BackgroundTaskRegistration.AllTasks.Values.Select(t => t.Name).ToList();
+        return !names.Contains(TimerTaskName) || !names.Contains(ReturnTaskName);
+    }
+
+    public static void RegisterDailyTimer(DateTimeOffset next)
+    {
+        Remove(TimerTaskName);
+        Register(TimerTaskName, new TimeTrigger(CheckSchedule.TimerMinutes(next, DateTimeOffset.Now), oneShot: true));
+    }
+
+    private static void Register(string name, IBackgroundTrigger trigger)
+    {
+        var builder = new BackgroundTaskBuilder { Name = name };
+        builder.SetTrigger(trigger);
+        builder.SetTaskEntryPointClsid(typeof(BackgroundCheckTask).GUID);
+        builder.Register();
+    }
+
+    private static void RemoveAll()
+    {
+        foreach (var task in BackgroundTaskRegistration.AllTasks.Values.ToList())
+        {
+            task.Unregister(true);
+        }
+    }
+
+    private static void Remove(string name)
+    {
+        foreach (var task in BackgroundTaskRegistration.AllTasks.Values.Where(t => t.Name == name).ToList())
+        {
+            task.Unregister(false);
+        }
+    }
+}

@@ -66,6 +66,9 @@ public sealed partial class MainWindow : Window
 
     public ActivityViewModel Activity { get; }
 
+    /// <summary>Opens the Updates page, for a clicked notification (010 R2.2).</summary>
+    public void ShowUpdates() => OpenStartPage(StartPage.Updates);
+
     // 006 R5.2: open the saved start page and select its navigation item.
     private void OpenStartPage(StartPage start)
     {
@@ -76,7 +79,10 @@ public sealed partial class MainWindow : Window
             _ => "search",
         };
         Nav.SelectedItem = Nav.MenuItems.OfType<NavigationViewItem>().First(i => (string)i.Tag == key);
-        ContentFrame.Navigate(Pages[key]);
+        if (ContentFrame.CurrentSourcePageType != Pages[key])
+        {
+            ContentFrame.Navigate(Pages[key]);
+        }
     }
 
     private void Nav_ItemInvoked(NavigationView sender, NavigationViewItemInvokedEventArgs args)
