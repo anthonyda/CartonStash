@@ -38,6 +38,10 @@ public sealed partial class SearchViewModel : ObservableObject
     [ObservableProperty]
     public partial string? EmptyMessage { get; set; }
 
+    /// <summary>Names the sources missing from a finished search, and why (011 R2.1); null when none are.</summary>
+    [ObservableProperty]
+    public partial string? SourceNotice { get; set; }
+
     private bool CanSearch() => !string.IsNullOrWhiteSpace(Query);
 
     // Concurrent executions are allowed so a new search can supersede a running one (R3.2).
@@ -51,6 +55,7 @@ public sealed partial class SearchViewModel : ObservableObject
         var query = Query.Trim();
         ErrorMessage = null;
         EmptyMessage = null;
+        SourceNotice = null;
         Results.Clear();
         IsSearching = true;
 
@@ -62,6 +67,7 @@ public sealed partial class SearchViewModel : ObservableObject
                 return;
             }
 
+            SourceNotice = SourceFailureMessages.Notice(_packages.SourceFailures);
             foreach (var package in found)
             {
                 Results.Add(new PackageRowViewModel(package, _actions, RowActions.Install));

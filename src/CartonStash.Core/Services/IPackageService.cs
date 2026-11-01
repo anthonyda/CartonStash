@@ -11,6 +11,9 @@ public interface IPackageService
     /// <summary>Searches all configured remote sources by name, ID or moniker.</summary>
     Task<IReadOnlyList<PackageInfo>> SearchAsync(string query, int maxResults = 50, CancellationToken cancellationToken = default);
 
+    /// <summary>Sources left out because they failed on their own, with the reason (011 R2.1). Empty while all work.</summary>
+    IReadOnlyList<SourceFailure> SourceFailures { get; }
+
     /// <summary>Every installed package, correlated with the remote sources (002 R1.1).</summary>
     Task<IReadOnlyList<PackageInfo>> GetInstalledAsync(CancellationToken cancellationToken = default);
 

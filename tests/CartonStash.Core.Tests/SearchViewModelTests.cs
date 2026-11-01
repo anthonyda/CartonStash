@@ -42,6 +42,49 @@ public class SearchViewModelTests
         Assert.False(vm.IsSearching);
     }
 
+    [Fact] // 011 R2.1
+    public async Task Results_stay_usable_and_the_notice_names_a_missing_source()
+    {
+        var app = new TestApp();
+        app.Packages.Search = (_, _) => Task.FromResult<IReadOnlyList<PackageInfo>>([Pkg("Git.Git")]);
+        app.Packages.SourceFailures = [new SourceFailure("msstore", "'msstore' can't be reached.", 0)];
+        var vm = new SearchViewModel(app.Packages, app.Actions);
+        vm.Query = "git";
+
+        await vm.SearchCommand.ExecuteAsync(null);
+
+        Assert.Equal("Results don't include: 'msstore' can't be reached.", vm.SourceNotice);
+        Assert.Single(vm.Results);
+        Assert.Null(vm.ErrorMessage);
+    }
+
+    [Fact] // 011 R1.5: the notice follows the latest search
+    public async Task The_next_search_clears_the_notice()
+    {
+        var app = new TestApp();
+        app.Packages.SourceFailures = [new SourceFailure("msstore", "'msstore' failed.", 0)];
+        var vm = new SearchViewModel(app.Packages, app.Actions);
+        vm.Query = "git";
+        await vm.SearchCommand.ExecuteAsync(null);
+
+        app.Packages.SourceFailures = [];
+        await vm.SearchCommand.ExecuteAsync(null);
+
+        Assert.Null(vm.SourceNotice);
+    }
+
+    [Fact] // 011 R2.5: not "no results"
+    public async Task When_every_source_fails_the_error_is_shown()
+    {
+        var vm = Create((_, _) => throw new WinGetException("'msstore' failed. 'winget' failed.", 0));
+        vm.Query = "git";
+
+        await vm.SearchCommand.ExecuteAsync(null);
+
+        Assert.Equal("'msstore' failed. 'winget' failed.", vm.ErrorMessage);
+        Assert.Null(vm.EmptyMessage);
+    }
+
     [Fact]
     public async Task New_search_supersedes_running_one() // R3.2
     {

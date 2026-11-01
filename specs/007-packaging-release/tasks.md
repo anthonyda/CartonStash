@@ -93,7 +93,7 @@ After going public:
 - [x] **T36.** On a PC without the runtime, such as Windows Sandbox: record what a user sees when the MSIX can't install, follow the documented steps, then do a search, an install and an uninstall. Run the portable zip there too. *(R8.3, R8.4)*
   - Verify: the open questions in the requirements are answered and recorded.
   - Done 2026-11-01 on x64 in Windows Sandbox, with the 1.0.6 test build signed by a throwaway certificate. Without the runtime, App Installer offers **Install**, then fails with "App Installer failed to install package dependencies", and PowerShell gives `0x80073CF3` naming `Microsoft.WindowsAppRuntime.2` 2.6.4.0. The 119 MB runtime installer then finishes in seconds, the MSIX installs, and `jq` installed and uninstalled. The portable app opens with no runtime installed.
-  - Found, not caused by R8: on a PC without WinGet the app crashes at start (`0xc0000409` in `Microsoft.Management.Deployment.dll`). With `msstore` failing, every search fails with an internet message, in the portable app too: search only worked here after `winget source remove msstore`.
+  - Found, not caused by R8: on a PC without WinGet the app crashes at start (`0xc0000409` in `Microsoft.Management.Deployment.dll`). With `msstore` failing, every search fails with an internet message, in the portable app too: search only worked here after `winget source remove msstore`. Both are fixed by spec 011.
 - [ ] **T37.** Tag a release and update a real GitHub install over the previous version, with settings and logs kept. *(R8.5)*
 
 ## Manual verification log

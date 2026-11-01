@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
 using CartonStash.App.Services;
@@ -19,8 +20,37 @@ public partial class App : Application
 
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
+        // Before anything resolves: activating WinGet when it's missing ends the process (011 R3.1).
+        var installed = WinGetAvailability.IsInstalled();
+        if (!installed || !TryOpenMainWindow())
+        {
+            ShowSetup(startFailed: installed);
+        }
+    }
+
+    private bool TryOpenMainWindow()
+    {
+        try
+        {
+            Services.GetRequiredService<CatalogConnection>(); // activates WinGet (011 R3.5)
+        }
+        catch (COMException)
+        {
+            return false;
+        }
+
+        var setup = _window;
         // Resolved on the UI thread: the queue and store rely on its SynchronizationContext.
         _window = Services.GetRequiredService<MainWindow>();
+        _window.Activate();
+        setup?.Close();
+        return true;
+    }
+
+    private void ShowSetup(bool startFailed)
+    {
+        _window = new WinGetSetupWindow(new WinGetSetupViewModel(startFailed, WinGetAvailability.IsInstalled, TryOpenMainWindow));
+        Services.GetRequiredService<ThemeService>().Attach(_window);
         _window.Activate();
     }
 
