@@ -25,8 +25,8 @@ dotnet build                                            # whole solution (RID de
 dotnet test                                             # all tests, incl. live WinGet
 dotnet test --filter "Category!=Integration"            # unit tests only
 dotnet run --project src/CartonStash.App             # run the app
-.\tools\Publish-Release.ps1 -Version 1.2.3            # unsigned MSIX + portable zip in artifacts\ (spec 007)
-.\tools\Sign-Release.ps1 -PfxPath x.pfx -PfxPassword y  # signs them, writes checksums (the release workflow does this)
+.\tools\Publish-Release.ps1 -Version 1.2.3            # portable zip in artifacts\, Store MSIX in store\ (spec 007)
+.\tools\Get-Changelog.ps1 -Version 1.2.3              # that version's CHANGELOG.md section: the GitHub Release notes
 ```
 
 ## Gotchas
@@ -36,3 +36,5 @@ dotnet run --project src/CartonStash.App             # run the app
 - Keep the repo at a short path. Long paths break the XAML compiler (error WMC1006 / WMC9999).
 - Package versions live only in `Directory.Packages.props`. After changing one, run `dotnet restore --force-evaluate` and
   commit the `packages.lock.json` files: CI refuses a restore that doesn't match them (error NU1004).
+- Add the version's section to `CHANGELOG.md` before tagging. Without it the release stops, and `v*` tags can't be moved or deleted, so that version number is lost.
+- Published releases are immutable: files can't be removed, and a deleted release's tag can't be used again.

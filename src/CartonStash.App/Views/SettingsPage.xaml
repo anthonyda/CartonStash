@@ -146,7 +146,7 @@
             <InfoBar
                 IsClosable="False"
                 IsOpen="{x:Bind Checks.IsUnavailable}"
-                Message="Background update checks need the Microsoft Store or MSIX version of CartonStash."
+                Message="Background update checks need the Microsoft Store version of CartonStash."
                 Severity="Informational" />
             <InfoBar
                 Title="Windows isn't allowing background checks"

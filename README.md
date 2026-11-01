@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/anthonyda/CartonStash/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/anthonyda/CartonStash?label=download" /></a>
+  <a href="https://github.com/anthonyda/CartonStash/blob/main/CHANGELOG.md"><img alt="Latest version" src="https://img.shields.io/github/v/release/anthonyda/CartonStash?label=version" /></a>
   <a href="https://github.com/anthonyda/CartonStash/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/anthonyda/CartonStash/actions/workflows/ci.yml/badge.svg" /></a>
   <img alt="Windows 10 and 11" src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4" />
   <img alt=".NET 10, WinUI 3" src="https://img.shields.io/badge/.NET%2010-WinUI%203-512BD4" />
@@ -37,7 +37,7 @@ It talks to WinGet directly through its official API, so what you see is exactly
 - **Uninstall programs** cleanly, with a confirmation that names exactly what will be removed.
 - **Progress for everything**: downloads, installs and uninstalls run one at a time in a queue, with cancel (while
   downloading), retry, and a clear success or error message. Pin the Activity pane to keep it open beside the page.
-- **Background update checks**, optional and off by default: on a schedule you choose, Windows runs a short check, even with the app closed, and a notification tells you what's waiting. It never installs anything by itself. Exclude any package you don't want to hear about. Microsoft Store and MSIX versions only.
+- **Background update checks**, optional and off by default: on a schedule you choose, Windows runs a short check, even with the app closed, and a notification tells you what's waiting. It never installs anything by itself. Exclude any package you don't want to hear about. Microsoft Store version only.
 - **Logs when something fails**: every operation keeps a log with WinGet's result and the installer's own output, ready
   to read or copy into a bug report.
 - **Runs without admin rights.** When an installer needs administrator access, Windows asks for that installer only.
@@ -55,47 +55,18 @@ It talks to WinGet directly through its official API, so what you see is exactly
 
 ## Download and install
 
-The easiest way is the **[Microsoft Store](https://apps.microsoft.com/detail/9MT37M7DBZRK)**: Windows handles everything,
-including updates.
-
-Or get the latest version from **[Releases](https://github.com/anthonyda/CartonStash/releases/latest)**:
-
-- **Installer (MSIX)**: `CartonStash_<version>_x64.msix` (or `_arm64` for Arm PCs). Adds CartonStash to
-  Start and uninstalls cleanly from Settings → Apps.
-- **Portable (zip)**: `CartonStash_<version>_x64_portable.zip`. Unzip anywhere and run `CartonStash.exe`. Nothing to install.
-
-The steps below are for the GitHub MSIX. It needs Microsoft's Windows App SDK runtime, so install that first, for your PC:
-[x64](https://aka.ms/windowsappsdk/2.6/2.6.4/windowsappruntimeinstall-x64.exe) or
-[Arm64](https://aka.ms/windowsappsdk/2.6/2.6.4/windowsappruntimeinstall-arm64.exe) (version 2.6.4, from
-[Microsoft's downloads page](https://learn.microsoft.com/windows/apps/windows-app-sdk/downloads)). If the install stops
-with "App Installer failed to install package dependencies", this runtime is missing.
-
-The MSIX is signed with CartonStash's own certificate, which Windows doesn't trust out of the box yet. Before you trust
-it, check that `CartonStash.cer` is the real one. This must print `99EE388A0F4388D0118678B7043D8626AA904441`:
+Get CartonStash from the **[Microsoft Store](https://apps.microsoft.com/detail/9MT37M7DBZRK)**. Microsoft signs it, and
+Windows keeps it up to date. You can also install it from a terminal:
 
 ```powershell
-(Get-PfxCertificate .\CartonStash.cer).Thumbprint
+winget install 9MT37M7DBZRK --source msstore
 ```
 
-Then trust it once (as administrator) and double-click the `.msix`:
-
-```powershell
-Import-Certificate -FilePath .\CartonStash.cer -CertStoreLocation Cert:\LocalMachine\TrustedPeople
-```
-
-**Checking a download.** Each release lists SHA-256 checksums in `SHA256SUMS.txt`. From v1.0.2 on, every file also has a
-build attestation, which shows it was built by this repository's release workflow:
-
-```powershell
-gh attestation verify CartonStash_1.0.2_x64.msix --repo anthonyda/CartonStash
-```
-
-From v1.0.2 on, the portable zip's `CartonStash.exe`, `CartonStash.dll` and `CartonStash.Core.dll` are signed with the same
-certificate. Windows still shows an unknown publisher for them, so compare the thumbprint if you want to check them.
+See what's new in each version in the [changelog](CHANGELOG.md).
 
 **Requirements:** Windows 10 version 2004 (build 19041) or later, or Windows 11, with
-[App Installer](https://apps.microsoft.com/detail/9NBLGGH4NNS1) (WinGet) 1.29 or later. .NET is included. The Windows App
-SDK runtime comes with the Store version and the portable zip; the GitHub MSIX needs it installed first (see above).
+[App Installer](https://apps.microsoft.com/detail/9NBLGGH4NNS1) (WinGet) 1.29 or later. The Store installs everything else
+the app needs.
 
 ## FAQ
 
@@ -112,7 +83,7 @@ WinGet refuses apps that are pinned or need explicit targeting; their Activity e
 is planned in [#1](https://github.com/anthonyda/CartonStash/issues/1).
 
 **Where are my settings?**
-`%LOCALAPPDATA%\CartonStash\settings.json` for the portable app; the MSIX keeps them in its own app-data folder.
+The Store version keeps them in its own app-data folder. A build of your own uses `%LOCALAPPDATA%\CartonStash\settings.json`.
 
 **What does CartonStash connect to?**
 WinGet does the searching and downloading. CartonStash itself only loads package icons, over https, from the addresses in
@@ -127,8 +98,12 @@ Visual Studio 2026 with the *WinUI application development* workload is optional
 dotnet build                                   # whole solution
 dotnet run --project src/CartonStash.App       # run the app
 dotnet test --filter "Category!=Integration"   # unit tests (add integration tests with plain `dotnet test`)
-.\tools\Publish-Release.ps1 -Version 1.2.3     # unsigned MSIX + portable zip in artifacts\
+.\tools\Publish-Release.ps1 -Version 1.2.3     # portable zip in artifacts\, Store MSIX in store\
 ```
+
+You don't need a certificate for any of this. To get a copy you can keep, run `Publish-Release.ps1` (add
+`-Runtimes win-x64` to build for x64 only), unzip `artifacts\CartonStash_<version>_x64_portable.zip` anywhere and run
+`CartonStash.exe`. It has everything it needs, but it isn't signed, and background update checks need the Store version.
 
 Keep the repository at a short path (for example `C:\dev\CartonStash`): long paths break the XAML compiler.
 
@@ -157,8 +132,7 @@ that spec.
   When testing shows the spec itself was wrong, the spec is corrected first and the change is recorded, so the
   documentation and the code never drift apart.
 - **Checked on every change.** Every push is built and tested by [CI](https://github.com/anthonyda/CartonStash/actions/workflows/ci.yml);
-  releases are built by the same workflow every time, signed with the project's own certificate, and published with
-  SHA-256 checksums.
+  releases are built by the same workflow every time, and Microsoft signs them after Store certification.
 
 Ideas and bug reports are welcome as [issues](https://github.com/anthonyda/CartonStash/issues). New features start the
 same way: as a spec.
