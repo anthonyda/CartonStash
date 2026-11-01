@@ -8,21 +8,20 @@ public class SourceAgreementPolicyTests
 {
     private const string Text = "text-a";
 
-    public static TheoryData<SourceAgreementAnswer?, bool, bool> Answers => new()
+    public static TheoryData<SourceAgreementAnswer?, bool> Answers => new()
     {
-        { null, false, true },
-        { new SourceAgreementAnswer(true, Text), true, false },
-        { new SourceAgreementAnswer(true, "old-text"), false, true },
-        { new SourceAgreementAnswer(false, Text), false, false },
-        { new SourceAgreementAnswer(false, "old-text"), false, false },
+        { null, false },
+        { new SourceAgreementAnswer(true, Text), true },
+        { new SourceAgreementAnswer(true, "old-text"), false },
+        { new SourceAgreementAnswer(false, Text), false },
+        { new SourceAgreementAnswer(false, "old-text"), false },
     };
 
     [Theory]
     [MemberData(nameof(Answers))]
-    public void Saved_answer_decides_use_and_asking(SourceAgreementAnswer? answer, bool mayUse, bool needsAnswer) // R3.8, R3.9
+    public void Only_an_acceptance_of_this_text_allows_use(SourceAgreementAnswer? answer, bool mayUse) // R3.8
     {
         Assert.Equal(mayUse, SourceAgreementPolicy.MayUse(answer, Text));
-        Assert.Equal(needsAnswer, SourceAgreementPolicy.NeedsAnswer(answer, Text));
     }
 
     [Fact]

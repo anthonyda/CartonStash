@@ -301,7 +301,15 @@ public sealed class CatalogConnection(ISettings settings)
     }
 
     private WinGetException NotFound(string id, string? source) =>
-        FailedSourceError(id, source, SourceFailures) ?? new($"WinGet can no longer find the package '{id}'. Refresh and try again.", null);
+        LeftOutSourceError(source, LeftOutSources)
+        ?? FailedSourceError(id, source, SourceFailures)
+        ?? new($"WinGet can no longer find the package '{id}'. Refresh and try again.", null);
+
+    /// <summary>A package from a source not in use isn't gone: say how to use it (006 R3.10). Null when that isn't the case.</summary>
+    internal static WinGetException? LeftOutSourceError(string? source, IReadOnlyList<string> leftOut) =>
+        leftOut.Contains(source, StringComparer.OrdinalIgnoreCase)
+            ? new($"'{source}' isn't in use. Read and accept its agreements in Settings, then try again.", null)
+            : null;
 
     /// <summary>A package from a failed source isn't gone: say which source failed (011 R2.6). Null when none is involved.</summary>
     internal static WinGetException? FailedSourceError(string id, string? source, IReadOnlyList<SourceFailure> failures)

@@ -14,11 +14,8 @@ public static class SourceAgreementPolicy
     public static bool MayUse(SourceAgreementAnswer? answer, string textHash) =>
         answer is { Accepted: true } && answer.TextHash == textHash;
 
-    /// <summary>Ask at start: never answered, or accepted a text that has changed. A decline is not asked again.</summary>
-    public static bool NeedsAnswer(SourceAgreementAnswer? answer, string textHash) =>
-        answer is null || (answer.Accepted && answer.TextHash != textHash);
 
-    /// <summary>A changed text puts an acceptance back to unanswered; a decline stays a decline.</summary>
+    /// <summary>Unanswered sources are asked at start. A changed text puts an acceptance back there; a decline stays a decline.</summary>
     public static AgreementStatus Status(IReadOnlyList<Agreement> agreements, SourceAgreementAnswer? answer)
     {
         if (agreements.Count == 0)

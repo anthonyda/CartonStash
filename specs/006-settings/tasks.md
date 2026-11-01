@@ -39,11 +39,11 @@ Starts after 011 is merged. T12 to T16 and T18 don't depend on T11's result.
   - Verify: `SourceAgreementPolicyTests` (every row of the design's table); store round trip; older file loads with no reset.
 - [x] **T13.** `CatalogConnection` uses the saved answers and leaves sources out; `LeftOutSources`; `SourceInfo.Id` and `AgreementStatus`; replace the session `HashSet` and `AcceptSourceAgreements`. *(R3.8, R3.9)*
   - Verify: integration test that an unanswered `msstore` isn't in the composite; `dotnet test`.
-- [ ] **T14.** `ShowSourceAgreementAsync`, `SourceAgreementCheck`, and move the installed preload behind the check. *(R3.4, R3.5, R3.6, R3.12)*
+- [x] **T14.** `ShowSourceAgreementAsync`, `SourceAgreementCheck`, and move the installed preload behind the check. *(R3.4, R3.5, R3.6, R3.12)*
   - Verify: `SourceAgreementCheckTests` with fake dialogs (each answer; region line for `msstore` only).
-- [ ] **T15.** **Read and accept** on Search and Settings, **Withdraw** in Settings, and the left-out source message on rows. *(R3.10, R3.11)*
+- [x] **T15.** **Read and accept** on Search and Settings, **Withdraw** in Settings, and the left-out source message on rows. *(R3.10, R3.11)*
   - Verify: `SearchViewModelTests`, `SettingsTests`.
-- [ ] **T16.** Handle every source left out: Search shows the button, Installed keeps working. *(R3.10)*
+- [x] **T16.** Handle every source left out: Search shows the button, Installed keeps working. *(R3.10)*
   - Verify: unit test, plus T19.
 - [ ] **T17.** `AppInstallerSetup` and **Set up for me**, as T11 decided: download, signature check, install, Check again, fallback to the link. *(R3.5, R3.7)*
   - Verify: unit tests for the signature refusal and the outcomes; T19.

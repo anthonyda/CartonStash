@@ -64,6 +64,7 @@ public partial class App : Application
             .AddSingleton<IOperationLogStore, OperationLogStore>()
             .AddSingleton<PackageOperationQueue>()
             .AddSingleton<InstalledPackagesStore>()
+            .AddSingleton<SourceAgreementCheck>()
             // Settings (006)
             .AddSingleton<ISettingsStore, JsonSettingsStore>()
             .AddSingleton<ISettings, SettingsService>()

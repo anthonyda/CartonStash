@@ -170,7 +170,7 @@ public sealed class SettingsTests : IDisposable
     public void View_model_writes_theme_and_scope() // R1.1, R2.1, R2.2
     {
         var settings = new FakeSettings();
-        var vm = new SettingsViewModel(settings, new FakePackageService(), new FakeDialogs(), new FakeClipboard());
+        var vm = Vm(settings, new FakePackageService(), new FakeDialogs(), new FakeClipboard());
         Assert.False(vm.ShowScopeWarning);
 
         vm.ThemeIndex = (int)AppTheme.Dark;
@@ -185,7 +185,7 @@ public sealed class SettingsTests : IDisposable
     public void View_model_shows_and_writes_the_start_page() // R5.1, R5.3
     {
         var settings = new FakeSettings(new AppSettings { StartPage = StartPage.Installed });
-        var vm = new SettingsViewModel(settings, new FakePackageService(), new FakeDialogs(), new FakeClipboard());
+        var vm = Vm(settings, new FakePackageService(), new FakeDialogs(), new FakeClipboard());
         Assert.Equal((int)StartPage.Installed, vm.StartPageIndex);
 
         vm.StartPageIndex = (int)StartPage.Updates;
@@ -202,7 +202,7 @@ public sealed class SettingsTests : IDisposable
         packages.Sources.Add(Source("winget"));
         packages.Sources.Add(Source("msstore"));
         packages.RefreshErrors["msstore"] = "Couldn't reach the source.";
-        var vm = new SettingsViewModel(new FakeSettings(), packages, new FakeDialogs(), new FakeClipboard());
+        var vm = Vm(new FakeSettings(), packages, new FakeDialogs(), new FakeClipboard());
         await vm.LoadCommand.ExecuteAsync(null);
 
         await vm.RefreshSourcesCommand.ExecuteAsync(null);
@@ -217,12 +217,17 @@ public sealed class SettingsTests : IDisposable
     public async Task Source_agreements_are_accepted_only_when_the_user_accepts() // R3.3
     {
         var packages = new FakePackageService();
-        var dialogs = new FakeDialogs { Answer = false };
-        var vm = new SettingsViewModel(new FakeSettings(), packages, dialogs, new FakeClipboard());
+        var dialogs = new FakeDialogs { SourceAnswer = AgreementAnswer.Declined };
+        var vm = Vm(new FakeSettings(), packages, dialogs, new FakeClipboard());
         var msstore = Source("msstore", new Agreement("Terms of Transaction", "…", "https://aka.ms/microsoft-store-terms-of-transaction"));
 
         await vm.ReviewAgreementsCommand.ExecuteAsync(msstore);
         Assert.Equal([("msstore", false)], packages.AgreementAnswers); // R3.8: a decline is saved too
+
+        dialogs.SourceAnswer = AgreementAnswer.Dismissed;
+        await vm.ReviewAgreementsCommand.ExecuteAsync(msstore);
+        Assert.Single(packages.AgreementAnswers); // R3.9
+        dialogs.SourceAnswer = AgreementAnswer.Accepted;
 
         dialogs.Answer = true;
         await vm.ReviewAgreementsCommand.ExecuteAsync(msstore);
@@ -235,7 +240,7 @@ public sealed class SettingsTests : IDisposable
         var packages = new FakePackageService();
         packages.Sources.Add(Source("winget"));
         var clipboard = new FakeClipboard();
-        var vm = new SettingsViewModel(new FakeSettings(), packages, new FakeDialogs(), clipboard);
+        var vm = Vm(new FakeSettings(), packages, new FakeDialogs(), clipboard);
         await vm.LoadCommand.ExecuteAsync(null);
 
         vm.CopyDiagnosticsCommand.Execute(null);
@@ -265,7 +270,7 @@ public sealed class SettingsTests : IDisposable
         var packages = new FakePackageService();
         packages.Sources.Add(Source("private") with { Argument = "https://user:hunter2@private.example.com/api?token=abc" });
         var clipboard = new FakeClipboard();
-        var vm = new SettingsViewModel(new FakeSettings(), packages, new FakeDialogs(), clipboard);
+        var vm = Vm(new FakeSettings(), packages, new FakeDialogs(), clipboard);
         await vm.LoadCommand.ExecuteAsync(null);
 
         vm.CopyDiagnosticsCommand.Execute(null);
@@ -273,6 +278,38 @@ public sealed class SettingsTests : IDisposable
         Assert.Contains("https://private.example.com/api", clipboard.Text);
         Assert.DoesNotContain("hunter2", clipboard.Text);
         Assert.DoesNotContain("token", clipboard.Text);
+    }
+
+    [Fact]
+    public async Task Withdrawing_saves_a_decline_and_refresh_skips_the_source() // R3.8, R3.11
+    {
+        var packages = new FakePackageService();
+        var accepted = Source("msstore", new Agreement("Terms", "…", null)) with { AgreementStatus = AgreementStatus.Accepted };
+        packages.Sources.Add(accepted);
+        packages.Sources.Add(Source("winget"));
+        var dialogs = new FakeDialogs();
+        var vm = Vm(new FakeSettings(), packages, dialogs, new FakeClipboard());
+        await vm.LoadCommand.ExecuteAsync(null);
+
+        await vm.ReviewAgreementsCommand.ExecuteAsync(accepted);
+        Assert.Equal([("msstore", false)], packages.AgreementAnswers);
+        Assert.Empty(dialogs.SourcePrompts);
+
+        await vm.RefreshSourcesCommand.ExecuteAsync(null);
+        Assert.Equal(["winget"], packages.Refreshed);
+    }
+
+    [Fact]
+    public void Button_offers_what_the_source_needs() // R3.10, R3.11
+    {
+        Assert.Equal("Read and accept", Source("a").AgreementButtonText);
+        Assert.Equal("Withdraw", (Source("a") with { AgreementStatus = AgreementStatus.Accepted }).AgreementButtonText);
+    }
+
+    private static SettingsViewModel Vm(ISettings settings, FakePackageService packages, FakeDialogs dialogs, IClipboardService clipboard)
+    {
+        var queue = new PackageOperationQueue(new ScriptedInstaller());
+        return new SettingsViewModel(settings, packages, new SourceAgreementCheck(packages, dialogs, new InstalledPackagesStore(packages, queue)), clipboard);
     }
 
     private static SourceInfo Source(string name, params Agreement[] agreements) =>

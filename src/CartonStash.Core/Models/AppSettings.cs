@@ -82,4 +82,7 @@ public sealed record SourceInfo(
         .Where(s => !string.IsNullOrEmpty(s)));
 
     public bool HasAgreements => Agreements.Count > 0;
+
+    /// <summary>The source's button in Settings (006 R3.10, R3.11).</summary>
+    public string AgreementButtonText => AgreementStatus == AgreementStatus.Accepted ? "Withdraw" : "Read and accept";
 }

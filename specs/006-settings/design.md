@@ -108,7 +108,7 @@ The preload has to move: today it connects before anything can ask (R3.8). Searc
 | Core/Services | `SourceAgreementPolicy` | Pure: `Needs(answer, hash)` and `MayUse(answer, hash)`, the hash of the agreements, the notice text for a source | New |
 | Core/Services | `CatalogConnection` | Takes `ISettings`. `ConnectAsync` leaves out sources that `MayUse` refuses, and `LeftOutSources` lists them. The session `HashSet` goes | Changed |
 | Core/Services | `IPackageService` | `AcceptSourceAgreements(name)` becomes `SetSourceAgreementAnswer(source, accepted)`, plus `LeftOutSources`. Withdrawing saves a decline. `SourceInfo` gains `Id` and `AgreementStatus` | Changed |
-| Core/Services | `SourceAgreementCheck` | Runs the dialogs at start | New |
+| Core/Services | `SourceAgreementCheck` | Runs the dialogs at start and for each button, keeps the list of sources not in use for the pages, and reloads the installed list after an acceptance | New |
 | Core/Services | `AppInstallerSetup` | Downloads, checks and installs App Installer (R3.7). Uses `Windows.Management.Deployment`, not WinGet's API | New |
 | Core/ViewModels | `WinGetSetupViewModel` (011) | **Set up for me** command, progress and outcome | Changed |
 | Core/ViewModels | `SearchViewModel`, `SettingsViewModel` | **Read and accept** command, withdrawal | Changed |
@@ -122,8 +122,8 @@ The preload has to move: today it connects before anything can ask (R3.8). Searc
 - `ConnectAsync`, for each reference: no agreements → add it. Accepted with a matching hash → set `AcceptSourceAgreements = true` and
   add it. Anything else → leave it out, because one refused reference fails the whole connect.
 - Answers change through `ISettings`, then `Invalidate()` drops the catalogs. This also meets 011 R1.5.
-- If every source is left out, Search shows the **Read and accept** button in place of results, and the catalog isn't connected. The
-  Installed list keeps working through `GetInstalledOnlyAsync`.
+- If every source is left out, Search shows its usual empty message with the **Read and accept** notice above it, and no catalog is
+  connected. The Installed list keeps working through `GetInstalledOnlyAsync`.
 - A row whose package is from a left-out source gets the message "`msstore` isn't in use. Read and accept its agreements in Settings."
   This extends 011's `NotFound` check of `_failedSources`.
 

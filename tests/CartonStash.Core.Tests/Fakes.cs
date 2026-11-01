@@ -72,7 +72,15 @@ internal sealed class FakePackageService : IPackageService
         return Task.FromResult(RefreshErrors.GetValueOrDefault(sourceName));
     }
 
-    public void SetSourceAgreementAnswer(SourceInfo source, bool accepted) => AgreementAnswers.Add((source.Name, accepted));
+    public void SetSourceAgreementAnswer(SourceInfo source, bool accepted)
+    {
+        AgreementAnswers.Add((source.Name, accepted));
+        var i = Sources.FindIndex(s => s.Id == source.Id);
+        if (i >= 0)
+        {
+            Sources[i] = Sources[i] with { AgreementStatus = accepted ? AgreementStatus.Accepted : AgreementStatus.Declined };
+        }
+    }
 
     public string GetWinGetVersion() => "1.29.380";
 }
@@ -142,6 +150,19 @@ internal sealed class FakeDialogs : IDialogService
         return Task.CompletedTask;
     }
 
+    public AgreementAnswer SourceAnswer { get; set; } = AgreementAnswer.Accepted;
+
+    public List<(string Source, string? Receives)> SourcePrompts { get; } = [];
+
+    public Action? SourceAsked { get; set; }
+
+    public Task<AgreementAnswer> ShowSourceAgreementAsync(SourceInfo source, string? receivesNotice)
+    {
+        SourcePrompts.Add((source.Name, receivesNotice));
+        SourceAsked?.Invoke();
+        return Task.FromResult(SourceAnswer);
+    }
+
     public Task<bool> ShowAgreementsAsync(string title, IReadOnlyList<Agreement> agreements)
     {
         AgreementPrompts.Add((title, agreements));
@@ -181,7 +202,10 @@ internal sealed class TestApp
         Queue = new PackageOperationQueue(Installer);
         Actions = new PackageActions(Queue, Installer, Dialogs, Packages);
         Store = new InstalledPackagesStore(Packages, Queue);
+        Agreements = new SourceAgreementCheck(Packages, Dialogs, Store);
     }
+
+    public SourceAgreementCheck Agreements { get; }
 
     public FakePackageService Packages { get; } = new();
 
