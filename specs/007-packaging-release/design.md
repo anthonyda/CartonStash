@@ -152,6 +152,15 @@ also covers `*.p12`, `*.pem`, `*.key`, `*.snk`, `*.pfx.*` and `.env.*`.
 - **Local test of the Store build.** The kit and a sideloaded install need the framework package on the PC. If it's missing, T32 installs the matching runtime from Microsoft first.
 - **Rollout.** One tagged release. The Store identity and package family don't change, so this is a normal update (R7.6).
 
+## Amendment R8: shared runtime on GitHub (approved 2026-10-31)
+
+- **Why.** Spec 010's T1: with the Windows App SDK bundled, `backgroundTaskHost.exe` crashes (`0xc000027b` in `biwinrt.dll`). On the shared runtime, background tasks work. See 010's design.
+- **Build.** `WindowsAppSDKSelfContained=false` moves from the Store build's flag into the csproj's `PackageMsix` group, so every MSIX gets it. `Publish-Release.ps1` drops `$Extra`. The portable build isn't an MSIX build, so it stays bundled (R8.3), and `SelfContained` stays true (R7.3).
+- **Size.** The GitHub MSIX should match the Store one, about 46 MB against 69 MB on x64. T34 records it.
+- **Docs.** The README's Requirements line and install steps, and `tools/release-notes.md`, link to Microsoft's [Windows App SDK downloads](https://learn.microsoft.com/windows/apps/windows-app-sdk/downloads) and name the version. Install order: runtime, certificate, MSIX. The portable zip needs neither.
+- **Runtime version.** It's the SDK version in `Directory.Packages.props`, so an SDK update can change what users need. Each release's notes state it (R8.2).
+- **Rollout.** The first R8 release needs a note for existing users at the top of its release notes (R8.6). Without the runtime, the update fails and the installed version keeps working.
+
 ## Testing strategy
 
 | Criteria | How |
@@ -171,6 +180,8 @@ also covers `*.p12`, `*.pem`, `*.key`, `*.snk`, `*.pfx.*` and `.env.*`.
 *Amendment R6:* R6.1–R6.3 by reading the built packages' manifests and running `Sign-Release.ps1` on a test release; R6.5 with the Windows App Certification Kit; R6.1 end to end when Partner Center accepts the upload and the Store build installs.
 
 *Amendment R7:* R7.1 and R7.2 by listing the built packages' contents and sizes; R7.4 and R7.5 with the unit tests, the portable start check and a real install of each package; R7.6 by updating the Store version on a real PC.
+
+*Amendment R8:* R8.1 by reading the built package's dependencies and contents; R8.2 and R8.6 by review of the docs and following them; R8.3 with the portable start check on a PC without the runtime; R8.4 with a search, an install and an uninstall after installing the runtime in Windows Sandbox; R8.5 by updating a real GitHub install.
 
 ## Risks and alternatives considered
 

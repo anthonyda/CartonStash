@@ -15,8 +15,8 @@ Tick a task only when its verification passes. Keep tasks small enough for one c
   - Verify: `WinGetSetupViewModelTests`.
 - [x] **T5.** Manual: scenarios S1 to S4 in Windows Sandbox, portable app in all four, MSIX in S3. *(all)*
   - Verify: results recorded in the log below. High contrast (R3.6) and R3.5 are T7.
-- [ ] **T6.** After merging with the 007 R8 work, update the note on 007's T36 and the roadmap; mark `Done`.
-- [ ] **T7.** Check the setup window and the notice in high contrast (R3.6). Check R3.5 if a catchable WinGet start failure can be produced.
+- [x] **T6.** After merging with the 007 R8 work, update the note on 007's T36 and the roadmap.
+- [ ] **T7.** Check the setup window and the notice in high contrast (R3.6). Check R3.5 if a catchable WinGet start failure can be produced. Then mark `Done`.
 
 ## Manual verification log
 
