@@ -23,9 +23,20 @@ public enum StartPage
     Updates,
 }
 
+/// <summary>When background update checks run (010 R3.1): one mode at a time.</summary>
+public enum CheckMode
+{
+    Off,
+    Interval,
+    DailyTime,
+}
+
 /// <summary>Per-user app settings (spec 006), saved as JSON.</summary>
 public sealed record AppSettings
 {
+    /// <summary>The choices for <see cref="CheckIntervalHours"/> (010 R3.1): 1, 6, 12 or 24 hours, or 7 days.</summary>
+    public static readonly IReadOnlyList<int> CheckIntervals = [1, 6, 12, 24, 168];
+
     public AppTheme Theme { get; init; } = AppTheme.System;
 
     public InstallScope InstallScope { get; init; } = InstallScope.Any;
@@ -36,17 +47,43 @@ public sealed record AppSettings
     /// <summary>Keep the Activity pane open beside the page (009 R3.4).</summary>
     public bool ActivityPinned { get; init; }
 
+    /// <summary>Missing in files saved before 010, which then keep checks off (R3.5).</summary>
+    public CheckMode CheckMode { get; init; } = CheckMode.Off;
+
+    public int CheckIntervalHours { get; init; } = 24;
+
+    public TimeOnly CheckTime { get; init; } = new(22, 0);
+
+    /// <summary>When the schedule was last changed: what counts as missed starts here, not from the last check (010 R3.10).</summary>
+    public DateTimeOffset? CheckScheduleSetAt { get; init; }
+
+    /// <summary>Packages left out of update checks, for every version (010 R5.3). Changes nothing in WinGet (R5.6).</summary>
+    public IReadOnlyList<string> ExcludedPackageIds { get; init; } = [];
+
+    public bool IsExcluded(string packageId) => ExcludedPackageIds.Contains(packageId, StringComparer.OrdinalIgnoreCase);
+
+    public AppSettings WithExcluded(string packageId) =>
+        IsExcluded(packageId) ? this : this with { ExcludedPackageIds = [.. ExcludedPackageIds, packageId] };
+
+    public AppSettings WithoutExcluded(string packageId) => this with
+    {
+        ExcludedPackageIds = ExcludedPackageIds.Where(id => !string.Equals(id, packageId, StringComparison.OrdinalIgnoreCase)).ToList(),
+    };
+
     /// <summary>The user's answer per source ID. Missing in files saved before 006 R3.8, which then count as unanswered.</summary>
     public IReadOnlyDictionary<string, SourceAgreementAnswer> SourceAgreementAnswers { get; init; } = new Dictionary<string, SourceAgreementAnswer>();
 
-    // By hand because a record compares a dictionary by reference, and SettingsService.Update skips equal settings.
+    // By hand because a record compares lists and dictionaries by reference, and SettingsService.Update skips equal settings.
     public bool Equals(AppSettings? other) =>
         other is not null
         && (Theme, InstallScope, StartPage, ActivityPinned) == (other.Theme, other.InstallScope, other.StartPage, other.ActivityPinned)
+        && (CheckMode, CheckIntervalHours, CheckTime, CheckScheduleSetAt) == (other.CheckMode, other.CheckIntervalHours, other.CheckTime, other.CheckScheduleSetAt)
+        && ExcludedPackageIds.SequenceEqual(other.ExcludedPackageIds, StringComparer.OrdinalIgnoreCase)
         && SourceAgreementAnswers.Count == other.SourceAgreementAnswers.Count
         && SourceAgreementAnswers.All(a => other.SourceAgreementAnswers.TryGetValue(a.Key, out var answer) && a.Value == answer);
 
-    public override int GetHashCode() => HashCode.Combine(Theme, InstallScope, StartPage, ActivityPinned, SourceAgreementAnswers.Count);
+    public override int GetHashCode() =>
+        HashCode.Combine(Theme, InstallScope, StartPage, ActivityPinned, CheckMode, CheckIntervalHours, CheckTime, SourceAgreementAnswers.Count);
 }
 
 /// <summary>What the user answered for a source's agreements, and which text they saw (006 R3.9).</summary>
