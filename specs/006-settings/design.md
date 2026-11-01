@@ -1,6 +1,6 @@
 # 006 – Settings: Design
 
-**Status:** Approved (2026-10-29), amended during implementation. Amendment R4.3 approved 2026-10-30. Amendment R3.4 **Draft**, for review
+**Status:** Approved (2026-10-29), amended during implementation. Amendment R4.3 approved 2026-10-30. Amendment R3.4 approved 2026-11-01
 **Requirements:** [requirements.md](requirements.md)
 
 ## Overview
@@ -81,7 +81,7 @@ Settings
 - Web URLs drop user name, password, query and fragment. Anything that isn't an http(s) URL becomes `(local source)`, because local paths can hold the user name.
 - Only the copied text changes. The Settings page still shows the full address to the user.
 
-## Amendment R3.4: startup check and source agreements (Draft, 2026-11-01)
+## Amendment R3.4: startup check and source agreements (approved 2026-11-01)
 
 Requires 011 merged first: it brings `WinGetAvailability`, `WinGetSetupWindow`, `_failedSources` and `SourceNotice`.
 
@@ -167,7 +167,7 @@ Store policy, version 7.20: 10.2.3 forbids offering software that "does not enha
 Installer is what the app needs to work, so it should be allowed. 10.2.4 requires the dependency to be disclosed at the start of the Store
 description, so the listing needs checking. Store reviewers decide in the end.
 
-**Not tested yet, so T1 of the tasks:** 011 installed with `Add-AppxPackage` in Sandbox, where the session is elevated. T1 must run
+**Not tested yet, so task T11:** 011 installed with `Add-AppxPackage` in Sandbox, where the session is elevated. T11 must run
 the same install through the API, unelevated, from the portable build and the MSIX. `AddPackageByUriAsync` may need the restricted
 `packageManagement` capability in the MSIX. If so, the MSIX build drops **Set up for me** and keeps the link, as adding a restricted
 capability for a rare case isn't worth the Store review.
