@@ -72,6 +72,11 @@ internal sealed class FakePackageService : IPackageService
         return Task.FromResult(RefreshErrors.GetValueOrDefault(sourceName));
     }
 
+    public IReadOnlyList<Agreement> AgreementsWhenRead { get; set; } = [];
+
+    public Task<SourceInfo> ReadSourceAgreementsAsync(SourceInfo source, CancellationToken cancellationToken = default) =>
+        Task.FromResult(source with { Agreements = AgreementsWhenRead });
+
     public void SetSourceAgreementAnswer(SourceInfo source, bool accepted)
     {
         AgreementAnswers.Add((source.Name, accepted));

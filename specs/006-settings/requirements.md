@@ -66,7 +66,7 @@ missing, offer to set it up, showing the licence so the user can read and accept
 | R3.5 | US6   | If a prerequisite is missing, then the app shall list what's missing and offer to set it up. Nothing shall be installed or accepted until the user chooses to. |
 | R3.6 | US6   | When the user chooses to set up a source's agreements, the app shall show the agreement text or link and what the source receives, with Accept and Decline. For `msstore`, it receives the PC's 2-letter region. |
 | R3.7 | US6   | If WinGet is missing and the user chooses to set it up, then the app shall install App Installer from Microsoft, show progress and the outcome, and carry on without a restart where it can. If that fails, it shall offer the link from 011 R3.2. |
-| R3.8 | US6   | The app shall not connect to a source with agreements until the user has accepted them in the app. |
+| R3.8 | US6   | Until the user has accepted a source's agreements in the app, the app shall contact that source only to fetch the agreements it shows, and shall not search it. After Decline, it shall not contact the source until the user chooses to read the agreements again. If the agreements can't be read, the source shall stay out and the other sources shall keep working. *(Changed 2026-11-01 during T19: the first wording, "shall not connect", can't be met, because the text comes from the source. See the note below.)* |
 | R3.9 | US6   | The app shall save the user's answer per Windows user and keep it across restarts. It shall ask again at start if the user hasn't answered, or if the agreement text has changed, and shall not ask again after Decline. |
 | R3.10 | US6  | While a source is not accepted, Search, Installed, Updates and Settings shall keep working with the other sources, and Search and Settings shall show a visible **Read and accept** button naming the source. |
 | R3.11 | US6  | The user shall be able to withdraw an acceptance in Settings. |
@@ -75,6 +75,11 @@ missing, offer to set it up, showing the licence so the user can read and accept
 
 **US6.** As a user, I want the app to check what it needs when it starts and offer to set it up, so that I can read and accept a
 licence myself and nothing is hidden from me.
+
+**Reading the agreements contacts the source (T19, 2026-11-01).** With the Store's address sent to a local listener, reading
+`SourceAgreements` for `msstore` made a connection attempt, and threw a WinGet error when it failed. After one successful read WinGet keeps a
+copy. `winget` has to fetch them too before it can prompt. 011 saw the market in the `manifestSearch` request; the encrypted agreement
+request itself wasn't inspected, so what it carries beyond the IP address isn't confirmed.
 
 Links to other specs:
 

@@ -144,27 +144,49 @@ public sealed class CatalogConnection(ISettings settings)
                 ? CompositeSearchBehavior.LocalCatalogs
                 : CompositeSearchBehavior.RemotePackagesFromAllCatalogs,
         };
-        var catalogs = Manager.GetPackageCatalogs();
-        for (var i = 0; i < catalogs.Count; i++)
+        // Off the UI thread: each read is a call into WinGet's process (A4).
+        await Task.Run(() =>
         {
-            var reference = catalogs[i];
-            if (!include(reference.Info.Name))
+            var catalogs = Manager.GetPackageCatalogs();
+            for (var i = 0; i < catalogs.Count; i++)
             {
-                continue;
-            }
-            var agreements = ReadAgreements(reference);
-            if (agreements.Count > 0)
-            {
-                // Not set to false: one refused reference fails the whole composite, so it's left out instead (R3.8).
-                if (!SourceAgreementPolicy.MayUse(AnswerFor(reference.Info.Id), SourceAgreementPolicy.Hash(agreements)))
+                var reference = catalogs[i];
+                if (!include(reference.Info.Name))
                 {
-                    _leftOutSources[reference.Info.Name] = 0;
                     continue;
                 }
-                reference.AcceptSourceAgreements = true;
+                var name = reference.Info.Name;
+                if (AnswerFor(reference.Info.Id) is { Accepted: false })
+                {
+                    _leftOutSources[name] = 0; // not even read: reading reaches the source (R3.8)
+                    continue;
+                }
+
+                List<Agreement> agreements;
+                try
+                {
+                    agreements = ReadAgreements(reference);
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    // The text comes from the source. Unread means not accepted, and the others carry on (R3.8, 011 R1.1).
+                    _failedSources[name] = new SourceFailure(name, SourceFailureMessages.Describe(name, ex.HResult, WindowsRegion.IsCountry()), ex.HResult);
+                    continue;
+                }
+
+                if (agreements.Count > 0)
+                {
+                    // Not set to false: one refused reference fails the whole composite, so it's left out instead (R3.8).
+                    if (!SourceAgreementPolicy.MayUse(AnswerFor(reference.Info.Id), SourceAgreementPolicy.Hash(agreements)))
+                    {
+                        _leftOutSources[name] = 0;
+                        continue;
+                    }
+                    reference.AcceptSourceAgreements = true;
+                }
+                options.Catalogs.Add(reference);
             }
-            options.Catalogs.Add(reference);
-        }
+        }, cancellationToken);
         if (options.Catalogs.Count == 0)
         {
             return localFirst ? await GetInstalledOnlyAsync(cancellationToken) : null; // R3.10

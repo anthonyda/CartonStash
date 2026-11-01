@@ -49,7 +49,11 @@ public sealed partial class SearchViewModel : ObservableObject
 
     /// <summary>Names the sources not accepted, shown with Read and accept (006 R3.10); null when there are none.</summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasNotInUseNotice))]
     public partial string? NotInUseNotice { get; private set; }
+
+    /// <summary>A plain bool for the InfoBar: x:Bind doesn't call a function again once its argument is null.</summary>
+    public bool HasNotInUseNotice => NotInUseNotice is not null;
 
     private bool CanSearch() => !string.IsNullOrWhiteSpace(Query);
 

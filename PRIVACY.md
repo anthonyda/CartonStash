@@ -16,7 +16,7 @@ CartonStash does not send these to the developer. If you copy a log or diagnosti
 ## Internet connections
 
 - **WinGet:** searches, downloads and installs are carried out by Microsoft WinGet, using the sources configured on your PC, and packages are downloaded from their publishers. Those services receive your IP address and handle data under their own privacy policies.
-- **Microsoft Store source:** CartonStash uses this source only after you accept its agreements. It then also receives your PC's 2-letter region, such as US. You can withdraw your acceptance in Settings.
+- **Microsoft Store source:** until you accept its agreements, CartonStash contacts this source only to fetch them so it can show them to you, and not at all after you decline, unless you choose to read them again. Once you accept, the source is used for search and also receives your PC's 2-letter region, such as US. You can withdraw your acceptance in Settings.
 - **Package icons:** CartonStash loads icons over https from the addresses listed in package manifests. Those hosts can see your IP address.
 - **Links:** links you open, such as a package's home page, open in your default browser.
 

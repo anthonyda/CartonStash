@@ -97,10 +97,12 @@ public class SourceAgreementCheckTests
         var vm = new SearchViewModel(app.Packages, app.Actions, app.Agreements) { Query = "git" };
         await app.Agreements.RunAsync();
         Assert.Contains("msstore", vm.NotInUseNotice);
+        Assert.True(vm.HasNotInUseNotice);
 
         await vm.ReadAndAcceptCommand.ExecuteAsync(null);
 
         Assert.Null(vm.NotInUseNotice);
+        Assert.False(vm.HasNotInUseNotice);
         Assert.Equal(1, searches);
     }
 
@@ -115,6 +117,46 @@ public class SourceAgreementCheckTests
 
         Assert.Empty(vm.Results);
         Assert.NotNull(vm.NotInUseNotice);
+    }
+
+    [Fact]
+    public async Task Source_that_could_not_be_read_is_not_asked_about() // R3.8
+    {
+        var app = App(Store(AgreementStatus.Unknown) with { Agreements = [] }, Winget());
+
+        await app.Agreements.RunAsync();
+
+        Assert.Empty(app.Dialogs.SourcePrompts);
+        Assert.Empty(app.Agreements.NotAccepted);
+        Assert.True(app.Packages.InstalledCalls > 0);
+    }
+
+    [Fact]
+    public async Task A_declined_source_is_read_only_when_the_user_asks() // R3.8
+    {
+        var declined = Store(AgreementStatus.Declined) with { Agreements = [] };
+        var app = App(declined);
+        await app.Agreements.RunAsync();
+        Assert.Empty(app.Dialogs.SourcePrompts);
+
+        app.Packages.AgreementsWhenRead = [new Agreement("Terms", "…", null)];
+        await app.Agreements.ReadAndAcceptAsync();
+
+        Assert.Single(app.Dialogs.SourcePrompts);
+        Assert.Equal([("msstore", true)], app.Packages.AgreementAnswers);
+    }
+
+    [Fact]
+    public async Task Says_so_when_the_agreements_cannot_be_read_on_request() // R3.8
+    {
+        var app = App(Store(AgreementStatus.Declined) with { Agreements = [] });
+        await app.Agreements.RunAsync();
+
+        await app.Agreements.ReadAndAcceptAsync();
+
+        Assert.Empty(app.Dialogs.SourcePrompts);
+        Assert.Empty(app.Packages.AgreementAnswers);
+        Assert.Contains("can't be reached", Assert.Single(app.Dialogs.Confirmations));
     }
 
     [Fact]

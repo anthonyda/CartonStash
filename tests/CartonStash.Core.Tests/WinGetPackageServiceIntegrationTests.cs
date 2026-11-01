@@ -32,6 +32,28 @@ public class WinGetPackageServiceIntegrationTests
     }
 
     [Fact]
+    public void Search_works_when_it_starts_on_a_ui_thread() // 006 R3.8, A4: WinUI starts a search on an STA thread
+    {
+        Exception? failure = null;
+        var thread = new Thread(() =>
+        {
+            try
+            {
+                Assert.NotEmpty(_service.SearchAsync("git").GetAwaiter().GetResult());
+            }
+            catch (Exception ex)
+            {
+                failure = ex;
+            }
+        });
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        thread.Join();
+
+        Assert.Null(failure);
+    }
+
+    [Fact]
     public async Task Search_finds_git()
     {
         var results = await _service.SearchAsync("Git.Git");

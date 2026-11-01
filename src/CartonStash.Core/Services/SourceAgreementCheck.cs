@@ -71,6 +71,16 @@ public sealed class SourceAgreementCheck(IPackageService packages, IDialogServic
 
     private async Task<AgreementAnswer> AnswerAsync(SourceInfo source)
     {
+        if (source.Agreements.Count == 0)
+        {
+            source = await packages.ReadSourceAgreementsAsync(source); // declined earlier, so not read until now (R3.8)
+        }
+        if (source.Agreements.Count == 0)
+        {
+            await dialogs.ConfirmAsync($"{source.Name} can't be reached", "Its agreements come from the source itself. Check your connection and try again.", "OK", "Close");
+            return AgreementAnswer.Dismissed;
+        }
+
         var answer = await dialogs.ShowSourceAgreementAsync(source, SourceAgreementPolicy.ReceivesNotice(source.Id));
         if (answer != AgreementAnswer.Dismissed)
         {

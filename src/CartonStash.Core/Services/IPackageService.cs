@@ -38,6 +38,9 @@ public interface IPackageService
     /// <summary>Sources not in use because their agreements aren't accepted (006 R3.10). Known after the first connection.</summary>
     IReadOnlyList<string> LeftOutSources { get; }
 
+    /// <summary>Reads a source's agreements, which reaches the source. Returns it unchanged if they can't be read (006 R3.8).</summary>
+    Task<SourceInfo> ReadSourceAgreementsAsync(SourceInfo source, CancellationToken cancellationToken = default);
+
     /// <summary>Saves the user's answer for the agreements shown. Withdrawing is declining (006 R3.9, R3.11).</summary>
     void SetSourceAgreementAnswer(SourceInfo source, bool accepted);
 

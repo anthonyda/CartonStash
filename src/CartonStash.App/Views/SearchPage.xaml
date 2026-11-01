@@ -69,7 +69,7 @@
                 <InfoBar
                     Title="A source isn't in use"
                     IsClosable="False"
-                    IsOpen="{x:Bind ui:Ui.HasText(ViewModel.NotInUseNotice), Mode=OneWay}"
+                    IsOpen="{x:Bind ViewModel.HasNotInUseNotice, Mode=OneWay}"
                     Message="{x:Bind ViewModel.NotInUseNotice, Mode=OneWay}"
                     Severity="Informational">
                     <InfoBar.ActionButton>

@@ -52,13 +52,17 @@ public sealed record AppSettings
 /// <summary>What the user answered for a source's agreements, and which text they saw (006 R3.9).</summary>
 public sealed record SourceAgreementAnswer(bool Accepted, string TextHash);
 
-/// <summary>Where a source stands with its agreements (006 R3.8). <see cref="None"/>: it has none.</summary>
+/// <summary>
+/// Where a source stands with its agreements (006 R3.8). <see cref="None"/>: it has none. <see cref="Unknown"/>: they
+/// couldn't be read, because the text comes from the source.
+/// </summary>
 public enum AgreementStatus
 {
     None,
     Unanswered,
     Accepted,
     Declined,
+    Unknown,
 }
 
 /// <summary>A configured WinGet source (006 R3.1).</summary>
@@ -81,7 +85,7 @@ public sealed record SourceInfo(
     public string DetailText => string.Join(" · ", new[] { Type, Argument, IsExplicit ? "explicit (excluded from default searches)" : null }
         .Where(s => !string.IsNullOrEmpty(s)));
 
-    public bool HasAgreements => Agreements.Count > 0;
+    public bool HasAgreements => Agreements.Count > 0 || AgreementStatus == AgreementStatus.Declined; // a declined source isn't read (R3.8)
 
     /// <summary>The source's button in Settings (006 R3.10, R3.11).</summary>
     public string AgreementButtonText => AgreementStatus == AgreementStatus.Accepted ? "Withdraw" : "Read and accept";

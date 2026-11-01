@@ -119,8 +119,13 @@ The preload has to move: today it connects before anything can ask (R3.8). Searc
 
 - The key is `PackageCatalogInfo.Id` (`StoreEdgeFD` for `msstore`), so a renamed source keeps its answer.
 - The hash is SHA-256 over each agreement's label, text and URL, read by index (W2).
-- `ConnectAsync`, for each reference: no agreements → add it. Accepted with a matching hash → set `AcceptSourceAgreements = true` and
-  add it. Anything else → leave it out, because one refused reference fails the whole connect.
+- `ConnectAsync`, for each reference: declined → leave it out without reading its agreements, so nothing reaches the source. Otherwise read
+  them: no agreements → add it. Accepted with a matching hash → set `AcceptSourceAgreements = true` and add it. Anything else → leave
+  it out, because one refused reference fails the whole connect.
+- The read reaches the source and throws when it can't (T19). The source then joins 011's failed sources until the next `Invalidate()`,
+  so Search names it and the others keep working. `GetSourcesAsync` reports it as `AgreementStatus.Unknown`, which isn't asked about.
+- `GetSourcesAsync` doesn't read a declined source either. **Read and accept** reads it through `ReadSourceAgreementsAsync`, and says
+  so if it can't be reached.
 - Answers change through `ISettings`, then `Invalidate()` drops the catalogs. This also meets 011 R1.5.
 - If every source is left out, Search shows its usual empty message with the **Read and accept** notice above it, and no catalog is
   connected. The Installed list keeps working through `GetInstalledOnlyAsync`.

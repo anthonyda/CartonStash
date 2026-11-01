@@ -208,7 +208,21 @@ public sealed class WinGetPackageService(CatalogConnection connection) : IPackag
             {
                 var reference = catalogs[i];
                 var info = reference.Info;
-                var list = CatalogConnection.ReadAgreements(reference);
+                var answer = connection.AnswerFor(info.Id);
+                var status = AgreementStatus.Declined;
+                List<Agreement> list = [];
+                if (answer is not { Accepted: false }) // a declined source isn't contacted (R3.8)
+                {
+                    try
+                    {
+                        list = CatalogConnection.ReadAgreements(reference);
+                        status = SourceAgreementPolicy.Status(list, answer);
+                    }
+                    catch (Exception ex) when (ex is not OperationCanceledException)
+                    {
+                        status = AgreementStatus.Unknown;
+                    }
+                }
                 sources.Add(new SourceInfo(
                     info.Id,
                     info.Name,
@@ -218,7 +232,7 @@ public sealed class WinGetPackageService(CatalogConnection connection) : IPackag
                     info.Explicit,
                     info.LastUpdateTime.Year > 1601 ? info.LastUpdateTime : null,
                     list,
-                    SourceAgreementPolicy.Status(list, connection.AnswerFor(info.Id))));
+                    status));
             }
             return sources;
         }, cancellationToken);
@@ -243,6 +257,21 @@ public sealed class WinGetPackageService(CatalogConnection connection) : IPackag
     }
 
     public IReadOnlyList<string> LeftOutSources => connection.LeftOutSources;
+
+    public Task<SourceInfo> ReadSourceAgreementsAsync(SourceInfo source, CancellationToken cancellationToken = default) =>
+        Task.Run(() =>
+        {
+            try
+            {
+                return connection.Manager.GetPackageCatalogByName(source.Name) is { } reference
+                    ? source with { Agreements = CatalogConnection.ReadAgreements(reference) }
+                    : source;
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                return source;
+            }
+        }, cancellationToken);
 
     public void SetSourceAgreementAnswer(SourceInfo source, bool accepted) =>
         connection.SetSourceAgreementAnswer(source.Id, SourceAgreementPolicy.Hash(source.Agreements), accepted);
