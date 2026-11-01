@@ -35,7 +35,7 @@ Starts after 011 is merged. T12 to T16 and T18 don't depend on T11's result.
 
 - [ ] **T11.** Probe: install App Installer through `AddPackageByUriAsync`, unelevated, in a clean Sandbox, from the portable build and the MSIX. Record whether the MSIX needs `packageManagement`; update the design first if the plan changes. *(R3.7)*
   - Verify: results recorded in the log below.
-- [ ] **T12.** `SourceAgreementAnswer`, `AppSettings.SourceAgreementAnswers`, `SourceAgreementPolicy`. *(R3.8, R3.9)*
+- [x] **T12.** `SourceAgreementAnswer`, `AppSettings.SourceAgreementAnswers`, `SourceAgreementPolicy`. *(R3.8, R3.9)*
   - Verify: `SourceAgreementPolicyTests` (every row of the design's table); store round trip; older file loads with no reset.
 - [ ] **T13.** `CatalogConnection` uses the saved answers and leaves sources out; `LeftOutSources`; `SourceInfo.Id` and `AgreementStatus`; replace the session `HashSet` and `AcceptSourceAgreements`. *(R3.8, R3.9)*
   - Verify: integration test that an unanswered `msstore` isn't in the composite; `dotnet test`.

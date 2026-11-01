@@ -34,6 +34,32 @@ public sealed class SettingsTests : IDisposable
     }
 
     [Fact]
+    public void Source_agreement_answers_survive_a_restart() // R3.9
+    {
+        var saved = new AppSettings
+        {
+            SourceAgreementAnswers = new Dictionary<string, SourceAgreementAnswer> { ["StoreEdgeFD"] = new(true, "ABC") },
+        };
+        new JsonSettingsStore(SettingsPath).Save(saved);
+
+        var (loaded, reset) = new JsonSettingsStore(SettingsPath).Load();
+
+        Assert.Equal(saved, loaded);
+        Assert.Equal(new SourceAgreementAnswer(true, "ABC"), loaded.SourceAgreementAnswers["StoreEdgeFD"]);
+        Assert.False(reset);
+    }
+
+    [Fact]
+    public void Changing_an_answer_changes_the_settings() // R3.9
+    {
+        var accepted = new AppSettings { SourceAgreementAnswers = new Dictionary<string, SourceAgreementAnswer> { ["a"] = new(true, "x") } };
+        var declined = new AppSettings { SourceAgreementAnswers = new Dictionary<string, SourceAgreementAnswer> { ["a"] = new(false, "x") } };
+
+        Assert.NotEqual(accepted, declined);
+        Assert.NotEqual(new AppSettings(), accepted);
+    }
+
+    [Fact]
     public void Missing_file_gives_defaults()
     {
         var (loaded, reset) = new JsonSettingsStore(SettingsPath).Load();
@@ -48,6 +74,7 @@ public sealed class SettingsTests : IDisposable
     [InlineData("""{ "Theme": 42 }""")]
     [InlineData("null")]
     [InlineData("""{ "StartPage": "Purple" }""")]
+    [InlineData("""{ "SourceAgreementAnswers": null }""")]
     public void Corrupt_file_gives_defaults_and_keeps_a_backup(string content)
     {
         Directory.CreateDirectory(_dir);
@@ -70,6 +97,7 @@ public sealed class SettingsTests : IDisposable
 
         Assert.Equal(StartPage.Search, loaded.StartPage);
         Assert.Equal(AppTheme.Dark, loaded.Theme);
+        Assert.Empty(loaded.SourceAgreementAnswers); // R3.9: counts as unanswered
         Assert.False(reset);
     }
 

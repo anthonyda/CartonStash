@@ -35,7 +35,22 @@ public sealed record AppSettings
 
     /// <summary>Keep the Activity pane open beside the page (009 R3.4).</summary>
     public bool ActivityPinned { get; init; }
+
+    /// <summary>The user's answer per source ID. Missing in files saved before 006 R3.8, which then count as unanswered.</summary>
+    public IReadOnlyDictionary<string, SourceAgreementAnswer> SourceAgreementAnswers { get; init; } = new Dictionary<string, SourceAgreementAnswer>();
+
+    // By hand because a record compares a dictionary by reference, and SettingsService.Update skips equal settings.
+    public bool Equals(AppSettings? other) =>
+        other is not null
+        && (Theme, InstallScope, StartPage, ActivityPinned) == (other.Theme, other.InstallScope, other.StartPage, other.ActivityPinned)
+        && SourceAgreementAnswers.Count == other.SourceAgreementAnswers.Count
+        && SourceAgreementAnswers.All(a => other.SourceAgreementAnswers.TryGetValue(a.Key, out var answer) && a.Value == answer);
+
+    public override int GetHashCode() => HashCode.Combine(Theme, InstallScope, StartPage, ActivityPinned, SourceAgreementAnswers.Count);
 }
+
+/// <summary>What the user answered for a source's agreements, and which text they saw (006 R3.9).</summary>
+public sealed record SourceAgreementAnswer(bool Accepted, string TextHash);
 
 /// <summary>A configured WinGet source (006 R3.1).</summary>
 public sealed record SourceInfo(
