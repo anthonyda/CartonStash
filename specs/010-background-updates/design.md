@@ -1,6 +1,6 @@
 # 010 – Background update checks: Design
 
-**Status:** Approved (2026-10-31), including the changes from T1's results. Depends on 007 amendment R8.
+**Status:** Approved (2026-10-31), including the changes from T1's results. Depends on 007 amendment R8. Amendment R3.14 (startup entry): approved 2026-11-02
 **Requirements:** [requirements.md](requirements.md)
 
 ## Overview
@@ -112,9 +112,63 @@ Notifications also work from the background process, with no extra setup. Clicki
 
 **Bundled Windows App SDK: doesn't work.** With the SDK bundled in the package, `backgroundTaskHost.exe` crashes with `0xc000027b` in `biwinrt.dll`. The cause wasn't found: the DLL is identical and its dependencies are present. So every MSIX uses the shared runtime (007 amendment R8), and the GitHub MSIX isn't an exception. T1 ran on the shared-runtime build only, because that's what both MSIX types become. The portable app is unaffected: it has no background checks.
 
+## Amendment R3.14: startup entry (approved 2026-11-02)
+
+**Manifest.** One more application extension, beside the background task:
+
+```xml
+<uap5:Extension Category="windows.startupTask" Executable="CartonStash.exe" EntryPoint="Windows.FullTrustApplication">
+  <uap5:StartupTask TaskId="CartonStashCheck" Enabled="false" DisplayName="CartonStash update check" />
+</uap5:Extension>
+```
+
+`Enabled="false"`, so a new install with checks off (the default) has nothing at startup. The name shows in Settings > Apps > Startup and Task Manager.
+
+**Turning it on and off (R3.15).** `BackgroundCheckScheduler.ApplyAsync` also sets the startup entry through `Windows.ApplicationModel.StartupTask.GetAsync("CartonStashCheck")`:
+
+| Checks | Entry state | Action |
+|--------|-------------|--------|
+| On | `Disabled` | `RequestEnableAsync()`. A packaged desktop app gets no prompt |
+| On | `DisabledByUser`, `DisabledByPolicy` | Nothing. Report it, for R3.16 |
+| On | `Enabled`, `EnabledByPolicy` | Nothing |
+| Off | `Enabled` | `Disable()` |
+
+`ICheckScheduler` gains `bool StartupBlocked`, read after `ApplyAsync` and when Settings opens. `CheckSettingsViewModel` shows it as a second note under the Windows-blocked one: "Windows won't start CartonStash at sign-in, so a check missed while the PC was off waits until you unlock it. Turn on **CartonStash update check** in Settings > Apps > Startup." Like R3.4, it's a note, not an error: the schedule still works.
+
+**At sign-in (R3.14).** Windows starts `CartonStash.exe` with no arguments. `Program.Main`, packaged only, reads `AppInstance.GetCurrent().GetActivatedEventArgs()`. For `ExtendedActivationKind.StartupTask`, it runs the check and returns, before `RedirectedToOpenApp` (so it never takes the "main" instance key) and before any XAML:
+
+- The check body in `BackgroundCheckTask.CheckAsync` moves to a static method that both entry points call, with trigger `MissedCheck`. Same runner, mutex, history, notification and next daily timer.
+- No deferral or Windows time limit applies, so the startup path keeps the same 12-minute cap as the COM server (R1.2).
+- `IsDue` decides as for any trigger. With nothing missed, the process exits within a second or two, which keeps Task Manager's startup impact low.
+
+**Once only (R3.17).** The startup entry and `UserPresent` can both fire at sign-in. The existing `Local\CartonStash.CheckRunning` mutex lets only one run at a time, and the second one finds the first's history entry, so `IsDue` is false and it exits.
+
+**Unchanged.** Interval and daily timers, and `UserPresent` for unlock and sleep. The startup entry isn't a `BackgroundTaskRegistration`, so `RemoveAll` doesn't touch it, and switching modes keeps it on.
+
+**Testing.** `CheckSettingsViewModelTests` for the note (a fake scheduler reports `StartupBlocked`). In the test VM: a probe first (T13), then R3.10 after a real shutdown, the entry turned off by the user, checks off, and uninstall.
+
+**Risks.**
+- Windows delays startup apps for a few seconds after sign-in, and less on fast boots. That only shifts the check.
+- ~~The probe must confirm the activation kind and that the entry starts the exe after a shutdown and sign-in, on a typed sign-in as well as an automatic one.~~ Confirmed by T13, below.
+- Store certification sees a new startup task. The certification notes say what it does and that it's off until the user turns checks on.
+
+**T13 results (2026-11-02, test VM, Windows 11 26H2 build 26300.9457, x64).** Throwaway 1.1.6 build with the Store identity and the manifest entry above. Its `Main` logged the activation kind and the entry's state, called `RequestEnableAsync` on a normal launch when the state was `Disabled`, and exited on a `StartupTask` launch. The probe code is not kept.
+
+| Point | Result |
+|-------|--------|
+| `RequestEnableAsync` from a normal launch | **Pass**: `Disabled` → `Enabled`, with no prompt |
+| Name in Settings > Apps > Startup | **Pass**: "CartonStash update check" |
+| Activation kind | **Pass**: `StartupTask`, no arguments |
+| Shutdown, then automatic sign-in | **Pass**: boot at 2:39:22 PM, the app started through the entry at 2:39:41 PM |
+| Shutdown, then a typed sign-in | **Pass**: the maintainer signed in at 5:53:29 PM, and the app started through the entry at 5:53:47 PM |
+| User turns it off in Startup apps | **Pass**: the app then reads `DisabledByUser`, and `RequestEnableAsync` isn't called, so the entry stays off |
+
+One behavior the design didn't expect: when `RequestEnableAsync` turns the entry on, Windows starts the exe through it right away, with kind `StartupTask` (5 seconds later in the probe). Turning it on from Startup apps didn't do this. The check path handles it unchanged: `IsDue` decides, and right after the user turns checks on, no check is due, so the process exits. T16 confirms that turning checks on shows nothing.
+
 ## Risks and alternatives considered
 
-- **If sign-in after a shutdown fails (T11):** a hidden check through the MSIX's startup task, as the requirements say. It covers sign-in only, and unlock already works.
+- **If sign-in after a shutdown fails (T11):** a hidden check through the MSIX's startup task, as the requirements say. It covers sign-in only, and unlock already works. **It failed on 2026-11-02**, so this is amendment R3.14 above.
+- **Two CartonStash packages side by side** (found in T11): both register the same COM class ID, so a trigger of one package can get the other package's server, and backgroundTaskHost crashes (`0xc000027b`). Only the Store build is published (007 R9), so users can't get there; a developer with a local test package beside the Store app can.
 - **Runtime:** `UniversalBGTask` needs the shared runtime, which the Store installs with the app.
 - **Startup cost:** a custom `Main` runs for every launch, so it must stay small, and the portable path must not change. R1.6 from spec 007 still applies.
 - **WinGet log noise:** each check adds a `WinGetCOM-*.log` file in WinGet's folder. The exact-match rule in 009 R2.9 stays safe, because the queue and a check can't run at once (R1.5).

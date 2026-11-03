@@ -1,6 +1,6 @@
 # 010 – Background update checks: Requirements
 
-**Status:** Approved (2026-10-31), including the R3.8 change from T1's results.
+**Status:** Approved (2026-10-31), including the R3.8 change from T1's results. Amendment R3.14 (missed check at sign-in through a startup entry): approved 2026-11-02
 **Depends on:** 002, 003, 004, 006, 007
 **Issues:** [#14](https://github.com/anthonyda/CartonStash/issues/14)
 
@@ -108,10 +108,38 @@ The design's first task is a probe, because these decide whether this approach w
 
 If the probe fails, this spec returns for review before any more work.
 
+## Amendment R3.14: missed check at sign-in through a startup entry (approved 2026-11-02)
+
+**Why.** T11 tested R3.10 after a real shutdown, in a Windows 11 26H2 VM with the Store build: the check was due, the user
+signed in, and nothing ran. Windows' "user present" trigger doesn't fire at sign-in after a shutdown. It still works on
+unlock and after sleep (T1, and T11 on the maintainer's PC). This is the fallback named in the risks below: a startup
+entry in the MSIX, which Windows starts at sign-in.
+
+| ID   | Story | Criterion |
+|------|-------|-----------|
+| R3.14 | US3  | While **Background update checks** is on, the MSIX shall have Windows start it at sign-in through a startup entry named **CartonStash update check**. Started this way, the app shall run the missed check of R3.10 if one is due, with no window, and exit (R1.2). If none is due, then it shall exit at once without a check. |
+| R3.15 | US3  | Turning checks on shall turn the startup entry on, and turning them off shall turn it off, without asking the user. The app shall never turn it back on after the user turned it off in Windows' Startup apps. |
+| R3.16 | US3  | If the user or a policy turned the startup entry off while checks are on, then Settings shall say that a check missed while the PC was off waits for the next unlock, and where to turn the entry back on (Settings > Apps > Startup). |
+| R3.17 | –    | A sign-in that fires both the startup entry and the "user present" trigger shall run at most one check (R3.10, "once only"). |
+
+R3.10 doesn't change: a check missed while the PC was off or asleep still runs at the next sign-in or unlock. R3.14 is how
+sign-in is covered; unlock and sleep keep the existing trigger. R3.6 covers the entry too: uninstalling the MSIX removes it.
+The portable app has no startup entry (R4.1).
+
+### Open questions (amendment R3.14)
+
+- **Turn the entry on by default when checks are on?** **Decided 2026-11-02: yes**, as R3.15 says. Without it, R3.10 fails after every
+  shutdown. Users see it in Startup apps and Task Manager, and can turn it off there (R3.16).
+- **What does the user see at sign-in?** **Decided 2026-11-02:** nothing but a notification when a missed check finds updates (R2.1). No
+  window, no splash screen, no tray icon.
+- **Run a missed check when the user opens the app, too?** **Decided 2026-11-02: no.** The app's own Updates page already refreshes when it
+  opens, so a background check then would only duplicate it.
+
 ## Changes to other specs, if approved
 
 - **004:** the "Scheduled / automatic background updates" line narrows to automatic installs, and R1.1, R2.3 and R4.1 gain the exclusions (R5.5, R5.7, R5.9, R5.10).
 - **003:** the "Windows toast when minimized?" decision is replaced by R2.1.
 - **006:** gains the setting and the last check line.
 - **006 amendment R3.4:** background checks use `CatalogConnection`, so a source that isn't accepted stays out of them too. The check at start doesn't run in the background task, so an unanswered source stays out until the user opens the app.
+- **007 (amendment R3.14):** the manifest also gains a startup task. The Store listing's notes for certification should say why the app has one.
 - **007:** the manifest gains the background task entries, and `PRIVACY.md` must mention the checks, which WinGet carries out, and the 7-day history kept on the PC.

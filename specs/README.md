@@ -46,7 +46,7 @@ If implementation reveals the spec is wrong, **stop, update the spec first**, th
 | 007 | [Packaging and release](007-packaging-release/)        | In progress: Sandbox check pending; public; amendment R5 (release hardening) done; amendment R6 (Microsoft Store): done, listed; amendment R7 (smaller packages): code done, Store update (T33) pending; amendment R8 (shared runtime on GitHub): GitHub MSIX withdrawn by R9; amendment R9 (Microsoft Store only): approved, in progress |
 | 008 | [Pin management](008-pin-management/)                  | Draft, on hold (updated against current code; constitution exception A6 undecided; issue #1) |
 | 009 | [Activity pane](009-activity-pane/)                    | Done (card redesign, operation logs, pin the pane; issues #2, #3, #4); high-contrast check pending; amendment R2.7 (log privacy note): code done, visual check pending; amendment R2.8–R2.10 (WinGet's record in the log): done, released in v1.0.3 |
-| 010 | [Background update checks](010-background-updates/)    | Approved; T1 probe done, in progress after 007 amendment R8 (issue #14) |
+| 010 | [Background update checks](010-background-updates/)    | In progress: code done; T11 passed except a missed check at sign-in after a shutdown; amendment R3.14 (startup entry): approved (issue #14) |
 | 011 | [Source failures and missing WinGet](011-source-resilience/) | In progress: code done; high-contrast check and R3.5 pending |
 
 Suggested build order: 002 → 003 → 004 → 005 → 006 → 007 (006's scope setting slots into 003's installer when it lands).
