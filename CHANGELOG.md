@@ -2,12 +2,17 @@
 
 What's new in each version of CartonStash. Get it from the [Microsoft Store](https://apps.microsoft.com/detail/9MT37M7DBZRK).
 
-## 1.0.6
+## 1.1.0
+
+CartonStash can now tell you about updates while it's closed, and it copes much better when a source or WinGet itself is missing.
 
 ### New
 
-- Background update checks, optional and off by default. On a schedule you choose, Windows runs a short check, even with the app closed, and a notification tells you what's waiting. It never installs anything by itself, and you can exclude any package you don't want to hear about.
-- At start, the app checks that WinGet is installed and that each source's agreements are accepted, and offers to set up what's missing.
+- **Background update checks.** Turn them on in Settings, and Windows runs a short check every 1, 6, 12 or 24 hours, every 7 days, or once a day at a time you pick, even with CartonStash closed. When updates are waiting, a notification names up to three of them, and clicking it opens the Updates page. Checks are off by default and never install anything. They're skipped on a metered connection and while the app is running an install, update or uninstall.
+- **Missed checks catch up.** If your PC was off or asleep when a check was due, it runs once when you next sign in or unlock. For this, checks add an entry named "CartonStash update check" to Windows' Startup apps. It opens no window and does nothing when no check was missed. You can turn it off there, and Settings tells you what that changes.
+- **Exclude packages from update checks.** On the Updates page, exclude any package you've decided not to update. It's left out of notifications, the Updates count and **Update all**, and you can still update it by hand. Settings lists your exclusions, and you can remove them there. Excluding a package changes nothing in WinGet.
+- **Check history.** Settings lists the background checks of the last 7 days: when each one ran, what started it, and whether it found updates, was skipped or failed, and why.
+- **Setup check at start.** When the app opens, it checks that WinGet is installed and that each source's agreements are accepted, and offers to set up whatever is missing. Nothing is installed or accepted until you choose to.
 
 ### Changed
 
@@ -15,13 +20,15 @@ What's new in each version of CartonStash. Get it from the [Microsoft Store](htt
 
 ### Fixed
 
-- One failing source no longer stops the others from working.
-- Search names any source that's missing and says why it failed.
-- On a PC without WinGet, the app no longer crashes at start: it opens and says what's missing.
+- One failing source no longer stops the others. Search, details, installs and updates keep working with the sources that respond.
+- When a source is left out, Search names it and says why: it can't be reached, or it reported a problem. It no longer blames your internet connection for a source's own error. If the Microsoft Store source fails because Windows has no country set, the app says where to set one.
+- On a PC without WinGet, the app no longer crashes at start. It opens, explains that it needs WinGet, part of App Installer, and offers to install it for you.
+- The details pane no longer keeps sections or links from the previously selected package, and messages close once they no longer apply.
 
 ### Privacy
 
-- The Microsoft Store source is only searched after you accept its agreements. Until then, the app contacts it only to fetch those agreements. You can withdraw your acceptance in Settings.
+- The Microsoft Store source is only searched after you accept its agreements in CartonStash. Until then, the app contacts it only to fetch those agreements. You can withdraw your acceptance in Settings.
+- Background checks go through WinGet, like the Updates page. Their history stays on your PC and holds no user name or file paths.
 
 ## 1.0.5
 
