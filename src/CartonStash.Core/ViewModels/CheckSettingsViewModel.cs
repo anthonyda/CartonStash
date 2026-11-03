@@ -79,6 +79,10 @@ public sealed partial class CheckSettingsViewModel : ObservableObject
     [ObservableProperty]
     public partial bool IsBlocked { get; private set; }
 
+    /// <summary>Checks are on but Windows won't start the app at sign-in (R3.16). A note: the schedule still works.</summary>
+    [ObservableProperty]
+    public partial bool IsStartupBlocked { get; private set; }
+
     [ObservableProperty]
     public partial string LastCheckText { get; private set; } = "";
 
@@ -117,6 +121,7 @@ public sealed partial class CheckSettingsViewModel : ObservableObject
         NextCheckText = CheckSchedule.NextDue(_settings.Current, since, _zone) is { } next
             ? $"Next check: {CheckText.When(next, now, _zone)} (approximate)"
             : "";
+        ReadStartupBlocked();
 
         Excluded.Clear();
         foreach (var id in _settings.Current.ExcludedPackageIds)
@@ -166,7 +171,11 @@ public sealed partial class CheckSettingsViewModel : ObservableObject
         {
             IsBlocked = true;
         }
+        ReadStartupBlocked();
     }
+
+    private void ReadStartupBlocked() =>
+        IsStartupBlocked = IsAvailable && _settings.Current.CheckMode != CheckMode.Off && _scheduler.StartupBlocked;
 
     private void OnInstalledChanged(object? sender, PropertyChangedEventArgs e)
     {

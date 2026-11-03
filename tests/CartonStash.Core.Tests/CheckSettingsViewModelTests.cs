@@ -98,6 +98,44 @@ public sealed class CheckSettingsViewModelTests : IDisposable
     }
 
     [Fact]
+    public void Startup_entry_turned_off_shows_the_note_when_settings_open() // R3.16
+    {
+        _scheduler.StartupBlocked = true;
+
+        var vm = Create(new FakeSettings(new AppSettings { CheckMode = CheckMode.Interval }));
+
+        Assert.True(vm.IsStartupBlocked);
+        Assert.False(vm.IsBlocked);
+    }
+
+    [Fact]
+    public async Task Startup_entry_note_follows_the_schedule_change() // R3.16
+    {
+        var vm = Create();
+        Assert.False(vm.IsStartupBlocked);
+
+        _scheduler.StartupBlocked = true;
+        vm.ModeIndex = (int)CheckMode.DailyTime;
+        await vm.LastApply;
+        Assert.True(vm.IsStartupBlocked);
+
+        vm.ModeIndex = (int)CheckMode.Off;
+        await vm.LastApply;
+        Assert.False(vm.IsStartupBlocked);
+    }
+
+    [Fact]
+    public void Startup_entry_note_is_hidden_in_the_portable_app() // R3.16, R4.1
+    {
+        _scheduler.IsAvailable = false;
+        _scheduler.StartupBlocked = true;
+
+        var vm = Create(new FakeSettings(new AppSettings { CheckMode = CheckMode.Interval }));
+
+        Assert.False(vm.IsStartupBlocked);
+    }
+
+    [Fact]
     public void Portable_app_says_it_is_unavailable_and_keeps_controls_off() // R4.1
     {
         _scheduler.IsAvailable = false;
@@ -186,6 +224,8 @@ public sealed class CheckSettingsViewModelTests : IDisposable
         public bool IsAvailable { get; set; } = true;
 
         public bool Allowed { get; set; } = true;
+
+        public bool StartupBlocked { get; set; }
 
         public List<(AppSettings Settings, DateTimeOffset? Next)> Applied { get; } = [];
 

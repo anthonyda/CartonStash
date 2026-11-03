@@ -10,6 +10,8 @@ public sealed class BackgroundCheckScheduler : ICheckScheduler
 {
     public bool IsAvailable => AppPackage.IsPackaged;
 
+    public bool StartupBlocked { get; private set; }
+
     public const string TimerTaskName = "CartonStash check timer";
 
     /// <summary>Runs when the user comes back, to catch up on a missed check (R3.10). Windows' UserPresent trigger (T1).</summary>

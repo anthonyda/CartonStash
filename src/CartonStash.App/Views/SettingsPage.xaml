@@ -154,6 +154,12 @@
                 IsOpen="{x:Bind Checks.IsBlocked, Mode=OneWay}"
                 Message="Allow it in Windows Settings, under Apps, Installed apps, CartonStash, Advanced options, Background app permissions. Everything else keeps working."
                 Severity="Warning" />
+            <InfoBar
+                Title="Windows won't start CartonStash at sign-in"
+                IsClosable="False"
+                IsOpen="{x:Bind Checks.IsStartupBlocked, Mode=OneWay}"
+                Message="So a check missed while the PC was off waits until you unlock it. Turn on CartonStash update check in Windows Settings, under Apps, Startup."
+                Severity="Informational" />
 
             <!-- Excluded packages (010 R5.4) -->
             <TextBlock Margin="0,12,0,0" AutomationProperties.HeadingLevel="Level2" Style="{StaticResource BodyStrongTextBlockStyle}" Text="Excluded packages" />

@@ -29,6 +29,9 @@ public interface ICheckScheduler
 
     /// <summary>Replaces the schedule. Returns false when Windows doesn't allow background work (R3.4).</summary>
     Task<bool> ApplyAsync(AppSettings settings, DateTimeOffset? nextDue);
+
+    /// <summary>The user or a policy turned the startup entry off, so a check missed while the PC was off waits for an unlock (R3.16).</summary>
+    bool StartupBlocked { get; }
 }
 
 /// <summary>

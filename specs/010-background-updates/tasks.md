@@ -39,8 +39,9 @@ Tick a task only when its verification passes. Keep tasks small enough for one c
 - [x] **T13.** Probe in the test VM, on a throwaway Store-identity build: the manifest's startup entry, turned on with `RequestEnableAsync`, starts the exe after a shutdown and sign-in, with activation kind `StartupTask`; no prompt; the name shows in Startup apps; `DisabledByUser` after turning it off there. *(R3.14, R3.15)*
   - Verify: each point recorded in design.md, for an automatic sign-in and a typed one (the maintainer types it in the VM window). If the entry doesn't start the exe, stop and return the spec for review. The probe code is not kept.
   - Done 2026-11-02: every point passed, on automatic and typed sign-in. Turning the entry on also starts the exe right away; recorded in design.md, and T16 covers it.
-- [ ] **T14.** `ICheckScheduler.StartupBlocked` and the Settings note. *(R3.16)*
+- [x] **T14.** `ICheckScheduler.StartupBlocked` and the Settings note. *(R3.16)*
   - Verify: `CheckSettingsViewModelTests.*`.
+  - Done 2026-11-03: 358 unit tests pass. `BackgroundCheckScheduler` reports false until T15 reads the entry.
 - [ ] **T15.** Manifest startup entry; `BackgroundCheckScheduler` turns it on and off; `Program` runs the check for `StartupTask` activation through the shared check method. *(R3.14, R3.15, R3.17)*
   - Verify: unit tests pass; the portable app still starts (007 R1.6).
 - [ ] **T16.** Manual in the test VM, Store build: R3.10 after a shutdown and sign-in; nothing at sign-in when no check is missed; turning checks on shows nothing (the entry's immediate start finds no check due); checks off turns the entry off; the user's "off" in Startup apps is kept and Settings shows the note; one check when unlock and sign-in both fire; uninstall leaves nothing. *(R3.10, R3.14–R3.17, R3.6)*
