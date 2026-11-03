@@ -38,7 +38,7 @@ public sealed class BackgroundCheckTask : IBackgroundTask
         {
             try
             {
-                await CheckAsync(name);
+                await CheckAsync(name == BackgroundCheckScheduler.ReturnTaskName ? CheckTrigger.MissedCheck : CheckTrigger.Schedule, _cancelled.Token);
             }
             catch (Exception)
             {
@@ -49,9 +49,10 @@ public sealed class BackgroundCheckTask : IBackgroundTask
         });
     }
 
-    private async Task CheckAsync(string taskName)
+    /// <summary>One check, from a background task or the startup entry (R3.14). Same runner, history and notification.</summary>
+    public static async Task CheckAsync(CheckTrigger trigger, CancellationToken cancel)
     {
-        // A second trigger at the same moment exits and records nothing.
+        // A second trigger at the same moment, such as the startup entry and UserPresent at sign-in, exits and records nothing (R3.17).
         using var running = new Mutex(true, RunningMutex, out var isOnlyCheck);
         if (!isOnlyCheck)
         {
@@ -67,8 +68,7 @@ public sealed class BackgroundCheckTask : IBackgroundTask
             new AppActivityMarker(),
             new WindowsNetworkState());
 
-        var trigger = taskName == BackgroundCheckScheduler.ReturnTaskName ? CheckTrigger.MissedCheck : CheckTrigger.Schedule;
-        await runner.RunAsync(trigger, _cancelled.Token);
+        await runner.RunAsync(trigger, cancel);
 
         // A daily timer fires once, and possibly early, so each run sets the next one.
         if (settings.Current.CheckMode == CheckMode.DailyTime && runner.NextDue() is { } next)

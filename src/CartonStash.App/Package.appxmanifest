@@ -5,7 +5,8 @@
   xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
   xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
   xmlns:com="http://schemas.microsoft.com/appx/manifest/com/windows10"
-  IgnorableNamespaces="uap rescap com">
+  xmlns:uap5="http://schemas.microsoft.com/appx/manifest/uap/windows10/5"
+  IgnorableNamespaces="uap rescap com uap5">
 
   <!-- Version is set from the git tag by the release workflow (007 R3.2). -->
   <Identity Name="Anthony.CartonStash" Publisher="CN=Anthony" Version="1.0.0.0" />
@@ -53,6 +54,10 @@
             </com:ExeServer>
           </com:ComServer>
         </com:Extension>
+        <!-- Spec 010 R3.14: a check missed while the PC was off runs at sign-in. Off until the user turns checks on. -->
+        <uap5:Extension Category="windows.startupTask" Executable="CartonStash.exe" EntryPoint="Windows.FullTrustApplication">
+          <uap5:StartupTask TaskId="CartonStashCheck" Enabled="false" DisplayName="CartonStash update check" />
+        </uap5:Extension>
       </Extensions>
     </Application>
   </Applications>

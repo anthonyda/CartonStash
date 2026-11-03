@@ -42,8 +42,9 @@ Tick a task only when its verification passes. Keep tasks small enough for one c
 - [x] **T14.** `ICheckScheduler.StartupBlocked` and the Settings note. *(R3.16)*
   - Verify: `CheckSettingsViewModelTests.*`.
   - Done 2026-11-03: 358 unit tests pass. `BackgroundCheckScheduler` reports false until T15 reads the entry.
-- [ ] **T15.** Manifest startup entry; `BackgroundCheckScheduler` turns it on and off; `Program` runs the check for `StartupTask` activation through the shared check method. *(R3.14, R3.15, R3.17)*
+- [x] **T15.** Manifest startup entry; `BackgroundCheckScheduler` turns it on and off; `Program` runs the check for `StartupTask` activation through the shared check method. *(R3.14, R3.15, R3.17)*
   - Verify: unit tests pass; the portable app still starts (007 R1.6).
+  - Done 2026-11-03: 358 unit tests pass; the 1.1.6 x64 portable build opened its window in 3 s in the test VM, no crash. The app also applies the entry each time it opens, for users updating with checks on (design updated).
 - [ ] **T16.** Manual in the test VM, Store build: R3.10 after a shutdown and sign-in; nothing at sign-in when no check is missed; turning checks on shows nothing (the entry's immediate start finds no check due); checks off turns the entry off; the user's "off" in Startup apps is kept and Settings shows the note; one check when unlock and sign-in both fire; uninstall leaves nothing. *(R3.10, R3.14–R3.17, R3.6)*
   - Verify: logged below. Then finish T11 and T12.
 

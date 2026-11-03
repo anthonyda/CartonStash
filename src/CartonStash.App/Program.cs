@@ -2,6 +2,7 @@ using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.Windows.AppLifecycle;
 using CartonStash.App.Services;
+using CartonStash.Core.Models;
 using CartonStash.Core.Services;
 
 namespace CartonStash.App;
@@ -34,9 +35,18 @@ public static class Program
             RunBackgroundServer();
             return;
         }
-        if (AppPackage.IsPackaged && RedirectedToOpenApp())
+        if (AppPackage.IsPackaged)
         {
-            return;
+            var activation = AppInstance.GetCurrent().GetActivatedEventArgs();
+            if (activation.Kind == ExtendedActivationKind.StartupTask)
+            {
+                RunStartupCheck();
+                return;
+            }
+            if (RedirectedToOpenApp(activation))
+            {
+                return;
+            }
         }
 
         Application.Start(_ =>
@@ -58,11 +68,25 @@ public static class Program
         server.Join();
     }
 
+    // R3.14: Windows started the exe at sign-in through the startup entry. No window, and never the "main" instance key.
+    // A missed check runs if one is due; otherwise the runner records nothing and the process exits at once.
+    private static void RunStartupCheck()
+    {
+        using var limit = new CancellationTokenSource(BackgroundLimit);
+        try
+        {
+            Task.Run(() => BackgroundCheckTask.CheckAsync(CheckTrigger.MissedCheck, limit.Token)).Wait(BackgroundLimit);
+        }
+        catch (AggregateException)
+        {
+            // R1.6: a check never crashes. The runner records its own failures; this covers setup.
+        }
+    }
+
     // Only a notification click goes to the open copy (R2.2). A second launch from Start stays as it was.
-    private static bool RedirectedToOpenApp()
+    private static bool RedirectedToOpenApp(AppActivationArguments activation)
     {
         var main = AppInstance.FindOrRegisterForKey(MainInstanceKey);
-        var activation = AppInstance.GetCurrent().GetActivatedEventArgs();
         StartedFromNotification = activation.Kind == ExtendedActivationKind.ToastNotification;
         if (main.IsCurrent || !StartedFromNotification)
         {

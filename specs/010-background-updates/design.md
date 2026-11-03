@@ -133,7 +133,9 @@ Notifications also work from the background process, with no extra setup. Clicki
 | On | `Enabled`, `EnabledByPolicy` | Nothing |
 | Off | `Enabled` | `Disable()` |
 
-`ICheckScheduler` gains `bool StartupBlocked`, read after `ApplyAsync` and when Settings opens. `CheckSettingsViewModel` shows it as a second note under the Windows-blocked one: "Windows won't start CartonStash at sign-in, so a check missed while the PC was off waits until you unlock it. Turn on **CartonStash update check** in Settings > Apps > Startup." Like R3.4, it's a note, not an error: the schedule still works.
+The app also applies this table each time it opens, packaged only, without touching the background tasks. So an update from a version without the entry turns it on for users who already have checks on, since no schedule change would. (Changed during T15: the design first had it only in `ApplyAsync`.)
+
+`ICheckScheduler` gains `bool StartupBlocked`, set by both and read when Settings opens. `CheckSettingsViewModel` shows it as a second note under the Windows-blocked one: "Windows won't start CartonStash at sign-in, so a check missed while the PC was off waits until you unlock it. Turn on **CartonStash update check** in Settings > Apps > Startup." Like R3.4, it's a note, not an error: the schedule still works.
 
 **At sign-in (R3.14).** Windows starts `CartonStash.exe` with no arguments. `Program.Main`, packaged only, reads `AppInstance.GetCurrent().GetActivatedEventArgs()`. For `ExtendedActivationKind.StartupTask`, it runs the check and returns, before `RedirectedToOpenApp` (so it never takes the "main" instance key) and before any XAML:
 

@@ -104,6 +104,10 @@ public partial class App : Application
         {
             _ = RepairScheduleAsync(settings);
         }
+        else
+        {
+            _ = Services.GetRequiredService<BackgroundCheckScheduler>().ApplyStartupAsync(settings.Current); // R3.15
+        }
     }
 
     // R3.7: repairs a broken daily chain. If Windows refuses, Settings says so (R3.4), and the app carries on.

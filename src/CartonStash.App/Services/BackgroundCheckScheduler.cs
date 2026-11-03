@@ -1,3 +1,4 @@
+using Windows.ApplicationModel;
 using Windows.ApplicationModel.Background;
 using CartonStash.Core.Models;
 using CartonStash.Core.Services;
@@ -17,10 +18,14 @@ public sealed class BackgroundCheckScheduler : ICheckScheduler
     /// <summary>Runs when the user comes back, to catch up on a missed check (R3.10). Windows' UserPresent trigger (T1).</summary>
     public const string ReturnTaskName = "CartonStash check on return";
 
+    /// <summary>The manifest's startup entry (R3.14). It isn't a background task, so <see cref="RemoveAll"/> leaves it.</summary>
+    public const string StartupTaskId = "CartonStashCheck";
+
     /// <summary>Replaces every task with the chosen schedule. Returns false when Windows doesn't allow background work (R3.4).</summary>
     public async Task<bool> ApplyAsync(AppSettings settings, DateTimeOffset? nextDue)
     {
         RemoveAll();
+        await ApplyStartupAsync(settings);
         if (settings.CheckMode == CheckMode.Off)
         {
             return true;
@@ -42,6 +47,34 @@ public sealed class BackgroundCheckScheduler : ICheckScheduler
         }
         Register(ReturnTaskName, new SystemTrigger(SystemTriggerType.UserPresent, oneShot: false));
         return true;
+    }
+
+    /// <summary>
+    /// The startup entry follows checks on or off (R3.15). Also run when the app opens, so an update from a version without
+    /// the entry turns it on. Windows doesn't let an app turn back on what the user or a policy turned off: that's reported (R3.16).
+    /// </summary>
+    public async Task ApplyStartupAsync(AppSettings settings)
+    {
+        try
+        {
+            var entry = await StartupTask.GetAsync(StartupTaskId);
+            var on = settings.CheckMode != CheckMode.Off;
+            var state = entry.State;
+            if (on && state == StartupTaskState.Disabled)
+            {
+                // Windows starts the exe through the entry at once; no check is due then, so it exits (design, T13).
+                state = await entry.RequestEnableAsync();
+            }
+            else if (!on && state == StartupTaskState.Enabled)
+            {
+                entry.Disable();
+            }
+            StartupBlocked = on && state is StartupTaskState.DisabledByUser or StartupTaskState.DisabledByPolicy;
+        }
+        catch (Exception ex) when (ex is System.Runtime.InteropServices.COMException or ArgumentException or UnauthorizedAccessException)
+        {
+            // The schedule still works without the entry: a missed check waits for an unlock.
+        }
     }
 
     /// <summary>True when the chosen schedule has lost a task: repairs a broken daily chain (R3.7).</summary>
