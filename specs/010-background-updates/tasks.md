@@ -1,6 +1,6 @@
 # 010 – Background update checks: Tasks
 
-**Status:** In progress
+**Status:** Done (2026-11-03), including amendment R3.14
 **Design:** [design.md](design.md)
 **Issues:** #14 (close with the commit that finishes the spec)
 
@@ -29,10 +29,11 @@ Tick a task only when its verification passes. Keep tasks small enough for one c
   - Verify: manual. Done 2026-11-02 in the test VM (log below).
 - [x] **T10.** Update specs 003, 004, 006 and 007, and `PRIVACY.md`.
   - Verify: review against the requirements' last section.
-- [ ] **T11.** Manual end to end on the Store version (007 R9 ended the GitHub MSIX): each mode, a missed check after sleep and after a shutdown, metered, Windows-blocked, uninstall, and an app update. Includes T1's two gaps: `UserPresent` at sign-in after a shutdown, and a daily timer across sleep. *(all)*
+- [x] **T11.** Manual end to end on the Store version (007 R9 ended the GitHub MSIX): each mode, a missed check after sleep and after a shutdown, metered, Windows-blocked, uninstall, and an app update. Includes T1's two gaps: `UserPresent` at sign-in after a shutdown, and a daily timer across sleep. *(all)*
   - If sign-in after a shutdown starts nothing, use the startup-task fallback in the design's risks, and update the spec first.
   - 2026-11-02: all passed in the test VM and Sandbox except sign-in after a shutdown, which started nothing. Amendment R3.14 below. Only the Store build is in scope now (007 R9).
-- [ ] **T12.** Mark `Done`; close #14.
+  - 2026-11-03: sign-in after a shutdown passes with the startup entry (T16).
+- [x] **T12.** Mark `Done`; close #14.
 
 ### Amendment R3.14: startup entry (approved 2026-11-02)
 
@@ -45,8 +46,9 @@ Tick a task only when its verification passes. Keep tasks small enough for one c
 - [x] **T15.** Manifest startup entry; `BackgroundCheckScheduler` turns it on and off; `Program` runs the check for `StartupTask` activation through the shared check method. *(R3.14, R3.15, R3.17)*
   - Verify: unit tests pass; the portable app still starts (007 R1.6).
   - Done 2026-11-03: 358 unit tests pass; the 1.1.6 x64 portable build opened its window in 3 s in the test VM, no crash. The app also applies the entry each time it opens, for users updating with checks on (design updated).
-- [ ] **T16.** Manual in the test VM, Store build: R3.10 after a shutdown and sign-in; nothing at sign-in when no check is missed; turning checks on shows nothing (the entry's immediate start finds no check due); checks off turns the entry off; the user's "off" in Startup apps is kept and Settings shows the note; one check when unlock and sign-in both fire; uninstall leaves nothing. *(R3.10, R3.14–R3.17, R3.6)*
+- [x] **T16.** Manual in the test VM, Store build: R3.10 after a shutdown and sign-in; nothing at sign-in when no check is missed; turning checks on shows nothing (the entry's immediate start finds no check due); checks off turns the entry off; the user's "off" in Startup apps is kept and Settings shows the note; one check when unlock and sign-in both fire; uninstall leaves nothing. *(R3.10, R3.14–R3.17, R3.6)*
   - Verify: logged below. Then finish T11 and T12.
+  - Done 2026-11-03. The run also found that two schedule changes in a row could leave two "check on return" tasks; `BackgroundCheckScheduler.ApplyAsync` now runs one change at a time, and removes and registers with no await between them.
 
 ## Manual verification log
 
@@ -65,4 +67,9 @@ Tick a task only when its verification passes. Keep tasks small enough for one c
 | R3.10 at sign-in after a shutdown (T11, T1 gap) | 2026-11-02 | **Fail** | Same VM, check due, app closed. Clean shutdown at 11:07:10 PM, start at 11:07:19, tester signed in (automatic sign-in) at 11:07:25. Nothing ran in the next 5 minutes: no process started for the package, no history. `UserPresent` doesn't fire at sign-in after a shutdown. T11 says to use the startup-task fallback, spec first |
 | R3.6 uninstall (T11, Store build) | 2026-11-02 | Pass | Same VM after the sign-in test: no package, no tasks and no data folder left |
 | GitHub and Store builds side by side | 2026-11-02 | Not supported | Same VM, both 1.1.5 identities installed: every trigger of the GitHub package crashed backgroundTaskHost (`0xc000027b` in `biwinrt.dll`, stowed `0x8007001F`), and Windows started the Store package's server for it. Both packages register the same CLSID. Out of scope: only the Store build is published (007 R9) |
+| R3.15, R3.2 (T16, checks on) | 2026-11-03 | Pass | Test VM, Store build 1.1.6, fresh install. The entry stays off with checks off. Choosing Every turned it on, with no window, no check and no note; one timer and one "check on return" task. The first 1.1.6 build left two "check on return" tasks, fixed before this run |
+| R3.10, R3.14, R3.17 (T16, missed check at sign-in) | 2026-11-03 | Pass | Same VM, check due, app closed. Shutdown and start: tester signed in at 6:21:14 PM, Windows started the app through the entry at 6:21:23, and the missed check ran at 6:21:27 and found 5 updates. One history entry, no window, no process left |
+| R3.14 (T16, nothing missed) | 2026-11-03 | Pass | Shutdown and start again: the entry started the app at 6:23:27 PM, which ran no check, showed no window and exited |
+| R3.15, R3.16 (T16) | 2026-11-03 | Pass | Checks off turned the entry off, and on turned it back on. Turned off in Startup apps: the app opened with the note "Windows won't start CartonStash at sign-in", kept it after changing the schedule, hid it with checks off and showed it again with checks on. The entry stayed off throughout |
+| R3.6 (T16, uninstall) | 2026-11-03 | Pass | No package, startup entry, task or data folder left; Startup apps no longer lists it |
 | App Certification Kit, Store build 1.1.1 x64 | 2026-11-02 | Partial | Kit copied from the host SDK into Windows Sandbox, since the admin prompt couldn't be approved over a remote session. 14 tests pass, including app manifest, resources, background-task capabilities and run level. The six metadata tests (ExclusiveTo, Type location, the two type-name tests, metadata correctness and Properties) couldn't start because the copied Kit found no platform metadata folder, so they weren't run. The optional Blocked executables test flags the usual launch-process APIs in the runtime and .NET files, and the optional Platform appropriate files test fails with no detail. DPI awareness is only a warning, because WinUI sets it at run time. Store certification on submission still decides |

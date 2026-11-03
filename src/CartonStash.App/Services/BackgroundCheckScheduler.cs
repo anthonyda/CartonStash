@@ -24,14 +24,30 @@ public sealed class BackgroundCheckScheduler : ICheckScheduler
     /// <summary>Replaces every task with the chosen schedule. Returns false when Windows doesn't allow background work (R3.4).</summary>
     public async Task<bool> ApplyAsync(AppSettings settings, DateTimeOffset? nextDue)
     {
-        RemoveAll();
+        // One at a time, in order: two changes that overlapped both registered their tasks (T16: two "check on return").
+        await _applying.WaitAsync();
+        try
+        {
+            return await ApplyOnceAsync(settings, nextDue);
+        }
+        finally
+        {
+            _applying.Release();
+        }
+    }
+
+    private readonly SemaphoreSlim _applying = new(1, 1);
+
+    private async Task<bool> ApplyOnceAsync(AppSettings settings, DateTimeOffset? nextDue)
+    {
         await ApplyStartupAsync(settings);
+        var access = settings.CheckMode == CheckMode.Off ? BackgroundAccessStatus.Unspecified : await BackgroundExecutionManager.RequestAccessAsync();
+
+        RemoveAll();
         if (settings.CheckMode == CheckMode.Off)
         {
             return true;
         }
-
-        var access = await BackgroundExecutionManager.RequestAccessAsync();
         if (access is BackgroundAccessStatus.DeniedByUser or BackgroundAccessStatus.DeniedBySystemPolicy or BackgroundAccessStatus.Unspecified)
         {
             return false;
