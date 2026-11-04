@@ -27,7 +27,7 @@
     the arguments and takes the "main" key, which is what notification clicks rely on; a click itself wasn't tried.
 - [x] **T9.** `WinGetHost`: `IsAppInstaller`, `PendingVersion`. *(R6.1, R6.2)*
   - Verify: `WinGetHostTests.*`.
-- [ ] **T10.** `SucceededAppRestartRequired`: the installer's lookup after `Ok`, the outcome, card state and status text. *(R6.1)*
+- [x] **T10.** `SucceededAppRestartRequired`: the installer's lookup after `Ok`, the outcome, card state and status text. *(R6.1)*
   - Verify: `WinGetErrorMessageTests` for the three lookup cases; `PackageOperationTests` for state and text.
 - [ ] **T11.** App Installer queued last by Update all and Update selected. *(R6.5)*
   - Verify: `PackageActionsTests.App_Installer_is_queued_last`.

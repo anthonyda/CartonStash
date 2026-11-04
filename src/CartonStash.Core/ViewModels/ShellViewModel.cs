@@ -100,7 +100,7 @@ public sealed partial class ShellViewModel : ObservableObject
         var severity = operation.Result switch
         {
             OperationResult.Succeeded => NotificationSeverity.Success,
-            OperationResult.SucceededRestartRequired => NotificationSeverity.Warning, // R5.3: say it clearly
+            OperationResult.SucceededRestartRequired or OperationResult.SucceededAppRestartRequired => NotificationSeverity.Warning, // R5.3, 004 R6.1: say it clearly
             OperationResult.Cancelled => NotificationSeverity.Informational,
             _ => NotificationSeverity.Error,
         };

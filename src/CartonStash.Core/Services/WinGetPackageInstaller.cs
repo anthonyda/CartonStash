@@ -44,11 +44,17 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
             : await connection.FindByIdAsync(package.Id, package.Source, localFirst: kind != OperationKind.Install, cancellationToken);
         try
         {
-            return kind switch
+            var outcome = kind switch
             {
                 OperationKind.Uninstall => await UninstallAsync(found, logPath, progress, cancellationToken),
                 _ => await InstallAsync(kind, found, acceptAgreements, logPath, progress, cancellationToken),
             };
+            if (kind == OperationKind.Upgrade && outcome.Result == OperationResult.Succeeded && WinGetHost.IsAppInstaller(package))
+            {
+                connection.Invalidate();
+                outcome = AfterAppInstallerUpdate(outcome, await OldVersionStillInstalledAsync(package));
+            }
+            return outcome;
         }
         finally
         {
@@ -95,6 +101,36 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
         return MapUninstallResult(result.Status, result.UninstallerErrorCode, result.RebootRequired)
             with { Details = FormatDetails(result.Status.ToString(), result.UninstallerErrorCode, result.ExtendedErrorCode) };
     }
+
+    // 004 R6.1: WinGet reports Ok while Windows only staged the new App Installer, because WinGet's own server, which this
+    // app uses, still runs from the old one. WinGet's installed list then still has the old entry (the ID holds the version).
+    private async Task<bool?> OldVersionStillInstalledAsync(PackageInfo package)
+    {
+        try
+        {
+            await connection.FindInstalledEntryAsync(package.InstalledId!, CancellationToken.None);
+            return true;
+        }
+        catch (WinGetException)
+        {
+            return false; // not found: the new version is in
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>The outcome of an App Installer update once WinGet's installed list was read again (004 R6.1).</summary>
+    /// <param name="oldVersionStillInstalled">Null when the list couldn't be read: report what WinGet said.</param>
+    internal static OperationOutcome AfterAppInstallerUpdate(OperationOutcome outcome, bool? oldVersionStillInstalled) =>
+        oldVersionStillInstalled == true
+            ? outcome with
+            {
+                Result = OperationResult.SucceededAppRestartRequired,
+                Message = "Updated. Restart CartonStash to finish: WinGet runs from App Installer, so the new version starts with it.",
+            }
+            : outcome;
 
     /// <summary>
     /// Uninstall removes the row's own program, found by its installed entry ID, never another program WinGet merged

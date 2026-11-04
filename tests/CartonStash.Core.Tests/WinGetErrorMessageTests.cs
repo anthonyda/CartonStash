@@ -101,4 +101,20 @@ public class WinGetErrorMessageTests
         Assert.Equal(result, outcome.Result);
         Assert.Contains(expected, outcome.Message);
     }
+
+    [Theory] // 004 R6.1: WinGet's Ok, then its installed list read again
+    [InlineData(true, OperationResult.SucceededAppRestartRequired, "Restart CartonStash to finish")]
+    [InlineData(false, OperationResult.Succeeded, "Updated successfully.")]
+    [InlineData(null, OperationResult.Succeeded, "Updated successfully.")]
+    public void App_Installer_update_waits_for_a_restart_while_the_old_version_is_installed(bool? stillInstalled, OperationResult result, string message)
+    {
+        var ok = WinGetPackageInstaller.MapInstallResult(OperationKind.Upgrade, InstallResultStatus.Ok, 0, false, InstallScope.Any) with { Details = "WinGet status: Ok" };
+
+        var outcome = WinGetPackageInstaller.AfterAppInstallerUpdate(ok, stillInstalled);
+
+        Assert.Equal(result, outcome.Result);
+        Assert.Contains(message, outcome.Message);
+        Assert.DoesNotContain(stillInstalled == true ? "successfully" : "Restart CartonStash", outcome.Message);
+        Assert.Equal("WinGet status: Ok", outcome.Details);
+    }
 }

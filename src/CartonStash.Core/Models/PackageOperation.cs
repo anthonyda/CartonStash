@@ -24,6 +24,9 @@ public enum OperationResult
 {
     Succeeded,
     SucceededRestartRequired,
+
+    /// <summary>App Installer updated, but WinGet runs from it: the new version starts with CartonStash (004 R6.1).</summary>
+    SucceededAppRestartRequired,
     Failed,
     Cancelled,
 }
@@ -46,7 +49,7 @@ public enum OperationState
 /// <param name="Details">Technical lines for the log (WinGet status, exit code, extended error), 009 R2.2.</param>
 public sealed record OperationOutcome(OperationResult Result, string Message, string? Details = null)
 {
-    public bool IsSuccess => Result is OperationResult.Succeeded or OperationResult.SucceededRestartRequired;
+    public bool IsSuccess => Result is OperationResult.Succeeded or OperationResult.SucceededRestartRequired or OperationResult.SucceededAppRestartRequired;
 }
 
 /// <summary>
@@ -127,7 +130,7 @@ public sealed partial class PackageOperation : ObservableObject
         (OperationPhase.Queued, _) => OperationState.Queued,
         (not OperationPhase.Done, _) => OperationState.Running,
         (_, OperationResult.Succeeded) => OperationState.Succeeded,
-        (_, OperationResult.SucceededRestartRequired) => OperationState.RestartRequired,
+        (_, OperationResult.SucceededRestartRequired or OperationResult.SucceededAppRestartRequired) => OperationState.RestartRequired,
         (_, OperationResult.Cancelled) => OperationState.Cancelled,
         _ => OperationState.Failed,
     };
@@ -149,7 +152,7 @@ public sealed partial class PackageOperation : ObservableObject
     /// <summary>WinGet can only stop an operation before the installer itself runs (003 R3.2).</summary>
     public bool CanCancel => Phase is OperationPhase.Queued or OperationPhase.Downloading;
 
-    public bool IsSuccess => Result is OperationResult.Succeeded or OperationResult.SucceededRestartRequired;
+    public bool IsSuccess => Result is OperationResult.Succeeded or OperationResult.SucceededRestartRequired or OperationResult.SucceededAppRestartRequired;
 
     public bool IsFailure => Result is OperationResult.Failed;
 
@@ -175,6 +178,7 @@ public sealed partial class PackageOperation : ObservableObject
         (OperationPhase.Finishing, _) => "Finishing…",
         (_, OperationResult.Succeeded) => DoneText,
         (_, OperationResult.SucceededRestartRequired) => $"{DoneText} · restart required",
+        (_, OperationResult.SucceededAppRestartRequired) => $"{DoneText} · restart CartonStash",
         (_, OperationResult.Cancelled) => "Cancelled",
         _ => "Failed",
     };

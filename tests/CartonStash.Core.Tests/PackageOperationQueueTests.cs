@@ -140,6 +140,20 @@ public class PackageOperationQueueTests
     }
 
     [Fact]
+    public void App_Installer_restart_is_a_warning_that_names_CartonStash() // 004 R6.1
+    {
+        var app = new TestApp();
+        var op = app.Queue.Enqueue(OperationKind.Upgrade, WinGetHostTests.AppInstaller());
+
+        app.Installer.Complete("Microsoft.AppInstaller", OperationResult.SucceededAppRestartRequired, "Updated. Restart CartonStash to finish.");
+
+        Assert.True(op.IsSuccess);
+        Assert.False(op.CanRetry);
+        Assert.Equal(OperationState.RestartRequired, op.State);
+        Assert.Equal("Updated · restart CartonStash", op.StatusText);
+    }
+
+    [Fact]
     public void Completed_and_drained_are_raised()
     {
         var app = new TestApp();
