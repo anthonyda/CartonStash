@@ -123,6 +123,9 @@ public sealed partial class PackageRowViewModel : ObservableObject
     private void Update() => _actions.Update(Package);
 
     [RelayCommand]
+    private void Restart() => _actions.Queue.RequestRestart();
+
+    [RelayCommand]
     private void Exclude() => _exclusions?.Update(s => s.WithExcluded(Id));
 
     [RelayCommand]

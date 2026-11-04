@@ -138,6 +138,12 @@
                     Command="{x:Bind Operation.ShowLogCommand, Mode=OneWay}"
                     Content="Log"
                     Visibility="{x:Bind Operation.HasLog, Mode=OneWay}" />
+                <!-- 004 R6.3 -->
+                <Button
+                    Command="{x:Bind Operation.RestartAppCommand, Mode=OneWay}"
+                    Content="Restart CartonStash"
+                    Style="{StaticResource AccentButtonStyle}"
+                    Visibility="{x:Bind Operation.CanRestartApp, Mode=OneWay}" />
                 <Button
                     AutomationProperties.Name="{x:Bind ui:Ui.Format('Retry {0}', Operation.Title), Mode=OneWay}"
                     Command="{x:Bind Operation.RetryCommand, Mode=OneWay}"

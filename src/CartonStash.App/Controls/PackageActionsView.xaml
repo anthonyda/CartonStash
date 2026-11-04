@@ -31,6 +31,13 @@
                 Content="Update"
                 Style="{StaticResource AccentButtonStyle}"
                 Visibility="{x:Bind Row.ShowUpdate, Mode=OneWay}" />
+            <!-- 004 R6.2, R6.3: App Installer's update waits for the app to restart -->
+            <Button
+                AutomationProperties.Name="{x:Bind ui:Ui.Format('Restart CartonStash to finish updating {0}', Row.Name), Mode=OneWay}"
+                Command="{x:Bind Row.RestartCommand, Mode=OneWay}"
+                Content="Restart CartonStash"
+                Style="{StaticResource AccentButtonStyle}"
+                Visibility="{x:Bind Row.ShowRestart, Mode=OneWay}" />
             <Button
                 AutomationProperties.Name="{x:Bind ui:Ui.Format('Uninstall {0}', Row.Name), Mode=OneWay}"
                 Command="{x:Bind Row.UninstallCommand, Mode=OneWay}"

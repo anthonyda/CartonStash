@@ -24,14 +24,20 @@ public sealed partial class ShellViewModel : ObservableObject
     private readonly PackageOperationQueue _queue;
     private readonly UpdatesViewModel _updates;
     private readonly IDialogService _dialogs;
+    private readonly WinGetHost? _host;
+    private readonly IAppRestarter? _restarter;
 
-    public ShellViewModel(PackageOperationQueue queue, UpdatesViewModel updates, IDialogService dialogs, ISettings settings)
+    public ShellViewModel(PackageOperationQueue queue, UpdatesViewModel updates, IDialogService dialogs, ISettings settings,
+        WinGetHost? host = null, IAppRestarter? restarter = null)
     {
         _queue = queue;
         _updates = updates;
         _dialogs = dialogs;
+        _host = host;
+        _restarter = restarter;
 
         queue.Completed += (_, operation) => ShowOutcome(operation);
+        queue.RestartRequested += async (_, _) => await RestartAsync();
         queue.Enqueued += (_, _) => OnPropertyChanged(nameof(ActivityText));
         queue.Operations.CollectionChanged += (_, _) => OnPropertyChanged(nameof(ActivityText));
         updates.PropertyChanged += OnUpdatesChanged;
@@ -64,8 +70,13 @@ public sealed partial class ShellViewModel : ObservableObject
     [ObservableProperty]
     public partial NotificationSeverity NotificationSeverity { get; private set; }
 
+    /// <summary>The notification's button, when it has one: Restart CartonStash (004 R6.3).</summary>
+    [ObservableProperty]
+    public partial bool HasNotificationRestart { get; private set; }
+
     public void Notify(string title, string message, NotificationSeverity severity)
     {
+        HasNotificationRestart = false;
         NotificationTitle = title;
         NotificationMessage = message;
         NotificationSeverity = severity;
@@ -94,6 +105,23 @@ public sealed partial class ShellViewModel : ObservableObject
     [RelayCommand]
     private void CloseNotification() => IsNotificationOpen = false;
 
+    /// <summary>
+    /// 004 R6.3: restart to finish App Installer's update. With operations running or queued, asks first, as closing does
+    /// (003 R6.2): the restart skips the window's own close guard.
+    /// </summary>
+    [RelayCommand]
+    private async Task RestartAsync()
+    {
+        if (!await ConfirmCloseAsync())
+        {
+            return;
+        }
+        if (_restarter?.Restart(_host?.PendingVersion) != true)
+        {
+            Notify("Couldn't restart CartonStash", "Close CartonStash and open it again to finish updating App Installer.", NotificationSeverity.Error);
+        }
+    }
+
     private void ShowOutcome(PackageOperation operation)
     {
         OnPropertyChanged(nameof(ActivityText));
@@ -105,6 +133,7 @@ public sealed partial class ShellViewModel : ObservableObject
             _ => NotificationSeverity.Error,
         };
         Notify($"{operation.Title}: {operation.StatusText}", operation.Message ?? "", severity);
+        HasNotificationRestart = operation.CanRestartApp;
     }
 
     private void OnUpdatesChanged(object? sender, PropertyChangedEventArgs e)

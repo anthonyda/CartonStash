@@ -1,4 +1,5 @@
 using CartonStash.Core.Models;
+using CartonStash.Core.Services;
 using CartonStash.Core.ViewModels;
 
 namespace CartonStash.Core.Tests;
@@ -12,6 +13,81 @@ public class ShellViewModelTests
         var updates = new UpdatesViewModel(app.Store, app.Actions, app.Packages, app.Settings);
         var shell = new ShellViewModel(app.Queue, updates, app.Dialogs, new FakeSettings { WasReset = settingsReset });
         return (app, shell, updates);
+    }
+
+    private sealed class FakeRestarter(bool started = true) : IAppRestarter
+    {
+        public List<string?> Calls { get; } = [];
+
+        public bool Restart(string? pendingVersion)
+        {
+            Calls.Add(pendingVersion);
+            return started;
+        }
+    }
+
+    private static (TestApp App, ShellViewModel Shell, FakeRestarter Restarter) CreateWithRestarter(bool started = true)
+    {
+        var app = new TestApp();
+        var updates = new UpdatesViewModel(app.Store, app.Actions, app.Packages, app.Settings);
+        var restarter = new FakeRestarter(started);
+        return (app, new ShellViewModel(app.Queue, updates, app.Dialogs, new FakeSettings(), app.Actions.Host, restarter), restarter);
+    }
+
+    [Fact]
+    public void Restart_from_the_card_restarts_with_the_pending_version() // 004 R6.1, R6.3
+    {
+        var (app, shell, restarter) = CreateWithRestarter();
+        var op = app.Queue.Enqueue(OperationKind.Upgrade, WinGetHostTests.AppInstaller());
+        app.Installer.Complete("Microsoft.AppInstaller", OperationResult.SucceededAppRestartRequired, "Updated. Restart CartonStash to finish.");
+
+        Assert.Equal(NotificationSeverity.Warning, shell.NotificationSeverity);
+        Assert.True(shell.HasNotificationRestart);
+        Assert.True(op.CanRestartApp);
+
+        op.RestartAppCommand.Execute(null);
+
+        Assert.Equal(["1.29.379.0"], restarter.Calls);
+        Assert.Empty(app.Dialogs.Confirmations);
+    }
+
+    [Fact]
+    public async Task Restart_with_pending_work_asks_first_and_respects_the_answer() // 004 R6.3, 003 R6.2
+    {
+        var (app, shell, restarter) = CreateWithRestarter();
+        app.Queue.Enqueue(OperationKind.Install, Pkg.Remote("A"));
+
+        app.Dialogs.Answer = false;
+        await shell.RestartCommand.ExecuteAsync(null);
+        Assert.Empty(restarter.Calls);
+
+        app.Dialogs.Answer = true;
+        await shell.RestartCommand.ExecuteAsync(null);
+        Assert.Equal(2, app.Dialogs.Confirmations.Count);
+        Assert.Single(restarter.Calls);
+    }
+
+    [Fact]
+    public async Task Restart_that_fails_says_how_to_finish() // 004 R6.3
+    {
+        var (_, shell, _) = CreateWithRestarter(started: false);
+
+        await shell.RestartCommand.ExecuteAsync(null);
+
+        Assert.Equal(NotificationSeverity.Error, shell.NotificationSeverity);
+        Assert.Contains("open it again", shell.NotificationMessage);
+        Assert.False(shell.HasNotificationRestart);
+    }
+
+    [Fact]
+    public void Other_outcomes_have_no_restart_button()
+    {
+        var (app, shell, _) = CreateWithRestarter();
+        var op = app.Queue.Enqueue(OperationKind.Install, Pkg.Remote("A"));
+        app.Installer.Complete("A", OperationResult.SucceededRestartRequired, "Installed. Restart your PC to finish.");
+
+        Assert.False(shell.HasNotificationRestart);
+        Assert.False(op.CanRestartApp);
     }
 
     [Fact]

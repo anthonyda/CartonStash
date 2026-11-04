@@ -159,7 +159,15 @@
                         IsOpen="{x:Bind Shell.IsNotificationOpen, Mode=TwoWay}"
                         Message="{x:Bind Shell.NotificationMessage, Mode=OneWay}"
                         Severity="{x:Bind ui:Ui.Severity(Shell.NotificationSeverity), Mode=OneWay}"
-                        Title="{x:Bind Shell.NotificationTitle, Mode=OneWay}" />
+                        Title="{x:Bind Shell.NotificationTitle, Mode=OneWay}">
+                        <!-- 004 R6.3 -->
+                        <InfoBar.ActionButton>
+                            <Button
+                                Command="{x:Bind Shell.RestartCommand}"
+                                Content="Restart CartonStash"
+                                Visibility="{x:Bind Shell.HasNotificationRestart, Mode=OneWay}" />
+                        </InfoBar.ActionButton>
+                    </InfoBar>
                     <Frame x:Name="ContentFrame" Grid.Row="1" />
                 </Grid>
             </SplitView>

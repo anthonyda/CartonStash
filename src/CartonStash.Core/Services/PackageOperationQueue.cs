@@ -25,6 +25,9 @@ public sealed class PackageOperationQueue(IPackageInstaller installer, IOperatio
     /// <summary>Raised when the user asks for an operation's log (009 R2.2).</summary>
     public event EventHandler<PackageOperation>? LogRequested;
 
+    /// <summary>Raised when the user asks to restart CartonStash to finish App Installer's update (004 R6.3).</summary>
+    public event EventHandler? RestartRequested;
+
     /// <summary>Raised when an operation ends, whatever the result.</summary>
     public event EventHandler<PackageOperation>? Completed;
 
@@ -62,7 +65,7 @@ public sealed class PackageOperationQueue(IPackageInstaller installer, IOperatio
             return active;
         }
 
-        var operation = new PackageOperation(kind, package, acceptAgreements, Cancel, Retry, o => LogRequested?.Invoke(this, o));
+        var operation = new PackageOperation(kind, package, acceptAgreements, Cancel, Retry, o => LogRequested?.Invoke(this, o), RequestRestart);
         Operations.Insert(0, operation);
         Start(operation);
         return operation;
@@ -71,6 +74,9 @@ public sealed class PackageOperationQueue(IPackageInstaller installer, IOperatio
     /// <summary>Queues several operations in order (004 Update selected / Update all).</summary>
     public IReadOnlyList<PackageOperation> EnqueueMany(OperationKind kind, IEnumerable<PackageInfo> packages) =>
         packages.Select(p => Enqueue(kind, p)).ToList();
+
+    /// <summary>The Restart CartonStash buttons of a card or a row (004 R6.3).</summary>
+    public void RequestRestart() => RestartRequested?.Invoke(this, EventArgs.Empty);
 
     /// <summary>Removes finished operations from the Activity list.</summary>
     public void ClearFinished()

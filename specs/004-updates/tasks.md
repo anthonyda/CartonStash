@@ -33,8 +33,9 @@
   - Verify: `PackageActionsTests.App_Installer_is_queued_last`.
 - [x] **T12.** Row state: **Restart CartonStash to finish**, left out of Update all. *(R6.2)*
   - Verify: `PackageRowViewModelTests.*`, `UpdatesViewModelTests.*`.
-- [ ] **T13.** `IAppRestarter`, `ShellViewModel.RestartCommand` with the close guard, the buttons on the card, the notification and the row. *(R6.3)*
+- [x] **T13.** `IAppRestarter`, `ShellViewModel.RestartCommand` with the close guard, the buttons on the card, the notification and the row. *(R6.3)*
   - Verify: `ShellViewModelTests.Restart_*`; manual with keyboard, light, dark and high contrast.
+  - Done 2026-11-04: unit tests pass. The manual keyboard and theme check moves to T15, which has a real restart to show.
 - [ ] **T14.** `AppRestarter`, `Program` and `FinishUpdateWindow`: start the new copy, wait for the old copy and servers, open on the same page; the R6.4 message. *(R6.3, R6.4)*
   - Verify: argument parsing tests; the portable app still starts (007 R1.6).
 - [ ] **T15.** Manual in the test VM, Store build: restore `clean`, **Update all** with App Installer, check the warning and the row, Restart CartonStash: 1.29.380.0, gone from Updates, same page. Again with the `winget` command keeping WinGet open (R6.4). *(R6.1–R6.5)*

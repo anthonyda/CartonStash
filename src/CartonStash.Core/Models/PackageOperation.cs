@@ -61,10 +61,12 @@ public sealed partial class PackageOperation : ObservableObject
     private readonly Action<PackageOperation> _cancel;
     private readonly Action<PackageOperation> _retry;
     private readonly Action<PackageOperation> _showLog;
+    private readonly Action _restartApp;
 
     internal PackageOperation(OperationKind kind, PackageInfo package, bool acceptAgreements,
-        Action<PackageOperation> cancel, Action<PackageOperation> retry, Action<PackageOperation> showLog)
+        Action<PackageOperation> cancel, Action<PackageOperation> retry, Action<PackageOperation> showLog, Action restartApp)
     {
+        _restartApp = restartApp;
         Kind = kind;
         Package = package;
         AcceptAgreements = acceptAgreements;
@@ -107,7 +109,7 @@ public sealed partial class PackageOperation : ObservableObject
     public partial double? Percent { get; internal set; }
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(StatusText), nameof(IsSuccess), nameof(IsFailure), nameof(CanRetry), nameof(State))]
+    [NotifyPropertyChangedFor(nameof(StatusText), nameof(IsSuccess), nameof(IsFailure), nameof(CanRetry), nameof(State), nameof(CanRestartApp))]
     [NotifyCanExecuteChangedFor(nameof(RetryCommand))]
     public partial OperationResult? Result { get; internal set; }
 
@@ -158,6 +160,9 @@ public sealed partial class PackageOperation : ObservableObject
 
     public bool CanRetry => Result is OperationResult.Failed or OperationResult.Cancelled;
 
+    /// <summary>The card offers Restart CartonStash (004 R6.3).</summary>
+    public bool CanRestartApp => Result is OperationResult.SucceededAppRestartRequired;
+
     public bool IsIndeterminate => Phase != OperationPhase.Downloading || Percent is null;
 
     public double ProgressValue => Percent ?? 0;
@@ -205,4 +210,7 @@ public sealed partial class PackageOperation : ObservableObject
 
     [RelayCommand(CanExecute = nameof(HasLog))]
     private void ShowLog() => _showLog(this);
+
+    [RelayCommand]
+    private void RestartApp() => _restartApp();
 }
