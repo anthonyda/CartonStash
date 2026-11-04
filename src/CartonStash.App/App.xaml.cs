@@ -136,6 +136,7 @@ public partial class App : Application
             .AddSingleton<PackageOperationQueue>()
             .AddSingleton<InstalledPackagesStore>()
             .AddSingleton<SourceAgreementCheck>()
+            .AddSingleton<WinGetHost>()
             // Settings (006)
             .AddSingleton<ISettingsStore, JsonSettingsStore>()
             .AddSingleton<ISettings, SettingsService>()

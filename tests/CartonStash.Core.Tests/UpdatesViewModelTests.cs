@@ -153,6 +153,37 @@ public class UpdatesViewModelTests
     }
 
     [Fact]
+    public async Task App_Installer_waiting_for_a_restart_offers_the_restart_instead() // R6.2, R6.4 decision: still counted
+    {
+        var appInstaller = WinGetHostTests.AppInstaller();
+        var (app, vm) = await CreateLoaded(appInstaller, Pkg.Installed("B", update: true));
+        vm.Updates.Single(r => r.Id == "Microsoft.AppInstaller").UpdateCommand.Execute(null);
+
+        app.Installer.Complete("Microsoft.AppInstaller", OperationResult.SucceededAppRestartRequired, "Updated. Restart CartonStash to finish.");
+        await app.Queue.Idle;
+
+        var row = vm.Updates.Single(r => r.Id == "Microsoft.AppInstaller");
+        Assert.False(row.ShowUpdate);
+        Assert.True(row.ShowRestart);
+        Assert.Equal("Restart CartonStash to finish", row.ResultText);
+        Assert.Equal("Updates (2)", vm.Title);
+
+        await vm.UpdateAllCommand.ExecuteAsync(null);
+        Assert.Equal(["Microsoft.AppInstaller", "B"], app.Installer.Calls.Select(c => c.Id));
+    }
+
+    [Fact]
+    public async Task Other_rows_never_offer_the_restart() // R6.2
+    {
+        var (app, vm) = await CreateLoaded(WinGetHostTests.AppInstaller(), Pkg.Installed("B", update: true));
+        app.Actions.Host.SetPending("1.29.379.0");
+
+        Assert.False(vm.Updates.Single(r => r.Id == "B").ShowRestart);
+        Assert.True(vm.Updates.Single(r => r.Id == "B").ShowUpdate);
+        Assert.True(vm.Updates.Single(r => r.Id == "Microsoft.AppInstaller").ShowRestart);
+    }
+
+    [Fact]
     public async Task Only_wingets_own_match_is_offered_for_update() // 002 R6.4
     {
         var primary = Pkg.Installed("Microsoft.WSL", "WSL Update", update: true) with { InstalledId = "ARP-old" };

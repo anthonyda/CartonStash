@@ -44,7 +44,7 @@ public sealed partial class PackageRowViewModel : ObservableObject
     public string Name => Package.Name;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsBusy), nameof(ShowInstall), nameof(ShowUpdate), nameof(ShowUninstall), nameof(ResultText), nameof(HasResult))]
+    [NotifyPropertyChangedFor(nameof(IsBusy), nameof(ShowInstall), nameof(ShowUpdate), nameof(ShowRestart), nameof(ShowUninstall), nameof(ResultText), nameof(HasResult))]
     public partial PackageOperation? Operation { get; set; }
 
     /// <summary>Badge color: WinGet's comparison, and amber only when WinGet also offers the update (R7.1, R7.2).</summary>
@@ -88,7 +88,14 @@ public sealed partial class PackageRowViewModel : ObservableObject
 
     public bool ShowInstall => _allowed.HasFlag(RowActions.Install) && !Package.IsInstalled && !IsBusy && !Succeeded(OperationKind.Install);
 
-    public bool ShowUpdate => _allowed.HasFlag(RowActions.Update) && Package.HasUpdate && !IsBusy && !Succeeded(OperationKind.Upgrade);
+    public bool ShowUpdate => _allowed.HasFlag(RowActions.Update) && Package.HasUpdate && !IsBusy && !Succeeded(OperationKind.Upgrade)
+        && !IsRestartPending;
+
+    /// <summary>App Installer updated, but the new version starts with CartonStash (004 R6.2). Rows are rebuilt when it changes.</summary>
+    public bool IsRestartPending => _actions.Host.IsPending(Package);
+
+    /// <summary>Offered where Update would be (004 R6.2, R6.3).</summary>
+    public bool ShowRestart => _allowed.HasFlag(RowActions.Update) && IsRestartPending && !IsBusy;
 
     public bool ShowUninstall => _allowed.HasFlag(RowActions.Uninstall) && Package.IsInstalled && Package.IsManaged
         && !IsBusy && !Succeeded(OperationKind.Uninstall);
@@ -100,7 +107,9 @@ public sealed partial class PackageRowViewModel : ObservableObject
     public bool ShowIncludeAgain => IsExcluded;
 
     /// <summary>"Installed", "Failed"… after the last operation ended; null otherwise or when cancelled.</summary>
-    public string? ResultText => Operation is { IsActive: false, Result: not OperationResult.Cancelled } op ? op.StatusText : null;
+    public string? ResultText => IsRestartPending && !IsBusy
+        ? "Restart CartonStash to finish"
+        : Operation is { IsActive: false, Result: not OperationResult.Cancelled } op ? op.StatusText : null;
 
     public bool HasResult => ResultText is not null;
 
@@ -140,6 +149,7 @@ public sealed partial class PackageRowViewModel : ObservableObject
             OnPropertyChanged(nameof(IsBusy));
             OnPropertyChanged(nameof(ShowInstall));
             OnPropertyChanged(nameof(ShowUpdate));
+            OnPropertyChanged(nameof(ShowRestart));
             OnPropertyChanged(nameof(ShowUninstall));
             OnPropertyChanged(nameof(ResultText));
             OnPropertyChanged(nameof(HasResult));

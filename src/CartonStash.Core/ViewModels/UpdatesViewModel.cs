@@ -27,6 +27,7 @@ public sealed partial class UpdatesViewModel : ObservableObject
         _store.PropertyChanged += OnStoreChanged;
         _settings.Changed += OnSettingsChanged;
         RowOperationTracker.Track(actions, () => Updates.Concat(Excluded));
+        actions.Host.Changed += (_, _) => Rebuild(); // 004 R6.2, R6.4
         Rebuild();
     }
 

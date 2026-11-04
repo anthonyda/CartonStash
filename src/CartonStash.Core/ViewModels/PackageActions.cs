@@ -18,9 +18,26 @@ public enum RowActions
 /// The user-facing steps around each operation (confirmations, agreements), shared by rows, the details pane
 /// and the Updates page. The queue does the actual work.
 /// </summary>
-public sealed class PackageActions(PackageOperationQueue queue, IPackageInstaller installer, IDialogService dialogs, IPackageService packages)
+public sealed class PackageActions(PackageOperationQueue queue, IPackageInstaller installer, IDialogService dialogs, IPackageService packages,
+    WinGetHost? host = null)
 {
     public PackageOperationQueue Queue => queue;
+
+    /// <summary>App Installer's update waiting for a restart, for rows (004 R6.2).</summary>
+    public WinGetHost Host { get; } = Track(queue, host ?? new WinGetHost());
+
+    // 004 R6.1: the version stays in use until CartonStash restarts.
+    private static WinGetHost Track(PackageOperationQueue queue, WinGetHost host)
+    {
+        queue.Completed += (_, operation) =>
+        {
+            if (operation.Result == OperationResult.SucceededAppRestartRequired && operation.Package.InstalledVersion is { } version)
+            {
+                host.SetPending(version);
+            }
+        };
+        return host;
+    }
 
     /// <summary>The package's icon, for rows (005 R5). Never throws: no icon is fine.</summary>
     public async Task<Uri?> GetIconAsync(PackageInfo package)

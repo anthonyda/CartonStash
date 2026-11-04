@@ -31,7 +31,7 @@
   - Verify: `WinGetErrorMessageTests` for the three lookup cases; `PackageOperationTests` for state and text.
 - [x] **T11.** App Installer queued last by Update all and Update selected. *(R6.5)*
   - Verify: `PackageActionsTests.App_Installer_is_queued_last`.
-- [ ] **T12.** Row state: **Restart CartonStash to finish**, left out of Update all. *(R6.2)*
+- [x] **T12.** Row state: **Restart CartonStash to finish**, left out of Update all. *(R6.2)*
   - Verify: `PackageRowViewModelTests.*`, `UpdatesViewModelTests.*`.
 - [ ] **T13.** `IAppRestarter`, `ShellViewModel.RestartCommand` with the close guard, the buttons on the card, the notification and the row. *(R6.3)*
   - Verify: `ShellViewModelTests.Restart_*`; manual with keyboard, light, dark and high contrast.
