@@ -25,7 +25,7 @@
   - Done 2026-11-04: option A. Right after the App Installer update, the old copy ended in 0.36 s and WinGet's old server
     stopped 10.4 s later, as after a normal close; the reopened app ran 1.29.380.0. The new copy keeps the Store identity, gets
     the arguments and takes the "main" key, which is what notification clicks rely on; a click itself wasn't tried.
-- [ ] **T9.** `WinGetHost`: `IsAppInstaller`, `PendingVersion`. *(R6.1, R6.2)*
+- [x] **T9.** `WinGetHost`: `IsAppInstaller`, `PendingVersion`. *(R6.1, R6.2)*
   - Verify: `WinGetHostTests.*`.
 - [ ] **T10.** `SucceededAppRestartRequired`: the installer's lookup after `Ok`, the outcome, card state and status text. *(R6.1)*
   - Verify: `WinGetErrorMessageTests` for the three lookup cases; `PackageOperationTests` for state and text.
