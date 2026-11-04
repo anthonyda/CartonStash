@@ -16,6 +16,27 @@
 - [ ] **T6.** Manual: update one outdated package end to end. *(R2.1)*
 - [ ] **T7.** Mark `Done` (with R3 noted as deferred).
 
+### Amendment R6: updating App Installer (approved 2026-11-04)
+
+- [ ] **T8.** Probe in the test VM, on a throwaway build: restart with `AppInstance.Restart(args)`, then by starting our own exe
+  and closing normally. For each: how long WinGet's old server stays, whether the new copy has the package identity and the
+  arguments, and whether a notification click still reaches it. Also App Installer's installed entry ID as WinGet reports it.
+  - Verify: results recorded in design.md, with the option chosen. The probe code is not kept.
+- [ ] **T9.** `WinGetHost`: `IsAppInstaller`, `PendingVersion`. *(R6.1, R6.2)*
+  - Verify: `WinGetHostTests.*`.
+- [ ] **T10.** `SucceededAppRestartRequired`: the installer's lookup after `Ok`, the outcome, card state and status text. *(R6.1)*
+  - Verify: `WinGetErrorMessageTests` for the three lookup cases; `PackageOperationTests` for state and text.
+- [ ] **T11.** App Installer queued last by Update all and Update selected. *(R6.5)*
+  - Verify: `PackageActionsTests.App_Installer_is_queued_last`.
+- [ ] **T12.** Row state: **Restart CartonStash to finish**, left out of Update all. *(R6.2)*
+  - Verify: `PackageRowViewModelTests.*`, `UpdatesViewModelTests.*`.
+- [ ] **T13.** `IAppRestarter`, `ShellViewModel.RestartCommand` with the close guard, the buttons on the card, the notification and the row. *(R6.3)*
+  - Verify: `ShellViewModelTests.Restart_*`; manual with keyboard, light, dark and high contrast.
+- [ ] **T14.** `AppRestarter`, `Program` and `FinishUpdateWindow`: start the new copy, wait for the old copy and servers, open on the same page; the R6.4 message. *(R6.3, R6.4)*
+  - Verify: argument parsing tests; the portable app still starts (007 R1.6).
+- [ ] **T15.** Manual in the test VM, Store build: restore `clean`, **Update all** with App Installer, check the warning and the row, Restart CartonStash: 1.29.380.0, gone from Updates, same page. Again with the `winget` command keeping WinGet open (R6.4). *(R6.1–R6.5)*
+  - Verify: logged below.
+
 ## Manual verification log
 
 | Criterion | Date | Result | Notes |

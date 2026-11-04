@@ -1,6 +1,6 @@
 # 004 – Updates: Design
 
-**Status:** Approved (2026-10-29, R3 deferred)
+**Status:** Approved (2026-10-29, R3 deferred). Amendment R6 (updating App Installer): approved 2026-11-04
 **Requirements:** [requirements.md](requirements.md)
 
 ## Overview
@@ -63,3 +63,90 @@ Updates (3)                    [Update selected] [Update all]
 ## Risks and alternatives considered
 
 - Packages WinGet refuses to update in bulk (pins, explicit-only) fail individually in "Update all", with WinGet's reason shown (003 R5.2). Acceptable until R3 is revisited.
+
+## Amendment R6: updating App Installer (approved 2026-11-04)
+
+Against requirements amendment R6 (approved 2026-11-04).
+
+### Probe results (2026-11-04, test VM, 1.1.0, App Installer 1.29.379.0 to 1.29.380.0)
+
+The requirements' first risk, measured: the app updated App Installer (WinGet `Ok` after 12 s), then its window was closed
+normally. The app exited in 1 s, and WinGet's server stopped **11 s** later. Reopened, the app ran on WinGet from
+1.29.380.0, and App Installer had left the Updates list. So a clean exit is enough, but a restart that starts the new copy
+at once would connect to the old server during those 11 s. The new copy has to wait for it.
+
+A forced end of the process left the server running for more than 3 minutes (requirements table), so the restart must
+end the old copy the normal way.
+
+### Components
+
+| Layer | Type | Responsibility | New / changed |
+|-------|------|----------------|---------------|
+| Core/Services | `WinGetHost` | Knows App Installer: `IsAppInstaller(PackageInfo)` from the installed entry `MSIX\Microsoft.DesktopAppInstaller_<version>_<arch>__8wekyb3d8bbwe`. Holds the version waiting for a restart this session (`PendingVersion`), set by R6.1 or by the restart arguments (R6.4) | new |
+| Core/Services | `WinGetPackageInstaller` | After `Ok` for an App Installer upgrade, asks WinGet's installed catalog for the row's installed entry. Still there means the old version is still registered: outcome `SucceededAppRestartRequired` (R6.1) | changed |
+| Core/Models | `OperationResult.SucceededAppRestartRequired` | Card state `RestartRequired` (the warning icon), status "Updated · restart CartonStash", message "Updated. Restart CartonStash to finish: WinGet runs from App Installer, so the new version starts with it." The log takes the message as usual (009) | changed |
+| Core/ViewModels | `PackageActions.UpdateManyAsync` | Moves App Installer to the end of the list it queues (R6.5) | changed |
+| Core/ViewModels | `PackageRowViewModel` | While `WinGetHost` has App Installer's installed version pending: `ShowUpdate` false, `ShowRestart` true, result text "Restart CartonStash to finish" (R6.2). **Update all** already takes only rows with `ShowUpdate` | changed |
+| Core/ViewModels | `ShellViewModel` | `RestartCommand`: if operations are running or queued, the same dialog as closing (003 R6.2), then `IAppRestarter.Restart(currentPage)` (R6.3). The notification for that outcome gets a **Restart CartonStash** button | changed |
+| Core/Services | `IAppRestarter` | Interface, so view models stay free of WinUI (A1) | new |
+| App | `AppRestarter` | Notes the process IDs of WinGet's servers in this Windows session, starts a new copy with `--finish-winget-update <app pid> <server pids> --pending <version> --page <key>`, and closes the window the normal way | new |
+| App | `Program` | With `--finish-winget-update`: waits for the old copy to exit (so it takes the "main" instance key, 010 R2.2), then starts the app | changed |
+| App | `App` / `FinishUpdateWindow` | Before anything touches WinGet: a small window, "Finishing the App Installer update…", while it waits for the old servers to exit, 60 s at most. Then the normal start, on the given page | new |
+| App | `OperationCard`, `PackageActionsView` | **Restart CartonStash** button for that outcome and that row state | changed |
+
+### Data flow
+
+1. **Update all** → App Installer queued last (R6.5) → WinGet `Ok` → installed-catalog lookup still finds
+   `MSIX\Microsoft.DesktopAppInstaller_1.29.379.0_…` → `SucceededAppRestartRequired`, `WinGetHost.PendingVersion = 1.29.379.0`.
+2. The card, the notification and the log show the warning (R6.1). After the queue drains, the reload still lists App Installer
+   with an update; its row shows **Restart CartonStash to finish** and is left out of **Update all** (R6.2). The badge and the
+   title still count it (decided).
+3. **Restart CartonStash** → close guard if needed → new copy started with the arguments → old window closes normally
+   → the new copy waits for the old copy, then for the servers, then starts on the same page (R6.3).
+4. The reload shows 1.29.380.0: nothing more to do (R6.4). The arguments carry the old version (`--pending 1.29.379.0`). If the
+   reload still shows that version, for example because the servers didn't stop within 60 s, the new copy sets `PendingVersion`
+   to it, keeps R6.2's row, and the Updates page shows: "App Installer finishes updating once every program using WinGet is
+   closed, such as the winget command or another app." (R6.4)
+
+### How the new copy is started (T1 decides)
+
+- **Option A, `AppInstance.Restart(args)`** (Windows App SDK). Works packaged and unpackaged, but it ends the calling process
+  itself, which may be the forced end that kept the server alive for minutes.
+- **Option B, start our own exe** (`Environment.ProcessPath`) with the arguments, then close normally. Simple for the portable
+  build. For the MSIX, T1 checks that the new process has the package identity (settings and logs live in the package
+  folder) and that a notification click still reaches it.
+
+T1 tries A first, measuring how long the server stays after it, then B if A is slow. The waiting in the new copy covers
+either.
+
+### Error handling and edge cases
+
+- **The lookup fails** after `Ok`: report plain success, as today. The reload then shows the row as it is, and the row
+  offers **Update** again; that's the current behaviour, never worse.
+- **The user doesn't restart**: closing and reopening later finishes the update too (probe). That session has no pending
+  version, so App Installer shows normally: the new version, or still the update if something kept WinGet running.
+- **Several servers** (another app, the `winget` command, a background check): the new copy waits for all of this session's, up
+  to 60 s, then carries on (R6.4).
+- **Operations queued after App Installer**: none in **Update all** (R6.5). A single **Update** started afterwards still runs
+  on the old WinGet, which worked for four packages in the 2026-11-04 run.
+- **Restart fails to start the new copy**: the old copy stays open and says so, with "Close CartonStash and open it again".
+
+### Testing strategy
+
+| Criteria | How |
+|----------|-----|
+| R6.1 | Unit: the outcome for `Ok` + still installed, `Ok` + gone, `Ok` + lookup failed; the card's state and status text |
+| R6.2 | Unit: `PackageRowViewModel` with a pending version (`ShowUpdate`, `ShowRestart`, text); `UpdatesViewModel` Update all leaves it out |
+| R6.3 | Unit: `RestartCommand` asks first while the queue has work and restarts only on "Quit anyway"; argument parsing |
+| R6.4 | Manual in the test VM: restore `clean`, **Update all**, Restart CartonStash: App Installer 1.29.380.0, gone from Updates, same page. Then the same with the `winget` command holding WinGet open |
+| R6.5 | Unit: `UpdateManyAsync` queues App Installer last, others in order |
+| `WinGetHost.IsAppInstaller` | Unit on installed IDs, including other `Microsoft.*` MSIX entries |
+
+### Risks and alternatives considered
+
+- **Release WinGet's objects and wait in the same copy**, then restart. Rejected: every service would have to drop its COM
+  objects reliably, and the 11 s are WinGet's own idle time, not ours.
+- **Keep the pending version in settings across sessions.** Rejected: R6.4 covers the restart, and a later start reads the
+  truth from WinGet (P1).
+- **App Installer's installed entry ID could change format** in a later WinGet. `IsAppInstaller` is the only place that knows
+  it, and a miss means today's behaviour.
