@@ -7,6 +7,19 @@ namespace CartonStash.Core.Tests;
 public class PackageActionsTests
 {
     [Fact]
+    public async Task App_Installer_is_queued_last() // 004 R6.5
+    {
+        var app = new TestApp();
+        app.Installer.AutoComplete = new OperationOutcome(OperationResult.Succeeded, "ok");
+
+        await app.Actions.UpdateManyAsync(
+            [Pkg.Installed("B", update: true), WinGetHostTests.AppInstaller(), Pkg.Installed("A", update: true), Pkg.Installed("C", update: true)],
+            confirm: false);
+
+        Assert.Equal(["B", "A", "C", "Microsoft.AppInstaller"], app.Installer.Calls.Select(c => c.Id));
+    }
+
+    [Fact]
     public async Task Install_without_agreements_queues_directly() // R1.2
     {
         var app = new TestApp();

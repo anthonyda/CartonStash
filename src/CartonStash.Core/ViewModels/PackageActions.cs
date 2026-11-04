@@ -114,7 +114,14 @@ public sealed class PackageActions(PackageOperationQueue queue, IPackageInstalle
             }
         }
 
-        queue.EnqueueMany(OperationKind.Upgrade, packages);
+        queue.EnqueueMany(OperationKind.Upgrade, AppInstallerLast(packages));
         return true;
     }
+
+    /// <summary>
+    /// 004 R6.5: App Installer's update only takes over when WinGet restarts, so the others run first, on the WinGet that
+    /// started them, and the restart comes last. Otherwise the order is kept.
+    /// </summary>
+    internal static IEnumerable<PackageInfo> AppInstallerLast(IEnumerable<PackageInfo> packages) =>
+        packages.OrderBy(WinGetHost.IsAppInstaller);
 }

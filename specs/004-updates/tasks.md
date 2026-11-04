@@ -29,7 +29,7 @@
   - Verify: `WinGetHostTests.*`.
 - [x] **T10.** `SucceededAppRestartRequired`: the installer's lookup after `Ok`, the outcome, card state and status text. *(R6.1)*
   - Verify: `WinGetErrorMessageTests` for the three lookup cases; `PackageOperationTests` for state and text.
-- [ ] **T11.** App Installer queued last by Update all and Update selected. *(R6.5)*
+- [x] **T11.** App Installer queued last by Update all and Update selected. *(R6.5)*
   - Verify: `PackageActionsTests.App_Installer_is_queued_last`.
 - [ ] **T12.** Row state: **Restart CartonStash to finish**, left out of Update all. *(R6.2)*
   - Verify: `PackageRowViewModelTests.*`, `UpdatesViewModelTests.*`.
