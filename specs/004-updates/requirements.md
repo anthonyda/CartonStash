@@ -1,6 +1,6 @@
 # 004 – Updates: Requirements
 
-**Status:** Approved (2026-10-29, R3 deferred)
+**Status:** Approved (2026-10-29, R3 deferred). Amendment R6 (updating App Installer): approved 2026-11-04
 **Depends on:** 002, 003
 
 ## Problem
@@ -30,11 +30,63 @@ Keeping software current with `winget upgrade` means reading a table, then runni
 | R4.1 | US4   | The Updates navigation item shall show a count badge of available updates once the installed data is loaded, leaving out excluded packages (010 R5.7). |
 | R5.1 | –     | If nothing needs updating, then the page shall show "Everything is up to date". |
 
+## Amendment R6: updating App Installer (approved 2026-11-04)
+
+**Why.** R2.4 isn't met for App Installer. In the test VM on 2026-11-04, with 1.1.0, **Update all** reported "Updated
+successfully" for App Installer, but its row stayed on the Updates page with the old version, marked "Updated", and still
+offered the update. App Installer is the package WinGet runs from, and the app talks to WinGet through it, so the app is
+always using the version it asks WinGet to replace.
+
+Measured in the test VM: Windows 11 26H2, WinGet 1.29.380, App Installer 1.29.379.0 to 1.29.380.0.
+
+| Step | Result |
+|------|--------|
+| `UpgradePackageAsync` for `Microsoft.AppInstaller` | `Ok`, installer exit code 0, no restart flag |
+| Windows' deployment log | 1.29.380.0 staged. Registering it failed with `0x80073D02`, because `WinGetComServer` was running. WinGet didn't ask Windows to finish it later |
+| The rest of the same **Update all** (Outlook, Windows Terminal, two Windows App Runtimes) | Updated normally, through the old WinGet |
+| App closed by force, then reopened | WinGet's server stayed alive for more than 3 minutes, and the app connected to it again: still 1.29.379.0 |
+| WinGet's server stopped, then WinGet started again | 1.29.380.0 took over at once, and App Installer left the Updates list |
+| App closed normally, with no operation run | The app exited in 1 s, and WinGet's server stopped within 1 s |
+
+- **US5.** As a user who updates App Installer, I want to be told that the update finishes when CartonStash restarts, and to
+  finish it in one click, so the app never says "Updated" while the old version stays.
+
+| ID   | Story | Criterion |
+|------|-------|-----------|
+| R6.1 | US5   | If WinGet reports success for an update of App Installer, and the reloaded list still shows the previous version, then the app shall report a warning, as for a PC restart (003 R5.3), saying that the update finishes when CartonStash restarts. The Activity card, the notification and the operation's log shall not say "Updated successfully". |
+| R6.2 | US5   | While that update waits for the restart, App Installer's row shall say **Restart CartonStash to finish** wherever it would offer **Update**, and **Update all** shall leave it out. |
+| R6.3 | US5   | The warning and the row shall offer **Restart CartonStash**, which closes the app and opens it again on the same page. If operations are running or queued, then the app shall first warn, as when closing (003 R6.2). |
+| R6.4 | US5   | After that restart, App Installer shall show the new version, or leave the Updates list. If it still shows the previous version, then the app shall keep R6.2's row and say that the update finishes once every program using WinGet is closed. |
+| R6.5 | US5   | **Update all** and **Update selected** shall queue App Installer after the other packages, so they run on the WinGet that started them and the restart comes last. |
+
+### Open questions (amendment R6), decided 2026-11-04 as recommended
+
+- **App Installer only, or any update whose version doesn't change?** Recommended: App Installer only. It's the one case with a
+  known cause and a fix in the app. Other packages can still show an update after a successful one, when WinGet can't match the
+  installed version to the manifest. Calling those unfinished would be wrong, and their fix belongs in the package's manifest.
+- **Count it in the badge and the title while it waits?** Recommended: yes. WinGet still reports the update (P1), and the
+  restart clears it.
+- **Restart, or only close?** Recommended: restart, so one click finishes the job. The design checks that it works for the Store
+  build and the portable build.
+- **Keep updating App Installer through WinGet?** The alternative is to leave it out and link to its Store page. Recommended:
+  keep it. WinGet stages the new version correctly, only the finish is missing, and a second way to update would need explaining.
+
+### Risks, to prove first
+
+- **A normal close right after the update.** Does WinGet's server stop, and does the reopened app get the new version? It was
+  only measured with no operation run (1 s) and after a forced close (more than 3 minutes).
+- **Other WinGet users.** The `winget` command, another app or a background check (010) may keep WinGet's server running. Then
+  R6.4's message applies, and the design has to find out how the app can tell.
+
+Links to other specs: 003 R5.3 gains a second kind of restart, and 009's Activity card shows it. Neither changes otherwise.
+
 ## Out of scope
 
 - Automatic background updates, meaning installs. Background *checks* are spec 010, and installing without the user is ruled out by constitution P2.
 - Pin management (pin, unpin, pin to version). Possible later spec.
 - Updating unmanaged (non-WinGet) apps.
+- Installer failures that WinGet reports correctly. On 2026-11-04, Microsoft 365 Copilot's own installer failed with
+  `0x88A30033`, in the app and in the `winget` command alike.
 
 ## Open questions
 
