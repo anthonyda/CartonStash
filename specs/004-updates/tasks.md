@@ -18,10 +18,13 @@
 
 ### Amendment R6: updating App Installer (approved 2026-11-04)
 
-- [ ] **T8.** Probe in the test VM, on a throwaway build: restart with `AppInstance.Restart(args)`, then by starting our own exe
+- [x] **T8.** Probe in the test VM, on a throwaway build: restart with `AppInstance.Restart(args)`, then by starting our own exe
   and closing normally. For each: how long WinGet's old server stays, whether the new copy has the package identity and the
   arguments, and whether a notification click still reaches it. Also App Installer's installed entry ID as WinGet reports it.
   - Verify: results recorded in design.md, with the option chosen. The probe code is not kept.
+  - Done 2026-11-04: option A. Right after the App Installer update, the old copy ended in 0.36 s and WinGet's old server
+    stopped 10.4 s later, as after a normal close; the reopened app ran 1.29.380.0. The new copy keeps the Store identity, gets
+    the arguments and takes the "main" key, which is what notification clicks rely on; a click itself wasn't tried.
 - [ ] **T9.** `WinGetHost`: `IsAppInstaller`, `PendingVersion`. *(R6.1, R6.2)*
   - Verify: `WinGetHostTests.*`.
 - [ ] **T10.** `SucceededAppRestartRequired`: the installer's lookup after `Ok`, the outcome, card state and status text. *(R6.1)*

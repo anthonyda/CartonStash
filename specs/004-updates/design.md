@@ -89,7 +89,7 @@ end the old copy the normal way.
 | Core/ViewModels | `PackageRowViewModel` | While `WinGetHost` has App Installer's installed version pending: `ShowUpdate` false, `ShowRestart` true, result text "Restart CartonStash to finish" (R6.2). **Update all** already takes only rows with `ShowUpdate` | changed |
 | Core/ViewModels | `ShellViewModel` | `RestartCommand`: if operations are running or queued, the same dialog as closing (003 R6.2), then `IAppRestarter.Restart(currentPage)` (R6.3). The notification for that outcome gets a **Restart CartonStash** button | changed |
 | Core/Services | `IAppRestarter` | Interface, so view models stay free of WinUI (A1) | new |
-| App | `AppRestarter` | Notes the process IDs of WinGet's servers in this Windows session, starts a new copy with `--finish-winget-update <app pid> <server pids> --pending <version> --page <key>`, and closes the window the normal way | new |
+| App | `AppRestarter` | Notes the process IDs of WinGet's servers in this Windows session, restarts with `AppInstance.Restart("--finish-winget-update <app pid> <server pids> --pending <version> --page <key>")` (T8) | new |
 | App | `Program` | With `--finish-winget-update`: waits for the old copy to exit (so it takes the "main" instance key, 010 R2.2), then starts the app | changed |
 | App | `App` / `FinishUpdateWindow` | Before anything touches WinGet: a small window, "Finishing the App Installer update…", while it waits for the old servers to exit, 60 s at most. Then the normal start, on the given page | new |
 | App | `OperationCard`, `PackageActionsView` | **Restart CartonStash** button for that outcome and that row state | changed |
@@ -101,23 +101,35 @@ end the old copy the normal way.
 2. The card, the notification and the log show the warning (R6.1). After the queue drains, the reload still lists App Installer
    with an update; its row shows **Restart CartonStash to finish** and is left out of **Update all** (R6.2). The badge and the
    title still count it (decided).
-3. **Restart CartonStash** → close guard if needed → new copy started with the arguments → old window closes normally
+3. **Restart CartonStash** → close guard if needed → `AppInstance.Restart` with the arguments, which ends the old copy
    → the new copy waits for the old copy, then for the servers, then starts on the same page (R6.3).
 4. The reload shows 1.29.380.0: nothing more to do (R6.4). The arguments carry the old version (`--pending 1.29.379.0`). If the
    reload still shows that version, for example because the servers didn't stop within 60 s, the new copy sets `PendingVersion`
    to it, keeps R6.2's row, and the Updates page shows: "App Installer finishes updating once every program using WinGet is
    closed, such as the winget command or another app." (R6.4)
 
-### How the new copy is started (T1 decides)
+### How the new copy is started (decided by T8: option A)
 
-- **Option A, `AppInstance.Restart(args)`** (Windows App SDK). Works packaged and unpackaged, but it ends the calling process
-  itself, which may be the forced end that kept the server alive for minutes.
-- **Option B, start our own exe** (`Environment.ProcessPath`) with the arguments, then close normally. Simple for the portable
-  build. For the MSIX, T1 checks that the new process has the package identity (settings and logs live in the package
-  folder) and that a notification click still reaches it.
+- **Option A, `AppInstance.Restart(args)`** (Windows App SDK). Works packaged and unpackaged; it ends the calling process
+  itself.
+- **Option B, start our own exe** (`Environment.ProcessPath`) with the arguments, then close normally.
 
-T1 tries A first, measuring how long the server stays after it, then B if A is slow. The waiting in the new copy covers
-either.
+**T8 results (2026-11-04, test VM, throwaway Store-identity build 1.1.8, App Installer 1.29.379.0):**
+
+| Trial | Old copy gone | WinGet's old server gone | New copy |
+|-------|---------------|--------------------------|----------|
+| A, no operation run | 1.1 s | with the app | Store identity, arguments received, activation kind `Launch`, old copy already gone, took the "main" key |
+| B, no operation run | 1.1 s | with the app | Same as A |
+| A, right after updating App Installer in the app | 0.36 s | 10.4 s | Started 0.16 s after the call, while the old server still ran. Reopened later: App Installer 1.29.380.0, WinGet's server from 1.29.380.0 |
+
+`AppInstance.Restart` doesn't leave the server behind: after the update it stopped in the same time as after a normal close
+(11 s in the earlier probe). **Option A is chosen**: one call, the same for the Store and portable builds, and the old copy is
+gone before the new one checks, so the "main" key and notification clicks (010 R2.2) keep working. The new copy must still
+wait for the old servers, as designed: it started while one was running. `AppInstance.Restart` skips the window's closing
+event, so `RestartCommand` runs the close guard first.
+
+App Installer's installed entry, as the app's installed list reports it:
+`MSIX\Microsoft.DesktopAppInstaller_1.29.379.0_x64__8wekyb3d8bbwe` (WinGet ID `Microsoft.AppInstaller`), as assumed.
 
 ### Error handling and edge cases
 
