@@ -50,8 +50,9 @@
 
 - [x] **T16.** `PackageActions.UpdateAsync` and `UpdateManyAsync` ask for agreements, through one helper shared with install; the row's Update calls it. *(R7.1–R7.4)*
   - Verify: `PackageActionsTests.Update_*`, `PackageOperationQueueTests.Retry_keeps_the_acceptance`.
-- [ ] **T17.** Manual in the test VM, Store build: Power BI Desktop 2.158 to 2.159 with Update (Decline, then Accept), and with Update all. *(R7.1, R7.2)*
+- [x] **T17.** Manual in the test VM, Store build: Power BI Desktop 2.158 to 2.159 with Update (Decline, then Accept), and with Update all. *(R7.1, R7.2)*
   - Verify: logged below.
+  - Done 2026-11-05: Update and Decline, then Update all and Accept. Accept on a single Update is covered by the unit tests.
 
 ## Manual verification log
 
@@ -67,3 +68,4 @@
 | R6.3 (T15, final build 1.1.11) | 2026-11-05 | Pass, 3 of 3 | Each from a fresh `clean`, Update App Installer then Restart CartonStash at once: WinGet back from 1.29.380.0 after 13 to 14 s, no error, the Updates page, App Installer gone from the list |
 | R6.4 (T15) | 2026-11-05 | Pass | Same build. A second copy of the app held WinGet's server open. After the restart, the new copy waited its 60 s, still saw 1.29.379.0, showed "App Installer isn't updated yet. It finishes updating once every program using WinGet is closed…" and kept the Restart CartonStash button on the row |
 | Q5 for R6.2, R6.3 (T13, T15) | 2026-11-05 | Pass | Test VM, build 1.1.11. Dark: the notification's Restart CartonStash button, the card's warning icon with "Updated · restart CartonStash" and its accent button are readable. Keyboard: Tab reaches the card's button in the Activity pane; the row's and the notification's buttons are keyboard focusable, with the names "Restart CartonStash to finish updating App Installer" and "Restart CartonStash". High Contrast Black: the row's button uses the contrast accent like Update, the notification's button and the card are bordered and readable |
+| R7.1, R7.2 (T17) | 2026-11-05 | Pass | Test VM, Store test build 1.1.12; Power BI Desktop 2.158.1304.0 installed with the `winget` command; UAC's consent prompt turned off for this run only, so the per-machine installer could elevate without a click (the app stayed unelevated). Update on its row showed "Microsoft PowerBI Desktop (x64): license agreement" with the "Microsoft Software License Terms" link; Decline queued nothing and the Update button stayed. Update all (6 packages): the same dialog after the confirmation; Accept; Power BI updated: log "Updated successfully.", WinGet status Ok, `winget list` shows 2.159.1231.0. Before the fix the same update failed with `PackageAgreementsNotAccepted` (`0x8A150041`) |
