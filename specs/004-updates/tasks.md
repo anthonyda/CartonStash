@@ -13,7 +13,8 @@
   - Verify: `UpdatesViewModelTests.*`.
 - [x] **T5.** `UpdatesPage` + nav badge count. *(R4.1)*
   - Verify: `ShellViewModelTests.Updates_badge_counts_once_loaded` + manual, see log.
-- [ ] **T6.** Manual: update one outdated package end to end. *(R2.1)*
+- [x] **T6.** Manual: update one outdated package end to end. *(R2.1)*
+  - Done 2026-11-04 in the test VM during amendment R6's checks: see the log.
 - [ ] **T7.** Mark `Done` (with R3 noted as deferred).
 
 ### Amendment R6: updating App Installer (approved 2026-11-04)
@@ -39,8 +40,11 @@
 - [x] **T14.** `AppRestarter`, `Program` and `FinishUpdateWindow`: start the new copy, wait for the old copy and servers, open on the same page; the R6.4 message. *(R6.3, R6.4)*
   - Verify: argument parsing tests; the portable app still starts (007 R1.6).
   - Done 2026-11-04: `RestartArgumentsTests`, and `ShellViewModelTests.After_a_restart_*` for the R6.4 message; 388 unit tests pass. The 1.1.9 x64 portable test build opened its window in 11 s in the test VM.
-- [ ] **T15.** Manual in the test VM, Store build: restore `clean`, **Update all** with App Installer, check the warning and the row, Restart CartonStash: 1.29.380.0, gone from Updates, same page. Again with the `winget` command keeping WinGet open (R6.4). *(R6.1–R6.5)*
+- [x] **T15.** Manual in the test VM, Store build: restore `clean`, **Update all** with App Installer, check the warning and the row, Restart CartonStash: 1.29.380.0, gone from Updates, same page. Again with the `winget` command keeping WinGet open (R6.4). *(R6.1–R6.5)*
   - Verify: logged below.
+  - Done 2026-11-05. It found a race, fixed before the last runs: see the log and design.md. The `winget` command doesn't use
+    WinGet's server, so a second copy of the app held it open for R6.4. The keyboard and high-contrast look of the new buttons
+    (moved here from T13) wasn't checked: still pending, like 004's other visual checks.
 
 ## Manual verification log
 
@@ -49,4 +53,9 @@
 | R1.1, R4.1 | 2026-10-29 | Pass | UIA: badge "1"; Updates (1) lists Miniconda3 `py312_24.11.1-0 → py314_26.9.4-0 · winget` with an Update button |
 | R2.2 | 2026-10-29 | Pass | UIA: Update selected disabled until a row is checked; checking doesn't open details |
 | R2.3 | 2026-10-29 | Pass | UIA: Update all → "Update all? 1 package will be updated…" [Update 1 package] [Cancel]; Cancel queued nothing |
-| R2.1 (live) | – | **Pending** | The only outdated package here is Miniconda (the explicit-targeting case). A human needs to pick a package to really update |
+| R2.1 (live) | 2026-11-04 | Pass | Test VM, Store build 1.1.0: **Update all** updated Outlook for Windows, Windows Terminal and two Windows App Runtimes through the queue, each "Updated successfully" with a log. App Installer is amendment R6's case |
+| R6.1, R6.2, R6.5, 007 R1.6 (T14, T15) | 2026-11-04 | Pass | Test VM, Store test build 1.1.9. Portable build opened its window in 11 s. **Update all** with 6 packages queued App Installer last; notification "Update App Installer: Updated · restart CartonStash" with a Restart CartonStash button; the log's result and message say the same; the row shows "Restart CartonStash to finish" and the button, and Update all would leave it out |
+| R6.3 (T15, first build) | 2026-11-04 | Pass, then **Fail** | Run 1: after Restart CartonStash the app came back on Updates, App Installer 1.29.380.0, gone from the list, no crash. Run 2: the waiting window showed, but the new copy connected the moment WinGet's old server stopped and got 1.29.379.0 again; loading the installed list failed with `0x80073D02`. Fixed with a 2 s wait after the old server stops (design, T15 finding) |
+| R6.3 (T15, 2 s wait) | 2026-11-05 | 2 of 3 | Runs 1 and 3: WinGet back from 1.29.380.0 13 s after the click, no error, Updates page. Run 2: the old server never stopped. The restart had been pressed while the reload after the update was still talking to WinGet. Fixed: the restart first waits for that reload, 10 s at most |
+| R6.3 (T15, final build 1.1.11) | 2026-11-05 | Pass, 3 of 3 | Each from a fresh `clean`, Update App Installer then Restart CartonStash at once: WinGet back from 1.29.380.0 after 13 to 14 s, no error, the Updates page, App Installer gone from the list |
+| R6.4 (T15) | 2026-11-05 | Pass | Same build. A second copy of the app held WinGet's server open. After the restart, the new copy waited its 60 s, still saw 1.29.379.0, showed "App Installer isn't updated yet. It finishes updating once every program using WinGet is closed…" and kept the Restart CartonStash button on the row |
