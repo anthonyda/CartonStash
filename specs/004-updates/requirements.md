@@ -1,6 +1,6 @@
 # 004 – Updates: Requirements
 
-**Status:** Approved (2026-10-29, R3 deferred). Amendment R6 (updating App Installer): approved 2026-11-04
+**Status:** Approved (2026-10-29, R3 deferred). Amendment R6 (updating App Installer): approved 2026-11-04. Amendment R7 (license agreements on update): approved 2026-11-05
 **Depends on:** 002, 003
 
 ## Problem
@@ -79,6 +79,35 @@ Measured in the test VM: Windows 11 26H2, WinGet 1.29.380, App Installer 1.29.37
   R6.4's message applies, and the design has to find out how the app can tell.
 
 Links to other specs: 003 R5.3 gains a second kind of restart, and 009's Activity card shows it. Neither changes otherwise.
+
+## Amendment R7: license agreements on update (approved 2026-11-05)
+
+**Why.** R2.1 and R2.3 aren't met for packages with a license agreement. In the test VM on 2026-11-05, with the current
+build, Microsoft PowerBI Desktop 2.158.1304.0 (installed with the `winget` command) failed to update to 2.159.1231.0 within
+a second: "The package's license agreement wasn't accepted.", WinGet status `PackageAgreementsNotAccepted`, `0x8A150041`.
+Its manifest has one agreement, "Microsoft Software License Terms". The app shows a package's agreements before
+**Install** (003 R1.3), but **Update**, **Update selected** and **Update all** never do and always tell WinGet they weren't
+accepted, so WinGet refuses every update of such a package. The `winget` command asks, or takes
+`--accept-package-agreements`.
+
+- **US6.** As a user, I want to read and accept a package's license agreement when I update it, as when I install it, so
+  the update runs instead of failing.
+
+| ID   | Story | Criterion |
+|------|-------|-----------|
+| R7.1 | US6   | When the user updates a package whose new version has license agreements, the app shall show them, as for an install (003 R1.3), and update only if the user accepts. Declining shall queue nothing for that package. |
+| R7.2 | US6   | When the user presses **Update selected** or **Update all**, the app shall ask for every package with agreements before it queues anything, then queue the accepted packages and the packages without agreements, in their usual order (R6.5). A declined package shall be left out, and the Activity pane shall not list it. |
+| R7.3 | US6   | **Retry** of an update shall reuse the acceptance the user gave for that operation, as it does for an install. |
+| R7.4 | –     | If the agreements can't be read, then the app shall queue the update without acceptance, as an install does today: WinGet then refuses, and the result says why (003 R5.2). |
+
+### Open questions (amendment R7), decided 2026-11-05 as recommended
+
+- **One dialog per package, or one for the whole Update all?** Recommended: one per package, the dialog 003 already has. A
+  combined dialog would need a new layout, and agreements are rare: one in the six updates seen in the VM.
+- **Ask again for a package accepted earlier in the session?** Recommended: yes, at each update. WinGet ties acceptance to
+  the version, and a new version can bring new terms.
+- **Check the Update all confirmation count?** Recommended: the confirmation comes first and counts every package (R2.3), then
+  the agreements. A declined package doesn't get queued, and the Activity pane shows what really runs.
 
 ## Out of scope
 

@@ -1,6 +1,6 @@
 # 004 – Updates: Design
 
-**Status:** Approved (2026-10-29, R3 deferred). Amendment R6 (updating App Installer): approved 2026-11-04
+**Status:** Approved (2026-10-29, R3 deferred). Amendment R6 (updating App Installer): approved 2026-11-04. Amendment R7 (license agreements on update): Draft (2026-11-05)
 **Requirements:** [requirements.md](requirements.md)
 
 ## Overview
@@ -182,3 +182,48 @@ both waits, three of three runs switched to the new App Installer within 14 s.
   truth from WinGet (P1).
 - **App Installer's installed entry ID could change format** in a later WinGet. `IsAppInstaller` is the only place that knows
   it, and a miss means today's behaviour.
+
+## Amendment R7: license agreements on update (draft, 2026-11-05)
+
+Against requirements amendment R7 (approved 2026-11-05).
+
+### Findings
+
+- `IPackageInstaller.GetAgreementsAsync` already reads the agreements of the package's default install version in its source
+  (`FindByIdAsync` with `localFirst: false`). For an installed package, that's the version an update installs, so it serves
+  updates unchanged.
+- The queue already stores `AcceptAgreements` per operation and **Retry** runs the same operation again, so R7.3 needs no
+  code, only a test. Updates enqueue with `false` today; `InstallOptions.AcceptPackageAgreements` takes it as given.
+- The only caller of a single update is `PackageRowViewModel.Update`, on the Updates page rows and the details pane header.
+
+### Components
+
+| Layer | Type | Responsibility | New / changed |
+|-------|------|----------------|---------------|
+| Core/ViewModels | `PackageActions` | `UpdateAsync(package)`: agreements as in `InstallAsync` (read, show, queue with acceptance only if accepted; nothing on Decline; no acceptance if they can't be read, R7.4). The shared part moves to one private `AskAgreementsAsync`, so install and update can't drift | changed |
+| Core/ViewModels | `PackageActions.UpdateManyAsync` | After the confirmation (unchanged, R2.3), for each package in queue order: ask its agreements; then enqueue the accepted and agreement-free packages, each with its own acceptance, App Installer still last (R6.5). Nothing is queued until every dialog is answered (R7.2) | changed |
+| Core/ViewModels | `PackageRowViewModel.UpdateCommand` | Async, calling `UpdateAsync` | changed |
+
+The dialog is 003's: "`<name>`: license agreement", with the agreement text or link and Accept / Decline.
+
+### Data flow
+
+Update → `GetAgreementsAsync` (one source lookup) → none: queue → some: dialog → Accept: queue with acceptance → WinGet
+installs; Decline: nothing. Update all → confirm *n* → for each package: lookup, dialog if needed → queue the kept ones.
+
+### Error handling and edge cases
+
+- **The lookup is slow or offline**: each lookup is one search by ID in the source, as for an install. Update all reads them
+  one after another before anything starts; with 20 packages that's a few seconds, and the rows stay as they are until then.
+- **Every package declined**: nothing is queued and no confirmation repeats.
+- **A package is already queued** (R4.2): skipped before its agreements are read, as `InstallAsync` does.
+
+### Testing strategy
+
+| Criteria | How |
+|----------|-----|
+| R7.1 | Unit: `PackageActions.UpdateAsync` with agreements, accepted and declined; without agreements no dialog |
+| R7.2 | Unit: `UpdateManyAsync` asks only for the packages with agreements, queues none before the last answer, leaves out declined ones, keeps App Installer last |
+| R7.3 | Unit: Retry of a failed accepted update keeps `AcceptAgreements` |
+| R7.4 | Unit: agreements that throw → queued without acceptance |
+| R7.1, R7.2 live | Manual in the test VM: Power BI Desktop 2.158 → 2.159 with Update, then with Update all; Decline once, then Accept |
