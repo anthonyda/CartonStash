@@ -102,8 +102,15 @@ internal sealed class ScriptedInstaller : IPackageInstaller
     /// <summary>When set, every operation completes immediately with this outcome.</summary>
     public OperationOutcome? AutoComplete { get; set; }
 
+    /// <summary>Per package ID; packages not listed get <see cref="Agreements"/>.</summary>
+    public Dictionary<string, IReadOnlyList<Agreement>> AgreementsById { get; } = [];
+
+    public bool AgreementsFail { get; set; }
+
     public Task<IReadOnlyList<Agreement>> GetAgreementsAsync(PackageInfo package, CancellationToken cancellationToken = default) =>
-        Task.FromResult(Agreements);
+        AgreementsFail
+            ? Task.FromException<IReadOnlyList<Agreement>>(new WinGetException("Couldn't reach the source.", null))
+            : Task.FromResult(AgreementsById.GetValueOrDefault(package.Id, Agreements));
 
     public List<string?> LogPaths { get; } = [];
 
@@ -168,10 +175,13 @@ internal sealed class FakeDialogs : IDialogService
         return Task.FromResult(SourceAnswer);
     }
 
+    /// <summary>Answers to agreement prompts, in order; <see cref="Answer"/> once they run out.</summary>
+    public Queue<bool> AgreementAnswers { get; } = new();
+
     public Task<bool> ShowAgreementsAsync(string title, IReadOnlyList<Agreement> agreements)
     {
         AgreementPrompts.Add((title, agreements));
-        return Task.FromResult(Answer);
+        return Task.FromResult(AgreementAnswers.TryDequeue(out var answer) ? answer : Answer);
     }
 }
 

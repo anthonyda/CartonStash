@@ -1,6 +1,6 @@
 # 004 – Updates: Design
 
-**Status:** Approved (2026-10-29, R3 deferred). Amendment R6 (updating App Installer): approved 2026-11-04. Amendment R7 (license agreements on update): Draft (2026-11-05)
+**Status:** Approved (2026-10-29, R3 deferred). Amendment R6 (updating App Installer): approved 2026-11-04. Amendment R7 (license agreements on update): approved 2026-11-05
 **Requirements:** [requirements.md](requirements.md)
 
 ## Overview
@@ -183,7 +183,7 @@ both waits, three of three runs switched to the new App Installer within 14 s.
 - **App Installer's installed entry ID could change format** in a later WinGet. `IsAppInstaller` is the only place that knows
   it, and a miss means today's behaviour.
 
-## Amendment R7: license agreements on update (draft, 2026-11-05)
+## Amendment R7: license agreements on update (approved 2026-11-05)
 
 Against requirements amendment R7 (approved 2026-11-05).
 

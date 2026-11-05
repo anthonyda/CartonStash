@@ -46,6 +46,13 @@
     WinGet's server, so a second copy of the app held it open for R6.4. The keyboard and theme check of the new buttons (moved
     here from T13) passed on 2026-11-05: see the log.
 
+### Amendment R7: license agreements on update (approved 2026-11-05)
+
+- [x] **T16.** `PackageActions.UpdateAsync` and `UpdateManyAsync` ask for agreements, through one helper shared with install; the row's Update calls it. *(R7.1–R7.4)*
+  - Verify: `PackageActionsTests.Update_*`, `PackageOperationQueueTests.Retry_keeps_the_acceptance`.
+- [ ] **T17.** Manual in the test VM, Store build: Power BI Desktop 2.158 to 2.159 with Update (Decline, then Accept), and with Update all. *(R7.1, R7.2)*
+  - Verify: logged below.
+
 ## Manual verification log
 
 | Criterion | Date | Result | Notes |

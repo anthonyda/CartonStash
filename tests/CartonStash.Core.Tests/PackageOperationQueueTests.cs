@@ -154,6 +154,18 @@ public class PackageOperationQueueTests
     }
 
     [Fact]
+    public void Retry_keeps_the_acceptance() // 004 R7.3
+    {
+        var app = new TestApp();
+        var op = app.Queue.Enqueue(OperationKind.Upgrade, Pkg.Installed("Microsoft.PowerBI", update: true), acceptAgreements: true);
+        app.Installer.Complete("Microsoft.PowerBI", OperationResult.Failed, "The installer failed.");
+
+        op.RetryCommand.Execute(null);
+
+        Assert.Equal([true, true], app.Installer.Calls.Select(c => c.AcceptAgreements));
+    }
+
+    [Fact]
     public void Completed_and_drained_are_raised()
     {
         var app = new TestApp();

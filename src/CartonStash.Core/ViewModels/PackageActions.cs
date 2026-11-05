@@ -64,6 +64,18 @@ public sealed class PackageActions(PackageOperationQueue queue, IPackageInstalle
             return; // R4.2
         }
 
+        if (await AskAgreementsAsync(package) is { } accepted)
+        {
+            queue.Enqueue(OperationKind.Install, package, accepted);
+        }
+    }
+
+    /// <summary>
+    /// Shows the agreements of the version WinGet would install, if it has any (003 R1.3, 004 R7.1). Null when the user
+    /// declined; otherwise whether WinGet may treat them as accepted.
+    /// </summary>
+    private async Task<bool?> AskAgreementsAsync(PackageInfo package)
+    {
         IReadOnlyList<Agreement> agreements;
         try
         {
@@ -71,22 +83,16 @@ public sealed class PackageActions(PackageOperationQueue queue, IPackageInstalle
         }
         catch (Exception)
         {
-            // Can't read them: install without accepting. WinGet refuses with PackageAgreementsNotAccepted
-            // if there were any, and the Activity entry says so.
-            agreements = [];
+            // Can't read them: go ahead without accepting. WinGet refuses with PackageAgreementsNotAccepted
+            // if there were any, and the Activity entry says so (004 R7.4).
+            return false;
         }
 
-        var accepted = false;
-        if (agreements.Count > 0)
+        if (agreements.Count == 0)
         {
-            if (!await dialogs.ShowAgreementsAsync($"{package.Name}: license agreement", agreements))
-            {
-                return;
-            }
-            accepted = true;
+            return false;
         }
-
-        queue.Enqueue(OperationKind.Install, package, accepted);
+        return await dialogs.ShowAgreementsAsync($"{package.Name}: license agreement", agreements) ? true : null;
     }
 
     /// <summary>Uninstall, only after the user confirms (003 R2.2, constitution P2).</summary>
@@ -107,10 +113,24 @@ public sealed class PackageActions(PackageOperationQueue queue, IPackageInstalle
         }
     }
 
-    /// <summary>Update one package (004 R2.1).</summary>
-    public void Update(PackageInfo package) => queue.Enqueue(OperationKind.Upgrade, package);
+    /// <summary>Update one package, after the user accepts its agreements if it has any (004 R2.1, R7.1).</summary>
+    public async Task UpdateAsync(PackageInfo package)
+    {
+        if (queue.Find(package) is { IsActive: true })
+        {
+            return; // 003 R4.2
+        }
 
-    /// <summary>Update several. With <paramref name="confirm"/>, asks first, naming the count (004 R2.3).</summary>
+        if (await AskAgreementsAsync(package) is { } accepted)
+        {
+            queue.Enqueue(OperationKind.Upgrade, package, accepted);
+        }
+    }
+
+    /// <summary>
+    /// Update several. With <paramref name="confirm"/>, asks first, naming the count (004 R2.3). Then asks for the agreements
+    /// of each package that has them, and queues nothing until all are answered; declined packages are left out (R7.2).
+    /// </summary>
     public async Task<bool> UpdateManyAsync(IReadOnlyList<PackageInfo> packages, bool confirm)
     {
         if (packages.Count == 0)
@@ -131,8 +151,23 @@ public sealed class PackageActions(PackageOperationQueue queue, IPackageInstalle
             }
         }
 
-        queue.EnqueueMany(OperationKind.Upgrade, AppInstallerLast(packages));
-        return true;
+        var kept = new List<(PackageInfo Package, bool Accepted)>();
+        foreach (var package in AppInstallerLast(packages))
+        {
+            if (queue.Find(package) is { IsActive: true })
+            {
+                continue; // 003 R4.2
+            }
+            if (await AskAgreementsAsync(package) is { } accepted)
+            {
+                kept.Add((package, accepted));
+            }
+        }
+        foreach (var (package, accepted) in kept)
+        {
+            queue.Enqueue(OperationKind.Upgrade, package, accepted);
+        }
+        return kept.Count > 0;
     }
 
     /// <summary>

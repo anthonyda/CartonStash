@@ -120,7 +120,7 @@ public sealed partial class PackageRowViewModel : ObservableObject
     private Task UninstallAsync() => _actions.UninstallAsync(Package);
 
     [RelayCommand]
-    private void Update() => _actions.Update(Package);
+    private Task UpdateAsync() => _actions.UpdateAsync(Package);
 
     [RelayCommand]
     private void Restart() => _actions.Queue.RequestRestart();
