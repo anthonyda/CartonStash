@@ -11,6 +11,9 @@ namespace CartonStash.App;
 
 public partial class App : Application
 {
+    /// <summary>Margin after WinGet's old server stops, before the new copy connects (004 R6.3, T15).</summary>
+    private static readonly TimeSpan SwitchMarkWait = TimeSpan.FromSeconds(2);
+
     private Window? _window;
     private FileSystemWatcher? _historyWatcher;
 
@@ -31,6 +34,9 @@ public partial class App : Application
             Services.GetRequiredService<ThemeService>().Attach(_window);
             _window.Activate();
             await Task.Run(() => AppRestarter.WaitForExit(restart.ServerProcessIds, TimeSpan.FromSeconds(60)));
+            // About 0.1 s after the server stops, Windows marks the staged version to take over at the next start. A COM
+            // connection made before that starts the old version again (T15 finding).
+            await Task.Delay(SwitchMarkWait);
         }
 
         // Before anything resolves: activating WinGet when it's missing ends the process (011 R3.1).

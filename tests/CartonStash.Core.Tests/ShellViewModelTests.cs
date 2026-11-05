@@ -68,6 +68,24 @@ public class ShellViewModelTests
     }
 
     [Fact]
+    public async Task Restart_waits_for_the_installed_list_to_finish_loading() // 004 R6.3, T15
+    {
+        var (app, shell, restarter) = CreateWithRestarter();
+        var load = new TaskCompletionSource<IReadOnlyList<PackageInfo>>();
+        app.Packages.Installed = _ => load.Task;
+        var reload = app.Store.ReloadAsync();
+
+        var restart = shell.RestartCommand.ExecuteAsync(null);
+        await Task.Delay(300);
+        Assert.Empty(restarter.Calls);
+
+        load.SetResult([]);
+        await reload;
+        await restart;
+        Assert.Single(restarter.Calls);
+    }
+
+    [Fact]
     public async Task Restart_that_fails_says_how_to_finish() // 004 R6.3
     {
         var (_, shell, _) = CreateWithRestarter(started: false);

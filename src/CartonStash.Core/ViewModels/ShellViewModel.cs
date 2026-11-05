@@ -130,6 +130,12 @@ public sealed partial class ShellViewModel : ObservableObject
         {
             return;
         }
+        // Ending in the middle of a WinGet call leaves WinGet's server waiting minutes for this copy, so the new one would
+        // get the old App Installer (T15). The reload after an update is the call most likely to be running.
+        for (var i = 0; i < 100 && _updates.IsLoading; i++)
+        {
+            await Task.Delay(100);
+        }
         if (_restarter?.Restart(_host?.PendingVersion) != true)
         {
             Notify("Couldn't restart CartonStash", "Close CartonStash and open it again to finish updating App Installer.", NotificationSeverity.Error);

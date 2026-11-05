@@ -91,7 +91,7 @@ end the old copy the normal way.
 | Core/Services | `IAppRestarter` | Interface, so view models stay free of WinUI (A1) | new |
 | App | `AppRestarter` | Notes the process IDs of WinGet's servers in this Windows session, restarts with `AppInstance.Restart("--finish-winget-update <app pid> <server pids> --pending <version> --page <key>")` (T8) | new |
 | App | `Program` | With `--finish-winget-update`: waits for the old copy to exit (so it takes the "main" instance key, 010 R2.2), then starts the app | changed |
-| App | `App` / `FinishUpdateWindow` | Before anything touches WinGet: a small window, "Finishing the App Installer update…", while it waits for the old servers to exit, 60 s at most. Then the normal start, on the given page | new |
+| App | `App` / `FinishUpdateWindow` | Before anything touches WinGet: a small window, "Finishing the App Installer update…", while it waits for the old servers to exit, 60 s at most, then 2 s more for Windows to mark the switch (T15 finding below). Then the normal start, on the given page | new |
 | App | `OperationCard`, `PackageActionsView` | **Restart CartonStash** button for that outcome and that row state | changed |
 
 ### Data flow
@@ -130,6 +130,26 @@ event, so `RestartCommand` runs the close guard first.
 
 App Installer's installed entry, as the app's installed list reports it:
 `MSIX\Microsoft.DesktopAppInstaller_1.29.379.0_x64__8wekyb3d8bbwe` (WinGet ID `Microsoft.AppInstaller`), as assumed.
+
+**T15 finding, 2026-11-05: connecting the moment the old server stops can start the old version again.** In one of two runs,
+the new copy connected right after WinGet's old server stopped, got a new server from App Installer 1.29.379.0, and loading
+the installed list failed with `0x80073D02` ("resources it modifies are currently in use"). Probes, with nothing starting
+WinGet in between:
+
+| Step | Result |
+|------|--------|
+| The old server stops | About 0.1 s later, Windows changes the old App Installer's status: the staged version takes over at the next start |
+| Nothing starts WinGet | Windows doesn't switch on its own. Here it switched 28 s later, only while processing an unrelated Outlook update |
+| `winget --version` started as soon as the server stopped, and 2 s after it | Both ran 1.29.380.0, and the switch was done |
+
+The `winget` command takes long enough to start to miss that 0.1 s; a COM connection made within milliseconds doesn't. So
+after the old servers stop, the new copy waits **2 s more** before it connects. If App Installer still shows the old version
+after all, R6.4's message applies, so a miss is never silent.
+
+A second miss, in one of three runs with that wait: WinGet's old server didn't stop at all. The restart had been pressed while
+the reload after the update was still talking to WinGet, and ending a copy in the middle of a call leaves the server waiting
+minutes, as a forced end did. So `RestartCommand` first waits for the installed list to finish loading, 10 s at most. With
+both waits, three of three runs switched to the new App Installer within 14 s.
 
 ### Error handling and edge cases
 
