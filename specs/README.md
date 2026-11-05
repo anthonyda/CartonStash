@@ -40,7 +40,7 @@ If implementation reveals the spec is wrong, **stop, update the spec first**, th
 | 001 | [Package search](001-package-search/)                  | Done |
 | 002 | [Installed packages list](002-installed-packages/)     | Done; amendment R6 done; amendment R7 done; amendment R8 (status filter chips) done |
 | 003 | [Install / uninstall with progress](003-install-uninstall/) | Done |
-| 004 | [Available updates](004-updates/)                      | In progress: code done; live update (R2.1) done; R3 pins deferred, open; amendment R6 (updating App Installer): done (T8 to T15); keyboard and high-contrast check of the new buttons pending |
+| 004 | [Available updates](004-updates/)                      | In progress: code done; live update (R2.1) done; R3 pins deferred, open; amendment R6 (updating App Installer): done (T8 to T15) |
 | 005 | [Package details pane](005-package-details/)           | In progress: code done; link-opens-browser check (R1.3) pending; amendment R6 (https icons) done |
 | 006 | [Settings](006-settings/)                              | In progress: code done; high-contrast check pending; amendment R5 (start page) approved; amendment R4.3 (safe diagnostics) done; amendment R3.4 (startup check and source agreements): done (T11 to T19); R3.8 reworded during T19, Store listing check pending (Store policy 10.2.4) |
 | 007 | [Packaging and release](007-packaging-release/)        | In progress: Sandbox check pending; public; amendment R5 (release hardening) done; amendment R6 (Microsoft Store): done, listed; amendment R7 (smaller packages): code done, Store update (T33) pending; amendment R8 (shared runtime on GitHub): GitHub MSIX withdrawn by R9; amendment R9 (Microsoft Store only): approved, in progress |

@@ -43,8 +43,8 @@
 - [x] **T15.** Manual in the test VM, Store build: restore `clean`, **Update all** with App Installer, check the warning and the row, Restart CartonStash: 1.29.380.0, gone from Updates, same page. Again with the `winget` command keeping WinGet open (R6.4). *(R6.1–R6.5)*
   - Verify: logged below.
   - Done 2026-11-05. It found a race, fixed before the last runs: see the log and design.md. The `winget` command doesn't use
-    WinGet's server, so a second copy of the app held it open for R6.4. The keyboard and high-contrast look of the new buttons
-    (moved here from T13) wasn't checked: still pending, like 004's other visual checks.
+    WinGet's server, so a second copy of the app held it open for R6.4. The keyboard and theme check of the new buttons (moved
+    here from T13) passed on 2026-11-05: see the log.
 
 ## Manual verification log
 
@@ -59,3 +59,4 @@
 | R6.3 (T15, 2 s wait) | 2026-11-05 | 2 of 3 | Runs 1 and 3: WinGet back from 1.29.380.0 13 s after the click, no error, Updates page. Run 2: the old server never stopped. The restart had been pressed while the reload after the update was still talking to WinGet. Fixed: the restart first waits for that reload, 10 s at most |
 | R6.3 (T15, final build 1.1.11) | 2026-11-05 | Pass, 3 of 3 | Each from a fresh `clean`, Update App Installer then Restart CartonStash at once: WinGet back from 1.29.380.0 after 13 to 14 s, no error, the Updates page, App Installer gone from the list |
 | R6.4 (T15) | 2026-11-05 | Pass | Same build. A second copy of the app held WinGet's server open. After the restart, the new copy waited its 60 s, still saw 1.29.379.0, showed "App Installer isn't updated yet. It finishes updating once every program using WinGet is closed…" and kept the Restart CartonStash button on the row |
+| Q5 for R6.2, R6.3 (T13, T15) | 2026-11-05 | Pass | Test VM, build 1.1.11. Dark: the notification's Restart CartonStash button, the card's warning icon with "Updated · restart CartonStash" and its accent button are readable. Keyboard: Tab reaches the card's button in the Activity pane; the row's and the notification's buttons are keyboard focusable, with the names "Restart CartonStash to finish updating App Installer" and "Restart CartonStash". High Contrast Black: the row's button uses the contrast accent like Update, the notification's button and the card are bordered and readable |
