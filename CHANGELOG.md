@@ -2,6 +2,15 @@
 
 What's new in each version of CartonStash. Get it from the [Microsoft Store](https://apps.microsoft.com/detail/9MT37M7DBZRK).
 
+## 1.1.1
+
+Two fixes for updates that said one thing and did another.
+
+### Fixed
+
+- **Packages with a license agreement now update.** Updating a package such as Microsoft Power BI Desktop failed at once with "The package's license agreement wasn't accepted." CartonStash now shows the agreement before the update, as it already did for an install, and updates once you accept. **Update all** asks for every package that has one before anything starts, and leaves out the ones you decline.
+- **Updating App Installer is finished properly.** WinGet runs from App Installer, so its new version can only take over once CartonStash restarts. The app used to say "Updated successfully" while the old version stayed in the list. It now says the update finishes when CartonStash restarts and offers a **Restart CartonStash** button, which reopens the app on the same page with the new version. **Update all** runs App Installer last, so the other updates aren't held up. If another program keeps WinGet open, the app says so.
+
 ## 1.1.0
 
 CartonStash can now tell you about updates while it's closed, and it copes much better when a source or WinGet itself is missing.
