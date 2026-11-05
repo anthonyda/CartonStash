@@ -20,6 +20,9 @@ public static class Program
 
     private static readonly ManualResetEvent BackgroundDone = new(false);
 
+    /// <summary>Set when this copy was started to finish App Installer's update (004 R6.3).</summary>
+    public static RestartArguments? Restart { get; private set; }
+
     /// <summary>The notification that opened this copy of the app, if any.</summary>
     public static bool StartedFromNotification { get; private set; }
 
@@ -34,6 +37,12 @@ public static class Program
         {
             RunBackgroundServer();
             return;
+        }
+        Restart = RestartArguments.Parse(args);
+        if (Restart is not null)
+        {
+            // 004 R6.3: the old copy is ending; it must be gone before this one takes the "main" key (010 R2.2).
+            AppRestarter.WaitForExit([Restart.AppProcessId], TimeSpan.FromSeconds(10));
         }
         if (AppPackage.IsPackaged)
         {

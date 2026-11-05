@@ -106,6 +106,20 @@ public sealed partial class ShellViewModel : ObservableObject
     private void CloseNotification() => IsNotificationOpen = false;
 
     /// <summary>
+    /// 004 R6.4: the new copy after a restart. If App Installer still shows the old version, something else kept WinGet
+    /// running: the row keeps offering the restart, and this says what finishes it.
+    /// </summary>
+    public async Task FinishRestartAsync(string? pendingVersion)
+    {
+        if (pendingVersion is not null && await _updates.CheckAfterRestartAsync(pendingVersion))
+        {
+            Notify("App Installer isn't updated yet",
+                "It finishes updating once every program using WinGet is closed, such as the winget command or another app.",
+                NotificationSeverity.Warning);
+        }
+    }
+
+    /// <summary>
     /// 004 R6.3: restart to finish App Installer's update. With operations running or queued, asks first, as closing does
     /// (003 R6.2): the restart skips the window's own close guard.
     /// </summary>

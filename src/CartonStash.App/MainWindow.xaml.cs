@@ -69,6 +69,25 @@ public sealed partial class MainWindow : Window
     /// <summary>Opens the Updates page, for a clicked notification (010 R2.2).</summary>
     public void ShowUpdates() => OpenStartPage(StartPage.Updates);
 
+    /// <summary>The open page's navigation key, so a restart opens it again (004 R6.3).</summary>
+    public string? CurrentPageKey => Pages.FirstOrDefault(p => p.Value == ContentFrame.CurrentSourcePageType).Key;
+
+    /// <summary>Opens a page by navigation key; an unknown key leaves the start page (004 R6.3).</summary>
+    public void OpenPage(string? key)
+    {
+        if (key is null || !Pages.TryGetValue(key, out var page))
+        {
+            return;
+        }
+        Nav.SelectedItem = key == "settings"
+            ? Nav.SettingsItem
+            : Nav.MenuItems.OfType<NavigationViewItem>().First(i => (string)i.Tag == key);
+        if (ContentFrame.CurrentSourcePageType != page)
+        {
+            ContentFrame.Navigate(page);
+        }
+    }
+
     // 006 R5.2: open the saved start page and select its navigation item.
     private void OpenStartPage(StartPage start)
     {

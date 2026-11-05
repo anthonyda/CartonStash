@@ -21,8 +21,18 @@ public partial class App : Application
         InitializeComponent();
     }
 
-    protected override void OnLaunched(LaunchActivatedEventArgs args)
+    protected override async void OnLaunched(LaunchActivatedEventArgs args)
     {
+        if (Program.Restart is { } restart)
+        {
+            // 004 R6.3: WinGet's old server stops about 10 s after the old copy (T8). Connecting before that would bring
+            // back the old App Installer. Nothing here touches WinGet.
+            _window = new FinishUpdateWindow();
+            Services.GetRequiredService<ThemeService>().Attach(_window);
+            _window.Activate();
+            await Task.Run(() => AppRestarter.WaitForExit(restart.ServerProcessIds, TimeSpan.FromSeconds(60)));
+        }
+
         // Before anything resolves: activating WinGet when it's missing ends the process (011 R3.1).
         var installed = WinGetAvailability.IsInstalled();
         if (!installed || !TryOpenMainWindow())
@@ -50,6 +60,12 @@ public partial class App : Application
         {
             ConnectBackgroundChecks(window);
         }
+        Services.GetRequiredService<AppRestarter>().CurrentPage = () => window.CurrentPageKey;
+        if (Program.Restart is { } restart)
+        {
+            window.OpenPage(restart.Page);
+            _ = Services.GetRequiredService<ShellViewModel>().FinishRestartAsync(restart.PendingVersion); // R6.4
+        }
         _window.Activate();
         setup?.Close();
         return true;
@@ -57,9 +73,11 @@ public partial class App : Application
 
     private void ShowSetup(bool startFailed)
     {
+        var previous = _window; // the restart's waiting window, if any
         _window = new WinGetSetupWindow(new WinGetSetupViewModel(startFailed, WinGetAvailability.IsInstalled, TryOpenMainWindow, WinGetAvailability.SetUpAsync));
         Services.GetRequiredService<ThemeService>().Attach(_window);
         _window.Activate();
+        previous?.Close();
     }
 
     // Spec 010, MSIX only (R4.1).
@@ -146,6 +164,8 @@ public partial class App : Application
             .AddSingleton<IClipboardService, ClipboardService>()
             .AddSingleton<ThemeService>()
             .AddSingleton<AppActivityMarker>()
+            .AddSingleton<AppRestarter>()
+            .AddSingleton<IAppRestarter>(sp => sp.GetRequiredService<AppRestarter>())
             .AddSingleton<BackgroundCheckScheduler>()
             .AddSingleton<ICheckScheduler>(sp => sp.GetRequiredService<BackgroundCheckScheduler>())
             .AddSingleton(_ => new CheckHistoryStore(AppPackage.LocalFolder

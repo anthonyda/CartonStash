@@ -59,6 +59,14 @@ public sealed partial class UpdatesViewModel : ObservableObject
 
     public Task LoadAsync() => _store.EnsureLoadedAsync();
 
+    /// <summary>004 R6.4: after a restart for App Installer's update, true if the old version is still the one in use.</summary>
+    public async Task<bool> CheckAfterRestartAsync(string pendingVersion)
+    {
+        await _store.EnsureLoadedAsync();
+        _actions.Host.CheckAfterRestart(pendingVersion, _store.Packages);
+        return _actions.Host.StillPendingAfterRestart;
+    }
+
     /// <summary>The page reports the checked rows (R2.2).</summary>
     public void SetSelection(IReadOnlyList<PackageRowViewModel> rows)
     {

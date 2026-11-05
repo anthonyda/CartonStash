@@ -80,6 +80,32 @@ public class ShellViewModelTests
     }
 
     [Fact]
+    public async Task After_a_restart_the_new_version_needs_no_message() // 004 R6.4
+    {
+        var (app, shell, _) = CreateWithRestarter();
+        app.SetInstalled(WinGetHostTests.AppInstaller("1.29.380.0") with { UpdateAvailable = false });
+
+        await shell.FinishRestartAsync("1.29.379.0");
+
+        Assert.False(shell.IsNotificationOpen);
+        Assert.Null(app.Actions.Host.PendingVersion);
+    }
+
+    [Fact]
+    public async Task After_a_restart_the_old_version_says_what_finishes_it() // 004 R6.4
+    {
+        var (app, shell, _) = CreateWithRestarter();
+        app.SetInstalled(WinGetHostTests.AppInstaller());
+
+        await shell.FinishRestartAsync("1.29.379.0");
+
+        Assert.True(shell.IsNotificationOpen);
+        Assert.Equal(NotificationSeverity.Warning, shell.NotificationSeverity);
+        Assert.Contains("every program using WinGet is closed", shell.NotificationMessage);
+        Assert.True(app.Actions.Host.IsPending(WinGetHostTests.AppInstaller()));
+    }
+
+    [Fact]
     public void Other_outcomes_have_no_restart_button()
     {
         var (app, shell, _) = CreateWithRestarter();

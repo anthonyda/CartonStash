@@ -36,8 +36,9 @@
 - [x] **T13.** `IAppRestarter`, `ShellViewModel.RestartCommand` with the close guard, the buttons on the card, the notification and the row. *(R6.3)*
   - Verify: `ShellViewModelTests.Restart_*`; manual with keyboard, light, dark and high contrast.
   - Done 2026-11-04: unit tests pass. The manual keyboard and theme check moves to T15, which has a real restart to show.
-- [ ] **T14.** `AppRestarter`, `Program` and `FinishUpdateWindow`: start the new copy, wait for the old copy and servers, open on the same page; the R6.4 message. *(R6.3, R6.4)*
+- [x] **T14.** `AppRestarter`, `Program` and `FinishUpdateWindow`: start the new copy, wait for the old copy and servers, open on the same page; the R6.4 message. *(R6.3, R6.4)*
   - Verify: argument parsing tests; the portable app still starts (007 R1.6).
+  - Done 2026-11-04: `RestartArgumentsTests`, and `ShellViewModelTests.After_a_restart_*` for the R6.4 message; 388 unit tests pass. The 1.1.9 x64 portable test build opened its window in 11 s in the test VM.
 - [ ] **T15.** Manual in the test VM, Store build: restore `clean`, **Update all** with App Installer, check the warning and the row, Restart CartonStash: 1.29.380.0, gone from Updates, same page. Again with the `winget` command keeping WinGet open (R6.4). *(R6.1–R6.5)*
   - Verify: logged below.
 
