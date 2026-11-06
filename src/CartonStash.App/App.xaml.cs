@@ -155,6 +155,7 @@ public partial class App : Application
             .AddSingleton<CatalogConnection>()
             .AddSingleton<IPackageService, WinGetPackageService>()
             .AddSingleton<IPackageInstaller, WinGetPackageInstaller>()
+            .AddSingleton<IRunningPrograms, RunningPrograms>() // 003 R7.2
             .AddSingleton<IWinGetRecordReader, WinGetRecordReader>()
             .AddSingleton<IOperationLogStore, OperationLogStore>()
             .AddSingleton<PackageOperationQueue>()
