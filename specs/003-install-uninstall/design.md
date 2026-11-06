@@ -1,6 +1,6 @@
 # 003 – Install / uninstall with progress: Design
 
-**Status:** Approved (2026-10-29), amended during implementation
+**Status:** Approved (2026-10-29), amended during implementation. Amendment R7 (say when a program is running): done 2026-11-06
 **Requirements:** [requirements.md](requirements.md)
 
 ## Overview
@@ -82,3 +82,90 @@ Integration tests **do not** install software automatically. Real installs are m
 - **Parallel operations:** rejected. Most installers can't run side by side (MSI mutex), and WinGet serializes anyway.
 - **Running the whole app elevated:** rejected (A5).
 - **Progress granularity:** some installers report no installation %. Show an indeterminate ring then.
+
+## Amendment R7: say when a program is running (approved 2026-11-06, done 2026-11-06)
+
+Requirements: [amendment R7](requirements.md#amendment-r7-say-when-a-program-is-running-approved-2026-11-06-done-2026-11-06).
+
+### Components
+
+| Layer | Type | Responsibility | New / changed |
+|-------|------|----------------|---------------|
+| Core/Services | `IRunningPrograms` | `IReadOnlyList<string> FileNamesIn(string folder)`: file names of the user's processes whose executable sits in `folder` or below it. Empty when there are none or the folder is unreadable | new |
+| Core/Services | `RunningPrograms` | Implementation: `Process.GetProcesses()`, then each process's path from `QueryFullProcessImageNameW` with `PROCESS_QUERY_LIMITED_INFORMATION` (kernel32 P/Invoke, as in `AppPackage`). A process that can't be opened (protected, or already exited) is skipped. Every `Process` is disposed | new |
+| Core/Services | `WinGetPackageInstaller` | Takes `IRunningPrograms`. After a failed update or uninstall of a portable package, reads the install folder and asks `IRunningPrograms` (R7.2). Passes the package name and running files to the result mapping | changed |
+| Core/Services | `MapInstallResult`, `MapUninstallResult` | New inputs: package name, extended error (uninstall too), running file names. New messages for R7.1 and R7.2, checked before the generic `InstallError` / `UninstallError` lines | changed |
+| App | `App.xaml.cs` | `.AddSingleton<IRunningPrograms, RunningPrograms>()` | changed |
+
+No view, view model or queue changes: the Activity pane and notification already show `OperationOutcome.Message`.
+
+### WinGet API usage
+
+- **In-use codes (R7.1):** `InstallResult.ExtendedErrorCode.HResult` / `UninstallResult.ExtendedErrorCode.HResult` equal to
+  `0x8A150101` (`INSTALL_PACKAGE_IN_USE`), `0x8A150103` (`INSTALL_FILE_IN_USE`) or `0x8A150111`
+  (`INSTALL_PACKAGE_IN_USE_BY_APPLICATION`). WinGet sets these when the manifest maps the installer's exit code to them
+  (`ExpectedReturnCodes`). No extra call.
+- **Portable failure (R7.2):** extended error `0x8A150052` (`PORTABLE_INSTALL_FAILED`) on an update, `0x8A150057`
+  (`PORTABLE_UNINSTALL_FAILED`) on an uninstall. These codes say the package is portable, so the app doesn't need to read the
+  installer type.
+- **Install folder (R7.2):** `found.InstalledVersion.GetMetadata(PackageVersionMetadataField.InstalledLocation)`, read from
+  the `CatalogPackage` the operation already holds, only after one of the two codes above. WinGet takes it from the program's
+  Apps & features entry. For Claude Code that is
+  `%LOCALAPPDATA%\Microsoft\WinGet\Packages\Anthropic.ClaudeCode_Microsoft.Winget.Source_8wekyb3d8bbwe`, the folder of the
+  locked `claude.exe`. An empty value, a missing `InstalledVersion` or a COM error means no folder: R7.3.
+
+### Messages
+
+`{name}` is `PackageInfo.Name`, `{verb}` is "updated", "installed" or "uninstalled", and `{files}` is the running file names
+joined with ", ".
+
+| Case | Message |
+|------|---------|
+| `0x8A150101` or `0x8A150103` (R7.1) | "{name} is running, so it couldn't be {verb}. Close it, then press Retry." |
+| `0x8A150111` (R7.1) | "{name} is in use by another program, so it couldn't be {verb}. Close that program, then press Retry." |
+| Portable code, running files found (R7.2) | "{name} is running ({files}), so it couldn't be {verb}. Close it, then press Retry." |
+| Portable code, nothing found (R7.3) | Today's message, unchanged: "The installer failed with error code …" |
+
+`Details` (the log's WinGet status, exit code and extended error) is built as it is now and isn't touched (R7.5).
+
+### Data flow
+
+WinGet result → `InstallAsync` / `UninstallAsync` → if the extended error is a portable code: read `InstalledLocation` →
+`IRunningPrograms.FileNamesIn(folder)` → `MapInstallResult` / `MapUninstallResult` (pure, unit tested) → `OperationOutcome`.
+Nothing is read and no process is enumerated on success or on any other failure (decided: after the failure only).
+
+### Error handling and edge cases
+
+- **Folder matching:** compare full paths, ignoring case, with the folder ending in `\`, so `...\Foo` doesn't match
+  `...\FooBar\x.exe`. Paths are normalised with `Path.GetFullPath` first.
+- **Links:** WinGet puts a symlink in `WinGet\Links` on PATH. A process started through it reports its real path in the
+  package folder, so it still matches.
+- **Elevated or other users' processes:** `PROCESS_QUERY_LIMITED_INFORMATION` opens the user's elevated processes too.
+  Processes of other users or protected processes that can't be opened are skipped. The message may then fall back to
+  R7.3, which is still true.
+- **The program exits between the failure and the check:** nothing is found, R7.3. Retry then works.
+- **Enumeration throws:** caught in `WinGetPackageInstaller`. The outcome falls back to R7.3, never to an error of its own.
+- **Never closing the program (R7.4):** `IRunningPrograms` only reads. It never opens a process with rights to end it.
+
+### Testing strategy
+
+| Criteria | How |
+|----------|-----|
+| R7.1, R7.2, R7.3 | Unit tests on `MapInstallResult` / `MapUninstallResult`: each code, each kind, with and without running files |
+| R7.2 folder matching | Unit tests on the path check (prefix, case, `Foo` vs `FooBar`, trailing `\`) |
+| R7.3 fallbacks | Unit test with a fake `IRunningPrograms` that throws, and one that returns nothing |
+| R7.5 | Unit test: `Details` is the same string as before the change for the same result |
+| `InstalledLocation` | Integration test: for an installed portable package, the metadata is a folder that exists. Skipped when none is installed |
+| `RunningPrograms` | Integration test: `FileNamesIn` of the test process's own folder includes its own file name |
+| R7.2 end to end, R7.4 | Manual, in the test VM: install an older version of a portable GUI package with `winget install --version`, start it, update it in CartonStash, and check the message names its file and the program stays open. Close it, Retry, and check that it updates |
+
+### Risks and alternatives considered
+
+- **Reading WinGet's log for "Access is denied":** rejected (decided 2026-11-06). The wording can change between WinGet
+  versions and languages.
+- **Checking for running programs before each update:** rejected (decided 2026-11-06). Many installers close their own
+  program, and it would add a step to every operation.
+- **`Process.MainModule.FileName` instead of `QueryFullProcessImageNameW`:** rejected. It needs more access rights and
+  throws for elevated processes and for 32/64-bit mismatches.
+- **A portable program locked by something else (antivirus, Explorer preview):** no running file found, so R7.3 gives
+  today's message. That is honest, if not more helpful.

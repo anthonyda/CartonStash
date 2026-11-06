@@ -8,7 +8,7 @@ namespace CartonStash.Core.Services;
 /// <see cref="IPackageInstaller"/> on the WinGet COM API (specs 003, 004). WinGet starts the installer, and the
 /// installer asks for UAC itself when it needs to; the app never elevates (003 R6.1, constitution A5).
 /// </summary>
-public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettings settings) : IPackageInstaller
+public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettings settings, IRunningPrograms runningPrograms) : IPackageInstaller
 {
     public async Task<IReadOnlyList<Agreement>> GetAgreementsAsync(PackageInfo package, CancellationToken cancellationToken = default)
     {
@@ -46,8 +46,8 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
         {
             var outcome = kind switch
             {
-                OperationKind.Uninstall => await UninstallAsync(found, logPath, progress, cancellationToken),
-                _ => await InstallAsync(kind, found, acceptAgreements, logPath, progress, cancellationToken),
+                OperationKind.Uninstall => await UninstallAsync(found, package.Name, logPath, progress, cancellationToken),
+                _ => await InstallAsync(kind, found, package.Name, acceptAgreements, logPath, progress, cancellationToken),
             };
             if (kind == OperationKind.Upgrade && outcome.Result == OperationResult.Succeeded && WinGetHost.IsAppInstaller(package))
             {
@@ -63,7 +63,7 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
         }
     }
 
-    private async Task<OperationOutcome> InstallAsync(OperationKind kind, CatalogPackage package, bool acceptAgreements, string? logPath,
+    private async Task<OperationOutcome> InstallAsync(OperationKind kind, CatalogPackage package, string name, bool acceptAgreements, string? logPath,
         IProgress<OperationProgress> progress, CancellationToken cancellationToken)
     {
         var options = new InstallOptions
@@ -83,11 +83,13 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
         var winGetProgress = new Progress<InstallProgress>(p => progress.Report(MapInstallProgress(p)));
         var result = await operation.AsTask(cancellationToken, winGetProgress);
 
+        var extendedError = result.ExtendedErrorCode?.HResult ?? 0;
+        var running = await RunningFilesAfterAsync(extendedError, package);
         return MapInstallResult(kind, result.Status, result.InstallerErrorCode, result.RebootRequired, settings.Current.InstallScope,
-            result.ExtendedErrorCode?.HResult ?? 0) with { Details = FormatDetails(result.Status.ToString(), result.InstallerErrorCode, result.ExtendedErrorCode) };
+            extendedError, name, running) with { Details = FormatDetails(result.Status.ToString(), result.InstallerErrorCode, result.ExtendedErrorCode) };
     }
 
-    private async Task<OperationOutcome> UninstallAsync(CatalogPackage package, string? logPath, IProgress<OperationProgress> progress, CancellationToken cancellationToken)
+    private async Task<OperationOutcome> UninstallAsync(CatalogPackage package, string name, string? logPath, IProgress<OperationProgress> progress, CancellationToken cancellationToken)
     {
         var options = new UninstallOptions { PackageUninstallMode = PackageUninstallMode.Silent };
         if (logPath is not null)
@@ -98,8 +100,39 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
         var winGetProgress = new Progress<UninstallProgress>(p => progress.Report(MapUninstallProgress(p)));
         var result = await operation.AsTask(cancellationToken, winGetProgress);
 
-        return MapUninstallResult(result.Status, result.UninstallerErrorCode, result.RebootRequired)
+        var extendedError = result.ExtendedErrorCode?.HResult ?? 0;
+        var running = await RunningFilesAfterAsync(extendedError, package);
+        return MapUninstallResult(result.Status, result.UninstallerErrorCode, result.RebootRequired, extendedError, name, running)
             with { Details = FormatDetails(result.Status.ToString(), result.UninstallerErrorCode, result.ExtendedErrorCode) };
+    }
+
+    /// <summary>
+    /// 003 R7.2: after a portable failure only, the programs running from the package's install folder. Nothing is read
+    /// on success or on any other failure.
+    /// </summary>
+    private Task<IReadOnlyList<string>?> RunningFilesAfterAsync(int extendedError, CatalogPackage package) =>
+        IsPortableFailure(extendedError)
+            ? Task.Run(() => RunningFilesAfter(extendedError, () => package.InstalledVersion?.GetMetadata(PackageVersionMetadataField.InstalledLocation), runningPrograms))
+            : Task.FromResult<IReadOnlyList<string>?>(null);
+
+    /// <summary>
+    /// The running files for R7.2, or null for R7.3: not a portable failure, no folder, or any error reading it or the
+    /// process list. A failed check never becomes an error of its own.
+    /// </summary>
+    internal static IReadOnlyList<string>? RunningFilesAfter(int extendedError, Func<string?> installFolder, IRunningPrograms programs)
+    {
+        if (!IsPortableFailure(extendedError))
+        {
+            return null;
+        }
+        try
+        {
+            return installFolder() is { Length: > 0 } folder ? programs.FileNamesIn(folder) : null;
+        }
+        catch (Exception)
+        {
+            return null;
+        }
     }
 
     // 004 R6.1: WinGet reports Ok while Windows only staged the new App Installer, because WinGet's own server, which this
@@ -164,9 +197,50 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
     /// <summary>APPINSTALLER_CLI_ERROR_INSTALLER_HASH_MISMATCH: the download isn't the file the manifest describes.</summary>
     internal const int HashMismatch = unchecked((int)0x8A150011);
 
-    // Readable outcomes (003 R5.2, R5.3; 004 NoApplicableUpgrade; 006 scope hint).
+    /// <summary>APPINSTALLER_CLI_ERROR_INSTALL_PACKAGE_IN_USE: the program is running (003 R7.1).</summary>
+    internal const int PackageInUse = unchecked((int)0x8A150101);
+
+    /// <summary>APPINSTALLER_CLI_ERROR_INSTALL_FILE_IN_USE: one of its files is in use (003 R7.1).</summary>
+    internal const int FileInUse = unchecked((int)0x8A150103);
+
+    /// <summary>APPINSTALLER_CLI_ERROR_INSTALL_PACKAGE_IN_USE_BY_APPLICATION: another program uses it (003 R7.1).</summary>
+    internal const int InUseByApplication = unchecked((int)0x8A150111);
+
+    /// <summary>APPINSTALLER_CLI_ERROR_PORTABLE_INSTALL_FAILED: seen when a running claude.exe couldn't be replaced (003 R7.2).</summary>
+    internal const int PortableInstallFailed = unchecked((int)0x8A150052);
+
+    /// <summary>APPINSTALLER_CLI_ERROR_PORTABLE_UNINSTALL_FAILED (003 R7.2).</summary>
+    internal const int PortableUninstallFailed = unchecked((int)0x8A150057);
+
+    /// <summary>True for the codes after which the app looks for programs running from the package's folder (R7.2).</summary>
+    internal static bool IsPortableFailure(int extendedError) => extendedError is PortableInstallFailed or PortableUninstallFailed;
+
+    /// <summary>
+    /// 003 R7.1-R7.3: the message when the package is running, or null to keep the usual one. A portable failure says so only
+    /// when a running file was found; the app doesn't guess (constitution P1).
+    /// </summary>
+    internal static string? InUseMessage(OperationKind kind, int extendedError, string packageName, IReadOnlyList<string>? runningFiles)
+    {
+        var verb = kind switch
+        {
+            OperationKind.Upgrade => "updated",
+            OperationKind.Uninstall => "uninstalled",
+            _ => "installed",
+        };
+        var name = string.IsNullOrWhiteSpace(packageName) ? "The package" : packageName;
+        return extendedError switch
+        {
+            PackageInUse or FileInUse => $"{name} is running, so it couldn't be {verb}. Close it, then press Retry.",
+            InUseByApplication => $"{name} is in use by another program, so it couldn't be {verb}. Close that program, then press Retry.",
+            _ when IsPortableFailure(extendedError) && runningFiles is { Count: > 0 } =>
+                $"{name} is running ({string.Join(", ", runningFiles)}), so it couldn't be {verb}. Close it, then press Retry.",
+            _ => null,
+        };
+    }
+
+    // Readable outcomes (003 R5.2, R5.3, R7; 004 NoApplicableUpgrade; 006 scope hint).
     internal static OperationOutcome MapInstallResult(OperationKind kind, InstallResultStatus status, uint installerErrorCode, bool rebootRequired,
-        InstallScope scope, int extendedError = 0)
+        InstallScope scope, int extendedError = 0, string packageName = "", IReadOnlyList<string>? runningFiles = null)
     {
         var done = kind == OperationKind.Upgrade ? "Updated" : "Installed";
         return status switch
@@ -177,6 +251,7 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
             InstallResultStatus.DownloadError when extendedError == HashMismatch =>
                 Failed("The downloaded file doesn't match the package's checksum, so it wasn't installed. The publisher's site may have changed; try again later."),
             InstallResultStatus.DownloadError => Failed("The download failed. Check your internet connection and try again."),
+            InstallResultStatus.InstallError when InUseMessage(kind, extendedError, packageName, runningFiles) is { } inUse => Failed(inUse),
             InstallResultStatus.InstallError => Failed($"The installer failed with error code {FormatCode(installerErrorCode)}."),
             InstallResultStatus.BlockedByPolicy => Failed("Blocked by a group policy on this PC."),
             InstallResultStatus.NoApplicableInstallers => Failed(scope == InstallScope.Any
@@ -190,11 +265,14 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
         };
     }
 
-    internal static OperationOutcome MapUninstallResult(UninstallResultStatus status, uint uninstallerErrorCode, bool rebootRequired) => status switch
+    internal static OperationOutcome MapUninstallResult(UninstallResultStatus status, uint uninstallerErrorCode, bool rebootRequired,
+        int extendedError = 0, string packageName = "", IReadOnlyList<string>? runningFiles = null) => status switch
     {
         UninstallResultStatus.Ok when rebootRequired =>
             new(OperationResult.SucceededRestartRequired, "Uninstalled. Restart your PC to finish."),
         UninstallResultStatus.Ok => new(OperationResult.Succeeded, "Uninstalled successfully."),
+        UninstallResultStatus.UninstallError when InUseMessage(OperationKind.Uninstall, extendedError, packageName, runningFiles) is { } inUse =>
+            Failed(inUse),
         UninstallResultStatus.UninstallError => Failed($"The uninstaller failed with error code {FormatCode(uninstallerErrorCode)}."),
         UninstallResultStatus.BlockedByPolicy => Failed("Blocked by a group policy on this PC."),
         UninstallResultStatus.CatalogError => Failed("Couldn't read the installed packages."),

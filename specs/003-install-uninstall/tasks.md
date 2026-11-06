@@ -1,6 +1,6 @@
 # 003 – Install / uninstall with progress: Tasks
 
-**Status:** Done
+**Status:** Done. Amendment R7 (say when a program is running): done 2026-11-06
 **Design:** [design.md](design.md)
 
 - [x] **T1.** Models: `PackageOperation`, `OperationPhase`, `OperationResult`, `OperationProgress`, `OperationOutcome`.
@@ -20,6 +20,40 @@
   - Install → uninstall done (jqlang.jq, Mozilla.Firefox). UAC checked on the Firefox install (see log).
 - [x] **T8.** Mark `Done`.
 
+### Amendment R7: say when a program is running (approved 2026-11-06)
+
+- [x] **T9.** Integration test first: WinGet's COM API gives a portable package's install folder through
+  `InstalledVersion.GetMetadata(PackageVersionMetadataField.InstalledLocation)`. If it doesn't, stop and update the design. *(R7.2)*
+  - Verify: `InstalledLocationTests.Portable_package_reports_an_existing_folder` (`Category=Integration`; returns early when no
+    portable package is installed, as xunit 2 has no runtime skip). Run on the dev PC: it only reads, nothing is installed.
+  - Done 2026-11-06: passes on the dev PC. The folder matches the Apps & features `InstallLocation` and exists for Claude Code,
+    ripgrep, Driver Store Explorer and OMP Manager. Yuzu is no longer in the winget source, so the test skips it.
+- [x] **T10.** `IRunningPrograms` and `RunningPrograms` (process paths through `QueryFullProcessImageNameW`, read-only, every
+  `Process` disposed), the folder check, DI in `App.xaml.cs`. *(R7.2, R7.4)*
+  - Verify: `RunningProgramsTests.Folder_holds_only_paths_inside_it` (prefix, case, `Foo` vs `FooBar`, trailing `\`, `..`);
+    `RunningProgramsTests.Finds_the_test_process_in_its_own_folder`, `Finds_nothing_in_an_empty_folder` (`Category=Integration`).
+  - Done 2026-11-06: 11 tests pass. R7.4 holds by construction: the only right asked for is `PROCESS_QUERY_LIMITED_INFORMATION`.
+- [x] **T11.** Result mapping: the in-use codes, the portable codes with and without running files, for install, update and
+  uninstall; `MapUninstallResult` takes the extended error. `Details` unchanged. *(R7.1, R7.2, R7.3, R7.5)*
+  - Verify: `WinGetErrorMessageTests.In_use_*`, `WinGetErrorMessageTests.Portable_*`,
+    `WinGetErrorMessageTests.Running_files_alone_change_nothing`, `WinGetErrorMessageTests.Details_are_unchanged_*`.
+  - Done 2026-11-06: 416 unit tests pass. The in-use messages apply only to `InstallError` / `UninstallError`, where WinGet
+    reports installer failures.
+- [x] **T12.** `WinGetPackageInstaller`: after a portable code only, read the install folder and ask `IRunningPrograms`.
+  A missing folder, a COM error or an enumeration error falls back to today's message. *(R7.2, R7.3)*
+  - Verify: `WinGetErrorMessageTests.Running_files_come_from_the_install_folder`, `WinGetErrorMessageTests.Running_files_fallback_*`
+    (fake `IRunningPrograms` that throws or finds nothing, no folder, other codes); all unit tests pass.
+  - Done 2026-11-06: all 445 tests pass, including the integration tests (read-only). The check runs off the caller's
+    thread (`Task.Run`, constitution A4).
+- [x] **T13.** Manual in the test VM, Store test build: install an older version of a portable GUI package with
+  `winget install --version`, start it, update it in CartonStash. Check the message names its file and the program stays
+  open; close it, Retry, and check that it updates. Then the same with Uninstall. *(R7.2, R7.4)*
+  - Verify: logged below.
+  - Done 2026-11-06 with Claude Code itself, the case that started R7: a console app, not a GUI one, which also shows the
+    check doesn't need a window. The first run proved nothing, because `claude` didn't start from the `WinGet\Links` path
+    in the scheduled task, and both operations simply succeeded. Started from its package folder in a `cmd` window, it passed.
+- [x] **T14.** Mark amendment R7 `Done` here, in requirements.md, design.md and the README roadmap.
+
 ## Manual verification log
 
 | Criterion | Date | Result | Notes |
@@ -36,3 +70,6 @@
 | R3.2 (live) | – | Not run | Covered by `PackageOperationQueueTests.Cancel_*`; jq downloads too fast to cancel by hand |
 | R1.3 (live) | – | Not run | Covered by `PackageActionsTests.Install_with_agreements_*`; needs a package with agreements (e.g. an msstore app) |
 | R6.1 | 2026-10-30 | Pass | Mozilla.Firefox to Program Files: Windows' UAC prompt appeared and was approved by hand, and the app stayed unelevated |
+| R7.2, R7.4, R7.5 (T13) | 2026-11-06 | Pass | Test VM from `clean`, Store test build 1.1.13. Claude Code 2.1.309 installed with the `winget` command, `claude.exe` running from its package folder in a console. **Update** failed after 6 s: "Claude Code is running (claude.exe), so it couldn't be updated. Close it, then press Retry." in the notification, row and log; the log kept `InstallError`, exit code 2316632067, `0x8A150052`; `claude` was still running. Closed it, **Retry Update Claude Code** in Activity: "Updated successfully.", `winget list` shows 2.1.317 |
+| R7.2, R7.4, R7.5 (T13) | 2026-11-06 | Pass | Same run, `claude` 2.1.317 started again. **Uninstall** (confirmed) failed after 1 s: "Claude Code is running (claude.exe), so it couldn't be uninstalled. Close it, then press Retry."; log `UninstallError`, `0x8A150057`; `claude` still running. Closed it, Retry: "Uninstalled successfully.", `winget list` no longer finds it |
+| R7.1 (live) | – | Not run | Covered by `WinGetErrorMessageTests.In_use_*`; needs an installer whose manifest maps its exit code to an in-use code |
