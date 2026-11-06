@@ -1,6 +1,6 @@
 # 003 – Install / uninstall with progress: Tasks
 
-**Status:** Done. Amendment R7 (say when a program is running): in progress, T9 to T14
+**Status:** Done. Amendment R7 (say when a program is running): done 2026-11-06
 **Design:** [design.md](design.md)
 
 - [x] **T1.** Models: `PackageOperation`, `OperationPhase`, `OperationResult`, `OperationProgress`, `OperationOutcome`.
@@ -45,11 +45,14 @@
     (fake `IRunningPrograms` that throws or finds nothing, no folder, other codes); all unit tests pass.
   - Done 2026-11-06: all 445 tests pass, including the integration tests (read-only). The check runs off the caller's
     thread (`Task.Run`, constitution A4).
-- [ ] **T13.** Manual in the test VM, Store test build: install an older version of a portable GUI package with
+- [x] **T13.** Manual in the test VM, Store test build: install an older version of a portable GUI package with
   `winget install --version`, start it, update it in CartonStash. Check the message names its file and the program stays
   open; close it, Retry, and check that it updates. Then the same with Uninstall. *(R7.2, R7.4)*
   - Verify: logged below.
-- [ ] **T14.** Mark amendment R7 `Done` here, in requirements.md, design.md and the README roadmap.
+  - Done 2026-11-06 with Claude Code itself, the case that started R7: a console app, not a GUI one, which also shows the
+    check doesn't need a window. The first run proved nothing, because `claude` didn't start from the `WinGet\Links` path
+    in the scheduled task, and both operations simply succeeded. Started from its package folder in a `cmd` window, it passed.
+- [x] **T14.** Mark amendment R7 `Done` here, in requirements.md, design.md and the README roadmap.
 
 ## Manual verification log
 
@@ -67,3 +70,6 @@
 | R3.2 (live) | – | Not run | Covered by `PackageOperationQueueTests.Cancel_*`; jq downloads too fast to cancel by hand |
 | R1.3 (live) | – | Not run | Covered by `PackageActionsTests.Install_with_agreements_*`; needs a package with agreements (e.g. an msstore app) |
 | R6.1 | 2026-10-30 | Pass | Mozilla.Firefox to Program Files: Windows' UAC prompt appeared and was approved by hand, and the app stayed unelevated |
+| R7.2, R7.4, R7.5 (T13) | 2026-11-06 | Pass | Test VM from `clean`, Store test build 1.1.13. Claude Code 2.1.309 installed with the `winget` command, `claude.exe` running from its package folder in a console. **Update** failed after 6 s: "Claude Code is running (claude.exe), so it couldn't be updated. Close it, then press Retry." in the notification, row and log; the log kept `InstallError`, exit code 2316632067, `0x8A150052`; `claude` was still running. Closed it, **Retry Update Claude Code** in Activity: "Updated successfully.", `winget list` shows 2.1.317 |
+| R7.2, R7.4, R7.5 (T13) | 2026-11-06 | Pass | Same run, `claude` 2.1.317 started again. **Uninstall** (confirmed) failed after 1 s: "Claude Code is running (claude.exe), so it couldn't be uninstalled. Close it, then press Retry."; log `UninstallError`, `0x8A150057`; `claude` still running. Closed it, Retry: "Uninstalled successfully.", `winget list` no longer finds it |
+| R7.1 (live) | – | Not run | Covered by `WinGetErrorMessageTests.In_use_*`; needs an installer whose manifest maps its exit code to an in-use code |

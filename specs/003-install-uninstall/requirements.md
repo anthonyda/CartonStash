@@ -1,6 +1,6 @@
 # 003 – Install / uninstall with progress: Requirements
 
-**Status:** Done (2026-10-30). Amendment R7 (say when a program is running): approved 2026-11-06
+**Status:** Done (2026-10-30). Amendment R7 (say when a program is running): done 2026-11-06
 **Depends on:** 001, 002
 
 ## Problem
@@ -34,7 +34,7 @@ Users can find and list packages but still need a terminal to install or remove 
 | R6.1 | –     | The app shall keep running unelevated. When an installer needs admin rights, Windows' own UAC prompt shall appear for that installer only (constitution A5). |
 | R6.2 | –     | If the user closes the app while operations are running or queued, then the app shall warn and offer to wait or quit anyway. |
 
-## Amendment R7: say when a program is running (approved 2026-11-06)
+## Amendment R7: say when a program is running (approved 2026-11-06, done 2026-11-06)
 
 **Why.** R5.2 isn't met when the package being changed is running. On 2026-11-06, Claude Code (`Anthropic.ClaudeCode`, a
 portable package) failed to update from 2.1.302 to 2.1.317. The app showed only "The installer failed with error code

@@ -1,6 +1,6 @@
 # 003 – Install / uninstall with progress: Design
 
-**Status:** Approved (2026-10-29), amended during implementation. Amendment R7 (say when a program is running): approved 2026-11-06
+**Status:** Approved (2026-10-29), amended during implementation. Amendment R7 (say when a program is running): done 2026-11-06
 **Requirements:** [requirements.md](requirements.md)
 
 ## Overview
@@ -83,9 +83,9 @@ Integration tests **do not** install software automatically. Real installs are m
 - **Running the whole app elevated:** rejected (A5).
 - **Progress granularity:** some installers report no installation %. Show an indeterminate ring then.
 
-## Amendment R7: say when a program is running (approved 2026-11-06)
+## Amendment R7: say when a program is running (approved 2026-11-06, done 2026-11-06)
 
-Requirements: [amendment R7](requirements.md#amendment-r7-say-when-a-program-is-running-approved-2026-11-06).
+Requirements: [amendment R7](requirements.md#amendment-r7-say-when-a-program-is-running-approved-2026-11-06-done-2026-11-06).
 
 ### Components
 
