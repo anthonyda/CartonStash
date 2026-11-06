@@ -22,10 +22,12 @@
 
 ### Amendment R7: say when a program is running (approved 2026-11-06)
 
-- [ ] **T9.** Integration test first: WinGet's COM API gives a portable package's install folder through
+- [x] **T9.** Integration test first: WinGet's COM API gives a portable package's install folder through
   `InstalledVersion.GetMetadata(PackageVersionMetadataField.InstalledLocation)`. If it doesn't, stop and update the design. *(R7.2)*
-  - Verify: `InstalledLocationTests.Portable_package_reports_an_existing_folder` (`Category=Integration`, skipped when no
-    portable package is installed). Run on the dev PC: it only reads, nothing is installed.
+  - Verify: `InstalledLocationTests.Portable_package_reports_an_existing_folder` (`Category=Integration`; returns early when no
+    portable package is installed, as xunit 2 has no runtime skip). Run on the dev PC: it only reads, nothing is installed.
+  - Done 2026-11-06: passes on the dev PC. The folder matches the Apps & features `InstallLocation` and exists for Claude Code,
+    ripgrep, Driver Store Explorer and OMP Manager. Yuzu is no longer in the winget source, so the test skips it.
 - [ ] **T10.** `IRunningPrograms` and `RunningPrograms` (process paths through `QueryFullProcessImageNameW`, read-only, every
   `Process` disposed), the folder check, DI in `App.xaml.cs`. *(R7.2, R7.4)*
   - Verify: `RunningProgramsTests.Folder_*` (prefix, case, `Foo` vs `FooBar`, trailing `\`);
