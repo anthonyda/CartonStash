@@ -1,6 +1,6 @@
 # 003 – Install / uninstall with progress: Tasks
 
-**Status:** Done
+**Status:** Done. Amendment R7 (say when a program is running): in progress, T9 to T14
 **Design:** [design.md](design.md)
 
 - [x] **T1.** Models: `PackageOperation`, `OperationPhase`, `OperationResult`, `OperationProgress`, `OperationOutcome`.
@@ -19,6 +19,30 @@
 - [x] **T7.** Manual end-to-end: install → uninstall a small package; one admin-scope installer shows UAC only for itself. *(R6.1)*
   - Install → uninstall done (jqlang.jq, Mozilla.Firefox). UAC checked on the Firefox install (see log).
 - [x] **T8.** Mark `Done`.
+
+### Amendment R7: say when a program is running (approved 2026-11-06)
+
+- [ ] **T9.** Integration test first: WinGet's COM API gives a portable package's install folder through
+  `InstalledVersion.GetMetadata(PackageVersionMetadataField.InstalledLocation)`. If it doesn't, stop and update the design. *(R7.2)*
+  - Verify: `InstalledLocationTests.Portable_package_reports_an_existing_folder` (`Category=Integration`, skipped when no
+    portable package is installed). Run on the dev PC: it only reads, nothing is installed.
+- [ ] **T10.** `IRunningPrograms` and `RunningPrograms` (process paths through `QueryFullProcessImageNameW`, read-only, every
+  `Process` disposed), the folder check, DI in `App.xaml.cs`. *(R7.2, R7.4)*
+  - Verify: `RunningProgramsTests.Folder_*` (prefix, case, `Foo` vs `FooBar`, trailing `\`);
+    `RunningProgramsTests.Finds_the_test_process_in_its_own_folder` (`Category=Integration`).
+- [ ] **T11.** Result mapping: the in-use codes, the portable codes with and without running files, for install, update and
+  uninstall; `MapUninstallResult` takes the extended error. `Details` unchanged. *(R7.1, R7.2, R7.3, R7.5)*
+  - Verify: `WinGetErrorMessageTests.In_use_*`, `WinGetErrorMessageTests.Portable_*`,
+    `WinGetErrorMessageTests.Details_are_unchanged_*`.
+- [ ] **T12.** `WinGetPackageInstaller`: after a portable code only, read the install folder and ask `IRunningPrograms`.
+  A missing folder, a COM error or an enumeration error falls back to today's message. *(R7.2, R7.3)*
+  - Verify: `WinGetErrorMessageTests.Running_files_fallback_*` (fake `IRunningPrograms` that throws or finds nothing, no
+    folder); all unit tests pass.
+- [ ] **T13.** Manual in the test VM, Store test build: install an older version of a portable GUI package with
+  `winget install --version`, start it, update it in CartonStash. Check the message names its file and the program stays
+  open; close it, Retry, and check that it updates. Then the same with Uninstall. *(R7.2, R7.4)*
+  - Verify: logged below.
+- [ ] **T14.** Mark amendment R7 `Done` here, in requirements.md, design.md and the README roadmap.
 
 ## Manual verification log
 

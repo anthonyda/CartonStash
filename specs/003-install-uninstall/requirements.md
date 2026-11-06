@@ -1,6 +1,6 @@
 # 003 – Install / uninstall with progress: Requirements
 
-**Status:** Done (2026-10-30)
+**Status:** Done (2026-10-30). Amendment R7 (say when a program is running): approved 2026-11-06
 **Depends on:** 001, 002
 
 ## Problem
@@ -33,6 +33,41 @@ Users can find and list packages but still need a terminal to install or remove 
 | R5.3 | US5   | When WinGet reports that a restart is required, the app shall say so clearly. The app shall never restart the PC itself. |
 | R6.1 | –     | The app shall keep running unelevated. When an installer needs admin rights, Windows' own UAC prompt shall appear for that installer only (constitution A5). |
 | R6.2 | –     | If the user closes the app while operations are running or queued, then the app shall warn and offer to wait or quit anyway. |
+
+## Amendment R7: say when a program is running (approved 2026-11-06)
+
+**Why.** R5.2 isn't met when the package being changed is running. On 2026-11-06, Claude Code (`Anthropic.ClaudeCode`, a
+portable package) failed to update from 2.1.302 to 2.1.317. The app showed only "The installer failed with error code
+0x8A150003." The download and hash check passed. WinGet's own log, copied into the operation log (009 R2.8), shows why:
+the old `claude.exe` was in use, so WinGet couldn't delete it (`remove: Access is denied.`). The result carried
+`0x8A150003` (`APPINSTALLER_CLI_ERROR_COMMAND_FAILED`) and extended error `0x8A150052`
+(`APPINSTALLER_CLI_ERROR_PORTABLE_INSTALL_FAILED`). Neither code says "in use": a portable install can fail for other
+reasons. WinGet does have codes that do say it, for installers whose manifest maps their exit codes:
+`0x8A150101` (`INSTALL_PACKAGE_IN_USE`), `0x8A150103` (`INSTALL_FILE_IN_USE`) and `0x8A150111`
+(`INSTALL_PACKAGE_IN_USE_BY_APPLICATION`). The app turns those into "error code …" too.
+
+- **US6.** As a user, when an operation fails because the program is running, I want to be told to close it and retry,
+  so I don't have to read WinGet's log to find out.
+
+| ID   | Story | Criterion |
+|------|-------|-----------|
+| R7.1 | US6   | If an install, update or uninstall fails and WinGet reports that the program or one of its files is in use (`0x8A150101`, `0x8A150103`, `0x8A150111`), then the result shall say that the package is running, ask the user to close it, and keep **Retry** (R5.2). |
+| R7.2 | US6   | If an update or uninstall of a portable package fails (`0x8A150052`, `0x8A150057`) and a program is running from that package's install folder, then the result shall say so as in R7.1 and name the running file (for example `claude.exe`). |
+| R7.3 | US6   | If no running program is found for R7.2, then the result shall stay as it is today: the app doesn't guess at the cause (constitution P1). |
+| R7.4 | –     | The app shall never close or end the running program itself (constitution P2). The user closes it. |
+| R7.5 | –     | The operation log shall keep WinGet's status, exit code and extended error unchanged (009 R2.2). Only the message shown changes. |
+
+### Open questions (amendment R7), decided 2026-11-06 as recommended
+
+- **Look for the running program after the failure only, or before every update?** Recommended: after the failure only.
+  Many installers close their own program, so a check beforehand would hold back updates that would have worked. It
+  would also add a step to every operation.
+- **Read "Access is denied" from WinGet's log instead?** Recommended: no. The log is text, not an API. Its wording can change
+  between WinGet versions and languages.
+- **Message wording?** Recommended, for an update: "Claude Code is running (claude.exe), so it couldn't be updated. Close it,
+  then press Retry." For an uninstall, "couldn't be uninstalled". Without a file name (R7.1), the brackets are left out.
+- **To check in design:** whether WinGet reports a portable package's install folder (`InstalledLocation` metadata), and
+  whether the packaged app can see the paths of the user's other processes.
 
 ## Out of scope
 
