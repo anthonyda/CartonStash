@@ -33,10 +33,12 @@
   - Verify: `RunningProgramsTests.Folder_holds_only_paths_inside_it` (prefix, case, `Foo` vs `FooBar`, trailing `\`, `..`);
     `RunningProgramsTests.Finds_the_test_process_in_its_own_folder`, `Finds_nothing_in_an_empty_folder` (`Category=Integration`).
   - Done 2026-11-06: 11 tests pass. R7.4 holds by construction: the only right asked for is `PROCESS_QUERY_LIMITED_INFORMATION`.
-- [ ] **T11.** Result mapping: the in-use codes, the portable codes with and without running files, for install, update and
+- [x] **T11.** Result mapping: the in-use codes, the portable codes with and without running files, for install, update and
   uninstall; `MapUninstallResult` takes the extended error. `Details` unchanged. *(R7.1, R7.2, R7.3, R7.5)*
   - Verify: `WinGetErrorMessageTests.In_use_*`, `WinGetErrorMessageTests.Portable_*`,
-    `WinGetErrorMessageTests.Details_are_unchanged_*`.
+    `WinGetErrorMessageTests.Running_files_alone_change_nothing`, `WinGetErrorMessageTests.Details_are_unchanged_*`.
+  - Done 2026-11-06: 416 unit tests pass. The in-use messages apply only to `InstallError` / `UninstallError`, where WinGet
+    reports installer failures.
 - [ ] **T12.** `WinGetPackageInstaller`: after a portable code only, read the install folder and ask `IRunningPrograms`.
   A missing folder, a COM error or an enumeration error falls back to today's message. *(R7.2, R7.3)*
   - Verify: `WinGetErrorMessageTests.Running_files_fallback_*` (fake `IRunningPrograms` that throws or finds nothing, no

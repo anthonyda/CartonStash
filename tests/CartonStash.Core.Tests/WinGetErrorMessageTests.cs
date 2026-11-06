@@ -102,6 +102,88 @@ public class WinGetErrorMessageTests
         Assert.Contains(expected, outcome.Message);
     }
 
+    [Theory] // 003 R7.1
+    [InlineData(OperationKind.Install, 0x8A150101u, "Claude Code is running, so it couldn't be installed. Close it, then press Retry.")]
+    [InlineData(OperationKind.Upgrade, 0x8A150103u, "Claude Code is running, so it couldn't be updated. Close it, then press Retry.")]
+    [InlineData(OperationKind.Upgrade, 0x8A150111u,
+        "Claude Code is in use by another program, so it couldn't be updated. Close that program, then press Retry.")]
+    public void In_use_codes_ask_to_close_the_program(OperationKind kind, uint code, string expected)
+    {
+        var outcome = WinGetPackageInstaller.MapInstallResult(kind, InstallResultStatus.InstallError, 2316632067, false, InstallScope.Any,
+            unchecked((int)code), "Claude Code");
+
+        Assert.Equal(OperationResult.Failed, outcome.Result);
+        Assert.Equal(expected, outcome.Message);
+    }
+
+    [Theory] // 003 R7.1
+    [InlineData(0x8A150101u, "Claude Code is running, so it couldn't be uninstalled. Close it, then press Retry.")]
+    [InlineData(0x8A150111u, "Claude Code is in use by another program, so it couldn't be uninstalled. Close that program, then press Retry.")]
+    public void In_use_codes_ask_to_close_the_program_on_uninstall(uint code, string expected)
+    {
+        var outcome = WinGetPackageInstaller.MapUninstallResult(UninstallResultStatus.UninstallError, 1, false, unchecked((int)code), "Claude Code");
+
+        Assert.Equal(expected, outcome.Message);
+    }
+
+    [Fact] // 003 R7.2: the update seen on 2026-11-06, with claude.exe running
+    public void Portable_update_names_the_running_file()
+    {
+        var outcome = WinGetPackageInstaller.MapInstallResult(OperationKind.Upgrade, InstallResultStatus.InstallError, 2316632067, false,
+            InstallScope.Any, WinGetPackageInstaller.PortableInstallFailed, "Claude Code", ["claude.exe"]);
+
+        Assert.Equal(OperationResult.Failed, outcome.Result);
+        Assert.Equal("Claude Code is running (claude.exe), so it couldn't be updated. Close it, then press Retry.", outcome.Message);
+    }
+
+    [Fact] // 003 R7.2
+    public void Portable_uninstall_names_every_running_file()
+    {
+        var outcome = WinGetPackageInstaller.MapUninstallResult(UninstallResultStatus.UninstallError, 1, false,
+            WinGetPackageInstaller.PortableUninstallFailed, "Tools", ["a.exe", "b.exe"]);
+
+        Assert.Equal("Tools is running (a.exe, b.exe), so it couldn't be uninstalled. Close it, then press Retry.", outcome.Message);
+    }
+
+    [Theory] // 003 R7.3: nothing found, so today's message
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Portable_failure_without_a_running_file_keeps_the_error_code(bool emptyList)
+    {
+        var install = WinGetPackageInstaller.MapInstallResult(OperationKind.Upgrade, InstallResultStatus.InstallError, 2316632067, false,
+            InstallScope.Any, WinGetPackageInstaller.PortableInstallFailed, "Claude Code", emptyList ? [] : null);
+        var uninstall = WinGetPackageInstaller.MapUninstallResult(UninstallResultStatus.UninstallError, 1, false,
+            WinGetPackageInstaller.PortableUninstallFailed, "Claude Code", emptyList ? [] : null);
+
+        Assert.Equal("The installer failed with error code 0x8A150003.", install.Message);
+        Assert.Equal("The uninstaller failed with error code 1.", uninstall.Message);
+    }
+
+    [Fact] // 003 R7.3: running files only count after a portable failure
+    public void Running_files_alone_change_nothing()
+    {
+        var outcome = WinGetPackageInstaller.MapInstallResult(OperationKind.Upgrade, InstallResultStatus.InstallError, 1603, false,
+            InstallScope.Any, 0, "Claude Code", ["claude.exe"]);
+
+        Assert.Equal("The installer failed with error code 1603.", outcome.Message);
+    }
+
+    [Fact] // 003 R7.1: a name is always shown, even when the row has none
+    public void In_use_message_without_a_name_says_the_package()
+    {
+        Assert.StartsWith("The package is running",
+            WinGetPackageInstaller.InUseMessage(OperationKind.Upgrade, WinGetPackageInstaller.PackageInUse, "", null));
+    }
+
+    [Fact] // 003 R7.5: the log keeps WinGet's codes as they are (the Claude Code log of 2026-11-06)
+    public void Details_are_unchanged_for_an_in_use_failure()
+    {
+        var details = WinGetPackageInstaller.FormatDetails("InstallError", 2316632067,
+            new System.Runtime.InteropServices.COMException("", WinGetPackageInstaller.PortableInstallFailed));
+
+        Assert.Equal("WinGet status: InstallError\nInstaller exit code: 2316632067\nExtended error: 0x8A150052", details);
+    }
+
     [Theory] // 004 R6.1: WinGet's Ok, then its installed list read again
     [InlineData(true, OperationResult.SucceededAppRestartRequired, "Restart CartonStash to finish")]
     [InlineData(false, OperationResult.Succeeded, "Updated successfully.")]
