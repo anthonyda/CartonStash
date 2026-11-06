@@ -8,7 +8,7 @@ namespace CartonStash.Core.Services;
 /// <see cref="IPackageInstaller"/> on the WinGet COM API (specs 003, 004). WinGet starts the installer, and the
 /// installer asks for UAC itself when it needs to; the app never elevates (003 R6.1, constitution A5).
 /// </summary>
-public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettings settings) : IPackageInstaller
+public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettings settings, IRunningPrograms runningPrograms) : IPackageInstaller
 {
     public async Task<IReadOnlyList<Agreement>> GetAgreementsAsync(PackageInfo package, CancellationToken cancellationToken = default)
     {
@@ -46,8 +46,8 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
         {
             var outcome = kind switch
             {
-                OperationKind.Uninstall => await UninstallAsync(found, logPath, progress, cancellationToken),
-                _ => await InstallAsync(kind, found, acceptAgreements, logPath, progress, cancellationToken),
+                OperationKind.Uninstall => await UninstallAsync(found, package.Name, logPath, progress, cancellationToken),
+                _ => await InstallAsync(kind, found, package.Name, acceptAgreements, logPath, progress, cancellationToken),
             };
             if (kind == OperationKind.Upgrade && outcome.Result == OperationResult.Succeeded && WinGetHost.IsAppInstaller(package))
             {
@@ -63,7 +63,7 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
         }
     }
 
-    private async Task<OperationOutcome> InstallAsync(OperationKind kind, CatalogPackage package, bool acceptAgreements, string? logPath,
+    private async Task<OperationOutcome> InstallAsync(OperationKind kind, CatalogPackage package, string name, bool acceptAgreements, string? logPath,
         IProgress<OperationProgress> progress, CancellationToken cancellationToken)
     {
         var options = new InstallOptions
@@ -83,11 +83,13 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
         var winGetProgress = new Progress<InstallProgress>(p => progress.Report(MapInstallProgress(p)));
         var result = await operation.AsTask(cancellationToken, winGetProgress);
 
+        var extendedError = result.ExtendedErrorCode?.HResult ?? 0;
+        var running = await RunningFilesAfterAsync(extendedError, package);
         return MapInstallResult(kind, result.Status, result.InstallerErrorCode, result.RebootRequired, settings.Current.InstallScope,
-            result.ExtendedErrorCode?.HResult ?? 0) with { Details = FormatDetails(result.Status.ToString(), result.InstallerErrorCode, result.ExtendedErrorCode) };
+            extendedError, name, running) with { Details = FormatDetails(result.Status.ToString(), result.InstallerErrorCode, result.ExtendedErrorCode) };
     }
 
-    private async Task<OperationOutcome> UninstallAsync(CatalogPackage package, string? logPath, IProgress<OperationProgress> progress, CancellationToken cancellationToken)
+    private async Task<OperationOutcome> UninstallAsync(CatalogPackage package, string name, string? logPath, IProgress<OperationProgress> progress, CancellationToken cancellationToken)
     {
         var options = new UninstallOptions { PackageUninstallMode = PackageUninstallMode.Silent };
         if (logPath is not null)
@@ -98,8 +100,39 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
         var winGetProgress = new Progress<UninstallProgress>(p => progress.Report(MapUninstallProgress(p)));
         var result = await operation.AsTask(cancellationToken, winGetProgress);
 
-        return MapUninstallResult(result.Status, result.UninstallerErrorCode, result.RebootRequired)
+        var extendedError = result.ExtendedErrorCode?.HResult ?? 0;
+        var running = await RunningFilesAfterAsync(extendedError, package);
+        return MapUninstallResult(result.Status, result.UninstallerErrorCode, result.RebootRequired, extendedError, name, running)
             with { Details = FormatDetails(result.Status.ToString(), result.UninstallerErrorCode, result.ExtendedErrorCode) };
+    }
+
+    /// <summary>
+    /// 003 R7.2: after a portable failure only, the programs running from the package's install folder. Nothing is read
+    /// on success or on any other failure.
+    /// </summary>
+    private Task<IReadOnlyList<string>?> RunningFilesAfterAsync(int extendedError, CatalogPackage package) =>
+        IsPortableFailure(extendedError)
+            ? Task.Run(() => RunningFilesAfter(extendedError, () => package.InstalledVersion?.GetMetadata(PackageVersionMetadataField.InstalledLocation), runningPrograms))
+            : Task.FromResult<IReadOnlyList<string>?>(null);
+
+    /// <summary>
+    /// The running files for R7.2, or null for R7.3: not a portable failure, no folder, or any error reading it or the
+    /// process list. A failed check never becomes an error of its own.
+    /// </summary>
+    internal static IReadOnlyList<string>? RunningFilesAfter(int extendedError, Func<string?> installFolder, IRunningPrograms programs)
+    {
+        if (!IsPortableFailure(extendedError))
+        {
+            return null;
+        }
+        try
+        {
+            return installFolder() is { Length: > 0 } folder ? programs.FileNamesIn(folder) : null;
+        }
+        catch (Exception)
+        {
+            return null;
+        }
     }
 
     // 004 R6.1: WinGet reports Ok while Windows only staged the new App Installer, because WinGet's own server, which this

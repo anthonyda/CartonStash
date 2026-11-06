@@ -184,6 +184,84 @@ public class WinGetErrorMessageTests
         Assert.Equal("WinGet status: InstallError\nInstaller exit code: 2316632067\nExtended error: 0x8A150052", details);
     }
 
+    private sealed class FakeRunningPrograms(Func<string, IReadOnlyList<string>> find) : IRunningPrograms
+    {
+        public List<string> Asked { get; } = [];
+
+        public IReadOnlyList<string> FileNamesIn(string folder)
+        {
+            Asked.Add(folder);
+            return find(folder);
+        }
+    }
+
+    private const string ClaudeFolder = @"C:\Users\t\AppData\Local\Microsoft\WinGet\Packages\Anthropic.ClaudeCode_Microsoft.Winget.Source_8wekyb3d8bbwe";
+
+    [Theory] // 003 R7.2: both portable codes look in the install folder
+    [InlineData(0x8A150052u)]
+    [InlineData(0x8A150057u)]
+    public void Running_files_come_from_the_install_folder(uint code)
+    {
+        var programs = new FakeRunningPrograms(_ => ["claude.exe"]);
+
+        var files = WinGetPackageInstaller.RunningFilesAfter(unchecked((int)code), () => ClaudeFolder, programs);
+
+        Assert.Equal(["claude.exe"], files);
+        Assert.Equal([ClaudeFolder], programs.Asked);
+    }
+
+    [Theory] // 003 R7.2: any other result reads nothing
+    [InlineData(0u)]
+    [InlineData(0x8A150003u)]
+    [InlineData(0x8A150101u)]
+    public void Running_files_fallback_reads_nothing_after_other_codes(uint code)
+    {
+        var programs = new FakeRunningPrograms(_ => ["claude.exe"]);
+        var folderRead = false;
+
+        var files = WinGetPackageInstaller.RunningFilesAfter(unchecked((int)code), () => { folderRead = true; return ClaudeFolder; }, programs);
+
+        Assert.Null(files);
+        Assert.False(folderRead);
+        Assert.Empty(programs.Asked);
+    }
+
+    [Theory] // 003 R7.3: no folder
+    [InlineData(null)]
+    [InlineData("")]
+    public void Running_files_fallback_without_a_folder(string? folder)
+    {
+        var programs = new FakeRunningPrograms(_ => ["claude.exe"]);
+
+        Assert.Null(WinGetPackageInstaller.RunningFilesAfter(WinGetPackageInstaller.PortableInstallFailed, () => folder, programs));
+        Assert.Empty(programs.Asked);
+    }
+
+    [Fact] // 003 R7.3: a COM error reading the folder, or the process list throwing, gives today's message
+    public void Running_files_fallback_when_a_read_throws()
+    {
+        var throwing = new FakeRunningPrograms(_ => throw new InvalidOperationException("process list"));
+
+        Assert.Null(WinGetPackageInstaller.RunningFilesAfter(WinGetPackageInstaller.PortableInstallFailed,
+            () => throw new System.Runtime.InteropServices.COMException("gone"), new FakeRunningPrograms(_ => ["claude.exe"])));
+        Assert.Null(WinGetPackageInstaller.RunningFilesAfter(WinGetPackageInstaller.PortableInstallFailed, () => ClaudeFolder, throwing));
+
+        var outcome = WinGetPackageInstaller.MapInstallResult(OperationKind.Upgrade, InstallResultStatus.InstallError, 2316632067, false,
+            InstallScope.Any, WinGetPackageInstaller.PortableInstallFailed, "Claude Code",
+            WinGetPackageInstaller.RunningFilesAfter(WinGetPackageInstaller.PortableInstallFailed, () => ClaudeFolder, throwing));
+        Assert.Equal("The installer failed with error code 0x8A150003.", outcome.Message);
+    }
+
+    [Fact] // 003 R7.3: nothing running from the folder
+    public void Running_files_fallback_when_nothing_runs()
+    {
+        var files = WinGetPackageInstaller.RunningFilesAfter(WinGetPackageInstaller.PortableInstallFailed, () => ClaudeFolder,
+            new FakeRunningPrograms(_ => []));
+
+        Assert.NotNull(files);
+        Assert.Empty(files);
+    }
+
     [Theory] // 004 R6.1: WinGet's Ok, then its installed list read again
     [InlineData(true, OperationResult.SucceededAppRestartRequired, "Restart CartonStash to finish")]
     [InlineData(false, OperationResult.Succeeded, "Updated successfully.")]

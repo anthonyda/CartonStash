@@ -39,10 +39,12 @@
     `WinGetErrorMessageTests.Running_files_alone_change_nothing`, `WinGetErrorMessageTests.Details_are_unchanged_*`.
   - Done 2026-11-06: 416 unit tests pass. The in-use messages apply only to `InstallError` / `UninstallError`, where WinGet
     reports installer failures.
-- [ ] **T12.** `WinGetPackageInstaller`: after a portable code only, read the install folder and ask `IRunningPrograms`.
+- [x] **T12.** `WinGetPackageInstaller`: after a portable code only, read the install folder and ask `IRunningPrograms`.
   A missing folder, a COM error or an enumeration error falls back to today's message. *(R7.2, R7.3)*
-  - Verify: `WinGetErrorMessageTests.Running_files_fallback_*` (fake `IRunningPrograms` that throws or finds nothing, no
-    folder); all unit tests pass.
+  - Verify: `WinGetErrorMessageTests.Running_files_come_from_the_install_folder`, `WinGetErrorMessageTests.Running_files_fallback_*`
+    (fake `IRunningPrograms` that throws or finds nothing, no folder, other codes); all unit tests pass.
+  - Done 2026-11-06: all 445 tests pass, including the integration tests (read-only). The check runs off the caller's
+    thread (`Task.Run`, constitution A4).
 - [ ] **T13.** Manual in the test VM, Store test build: install an older version of a portable GUI package with
   `winget install --version`, start it, update it in CartonStash. Check the message names its file and the program stays
   open; close it, Retry, and check that it updates. Then the same with Uninstall. *(R7.2, R7.4)*
