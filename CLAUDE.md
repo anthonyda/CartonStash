@@ -29,6 +29,17 @@ dotnet run --project src/CartonStash.App             # run the app
 .\tools\Get-Changelog.ps1 -Version 1.2.3              # that version's CHANGELOG.md section: the GitHub Release notes
 ```
 
+## Where build files go
+
+Always these folders, in the main checkout `C:\dev\CartonStash`. Never make up another one. Both are git-ignored, and
+`Publish-Release.ps1` empties them at the start of each build.
+
+- **Store MSIX packages for Partner Center:** `store\`. That's where a local `Publish-Release.ps1` writes them, and
+  where a release's packages are downloaded to: `gh run download <release run id> --name store --dir store`. Empty
+  the folder first, so it only holds the version to upload. Give the user the full paths.
+- **Portable zips:** `artifacts\`.
+- **Test builds for the VM:** `C:\VMs\CartonStash-Test\builds\<run name>\` (see `TEST-ENV.local.md`), never inside the repo.
+
 ## Gotchas
 
 - WinGet collections: index them, don't `foreach` (constitution W2).
