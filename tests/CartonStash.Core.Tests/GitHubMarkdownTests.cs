@@ -58,6 +58,15 @@ public class GitHubMarkdownTests
         Assert.Equal("> P: quoted\nrule\nP: after", Parse("> quoted\n\n---\n\nafter"));
     }
 
+    [Theory] // R2.4: GitHub alerts, found in Windows Terminal's notes during T9
+    [InlineData("NOTE", "Note")]
+    [InlineData("WARNING", "Warning")]
+    [InlineData("CAUTION", "Caution")]
+    public void Alerts_are_quotes_with_their_label(string kind, string label)
+    {
+        Assert.Equal($"> P: **{label}**\n> P: Rolling out to Insiders first.", Parse($"> [!{kind}]\n> Rolling out to Insiders first."));
+    }
+
     [Fact]
     public void Pipe_table_with_a_header_row() // R2.4
     {

@@ -98,7 +98,8 @@ Any exception gives `NotesDocument.PlainText(text)`: one paragraph per blank-lin
 | anything else (5xx, bad JSON, too large, bad redirect) | Failed | "Couldn't load the notes from GitHub." + Retry |
 
 The RateLimited line has no Retry button: retrying before the reset time can't work. Pressing "Show notes from GitHub"
-again is still possible.
+again is still possible. Where Retry is offered, it takes the button's place, so the pane doesn't show two controls that do
+the same thing. *(Amended 2026-11-07 after T9.)*
 
 ### Session cache (R2.9)
 
@@ -111,6 +112,8 @@ straight away when a package is opened again.
 - Markdig 1.4.2 (BSD-2-Clause) with `UsePipeTables`, `UseTaskLists`, `UseEmphasisExtras(Strikethrough)` and
   `UseAutoLinks`. Line breaks inside a paragraph are kept as line breaks, as GitHub shows them in release notes. Checked
   2026-11-07: ripgrep 15.2.0's page has a `<br>` where its notes have a line break inside a paragraph.
+- GitHub alerts (`> [!NOTE]`, `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]`, `[!CAUTION]`) → Quote whose first paragraph is the label in
+  bold ("Note", "Tip"…), with `UseAlertBlocks`. *(Added 2026-11-07 after T9: Windows Terminal's notes showed "[!NOTE]" as text.)*
 - Blocks: `HeadingBlock` → Heading (level 1 to 6). `ParagraphBlock` → Paragraph. `ListBlock` → List (ordered, start number,
   task check state per item). `QuoteBlock` → Quote. `FencedCodeBlock` / `CodeBlock` → CodeBlock (text only; no highlighting).
   `Table` → Table (first row is the header). `ThematicBreakBlock` → Rule. Anything else is converted to its plain text.

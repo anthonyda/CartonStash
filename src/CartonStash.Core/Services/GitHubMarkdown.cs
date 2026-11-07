@@ -3,6 +3,7 @@ using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
 using Markdig;
+using Markdig.Extensions.Alerts;
 using Markdig.Extensions.EmphasisExtras;
 using Markdig.Extensions.Tables;
 using Markdig.Extensions.TaskLists;
@@ -23,6 +24,7 @@ public static partial class GitHubMarkdown
         .UseTaskLists()
         .UseEmphasisExtras(EmphasisExtraOptions.Strikethrough)
         .UseAutoLinks()
+        .UseAlertBlocks()
         .Build();
 
     /// <param name="page">The release page: relative links resolve against it (R2.7).</param>
@@ -98,6 +100,10 @@ public static partial class GitHubMarkdown
                     output.Add(List(list));
                     break;
 
+                case AlertBlock alert: // > [!NOTE], before QuoteBlock: an alert is a kind of quote
+                    output.Add(new NotesQuote([new NotesParagraph([new NotesText(AlertLabel(alert.Kind.ToString()), NotesStyle.Bold)]), .. Blocks(alert)]));
+                    break;
+
                 case QuoteBlock quote:
                     output.Add(new NotesQuote(Blocks(quote)));
                     break;
@@ -132,6 +138,10 @@ public static partial class GitHubMarkdown
                     break;
             }
         }
+
+        /// <summary>"NOTE" → "Note", as GitHub labels its alerts.</summary>
+        private static string AlertLabel(string kind) =>
+            kind.Length == 0 ? "Note" : char.ToUpperInvariant(kind[0]) + kind[1..].ToLowerInvariant();
 
         private static void AddParagraph(List<NotesBlock> output, List<NotesInline> inlines)
         {

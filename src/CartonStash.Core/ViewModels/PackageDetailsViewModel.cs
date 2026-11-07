@@ -52,6 +52,7 @@ public sealed partial class PackageDetailsViewModel(IPackageService packages, IR
 
     /// <summary>Only when trying again can help: no connection, or a failure (012 R2.11).</summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanShowGitHubNotes), nameof(ShowReleaseNotesSection))]
     public partial bool CanRetryGitHubNotes { get; private set; }
 
     /// <summary>"{title} · {date} · from GitHub" while GitHub's notes are shown (012 R2.4).</summary>
@@ -132,8 +133,8 @@ public sealed partial class PackageDetailsViewModel(IPackageService packages, IR
 
     public bool NotesFromGitHub => GitHubNotesHeader is not null;
 
-    /// <summary>The "Show notes from GitHub" button (012 R2.1, R2.2).</summary>
-    public bool CanShowGitHubNotes => GitHubRelease is not null && !IsLoadingGitHubNotes && !GitHubNotesLoaded;
+    /// <summary>The "Show notes from GitHub" button (012 R2.1, R2.2). Retry takes its place when it's offered.</summary>
+    public bool CanShowGitHubNotes => GitHubRelease is not null && !IsLoadingGitHubNotes && !GitHubNotesLoaded && !CanRetryGitHubNotes;
 
     /// <summary>The section also shows for a package that has only a GitHub link.</summary>
     public bool ShowReleaseNotesSection => HasReleaseNotes || CanShowGitHubNotes || IsLoadingGitHubNotes || HasGitHubNotesMessage;

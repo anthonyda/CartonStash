@@ -205,6 +205,7 @@ public class PackageDetailsReleaseNotesTests
         Assert.Equal(message, vm.GitHubNotesMessage);
         Assert.True(vm.HasGitHubNotesMessage);
         Assert.Equal(retry, vm.CanRetryGitHubNotes);
+        Assert.Equal(!retry, vm.CanShowGitHubNotes); // Retry takes the button's place
         Assert.Equal("P: **Fixes**\n- WinGet's own", Notes(vm));
         Assert.False(vm.NotesFromGitHub);
     }
