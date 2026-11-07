@@ -1,6 +1,6 @@
 # 013 – Honest operation results: Design
 
-**Status:** Approved (2026-11-07)
+**Status:** Done (2026-11-07). Approved 2026-11-07
 **Requirements:** [requirements.md](requirements.md)
 
 ## Overview
@@ -148,6 +148,9 @@ no **Retry**. Accessible names come from the existing text bindings.
   `RunAsync`'s `finally` already invalidates after every operation, so the next operation reconnects anyway. Cost: one
   extra local-first search per successful update. Measure it with Update all during the manual checks.
 - **R1 and the in-use codes:** `0x8A150101/0103/0111` and portable failures keep 003 R7's messages (R1.3).
+- **Miniconda on the Updates page** (checked in T7): WinGet's CLI lists it under "require explicit targeting for
+  upgrade", but the COM API still reports `IsUpdateAvailable`, so the app keeps offering it and R3.1's message explains
+  why it fails. Marking such rows is 004 R3.1 (deferred).
 - **R3 on install, not update:** WinGet doesn't raise this code for a fresh install. If it did, the generic arms apply.
 
 ## Testing strategy

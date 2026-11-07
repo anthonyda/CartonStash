@@ -1,6 +1,6 @@
 # 013 – Honest operation results: Tasks
 
-**Status:** Approved (2026-11-07)
+**Status:** Done (2026-11-07)
 **Design:** [design.md](design.md)
 
 Tick a task only when its verification passes. Keep tasks small enough for one commit.
@@ -26,7 +26,7 @@ Manual checks run in the CartonStash-Test VM (or Windows Sandbox), never on the 
 
 ## Manual checks
 
-- [ ] **T7.** In the VM, on a build from this branch, record the results in the log below. *(R1.2, R2.2, R3.1, R4.2)*
+- [x] **T7.** In the VM, on a build from this branch, record the results in the log below. *(R1.2, R2.2, R3.1, R4.2)*
   - Miniconda: `winget install Anaconda.Miniconda3 --version py312_24.11.1-0`, then update in the app → the in-place message, no Retry.
   - Fusion: install an older `Autodesk.Fusion` if winget-pkgs still has one, then update → "Update not confirmed", caution icon, warning notification, log `Result: Update not confirmed`, row still offers Update. If no older manifest exists, record that and rely on T5.
   - EA app: install an older `ElectronicArts.EADesktop`, delete `C:\Program Files\Electronic Arts\EA Desktop\EA Desktop\EAUninstall.exe`, then update → the R1.2 message.
@@ -36,3 +36,8 @@ Manual checks run in the CartonStash-Test VM (or Windows Sandbox), never on the 
 
 | Criterion | Date | Result | Notes |
 |-----------|------|--------|-------|
+| R3.1 | 2026-11-07 | Pass | Miniconda3 py314_26.9.3-0 → py314_26.9.4-0: "… can't be updated in place: its publisher asks for it to be uninstalled first. To get the new version, uninstall it, then install it again." No Retry. Log keeps `CatalogError`, exit code 0, `0x8A150114` (R4.1). |
+| R1.2 | 2026-11-07 | Pass | EA app's thin installer always installs the latest (13.822.0.6335), so the host's state was rebuilt: ARP `DisplayVersion` set back to 13.813.1.6327 and `EAUninstall.exe` deleted. Update: "WinGet couldn't start a program needed to update EA app: it wasn't found (0x800401F5). Repairing or reinstalling EA app from its publisher may fix this." Retry kept. WinGet's log shows the same `ShellExecuteInstallerHandler.cpp(353)` failure as on the host. |
+| R2.2 | 2026-11-07 | Not reproducible | `Autodesk.Fusion` 2704.1.36 can't be installed any more: its manifest's URL now serves a newer downloader (hash mismatch, `0x8A150011`). Covered by `AfterUpdateTests` only. |
+| R4.2, R2.3 | 2026-11-07 | Pass | jq 1.7.1 → 1.8.2: "Updated successfully." in 4 s, so the re-read (R2.1) saw the new version and raised no warning. Uninstall of jq: "Uninstalled successfully." |
+| Update all timing | 2026-11-07 | Not run | Update all would have run machine-wide installers (VC++ redistributables) that stop at a UAC prompt in the unattended VM. The single jq update took 4 s, re-read included. |

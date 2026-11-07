@@ -1,6 +1,6 @@
 # 013 – Honest operation results: Requirements
 
-**Status:** Approved (2026-11-07)
+**Status:** Done (2026-11-07). R2.2 checked by unit tests only (no older Fusion installer exists)
 **Depends on:** 003 (R5.2 readable reasons, R7), 004 (R2.4, R6.1), 009 (R2.2 operation log)
 
 ## Problem
