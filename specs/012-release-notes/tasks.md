@@ -1,6 +1,6 @@
 # 012 – Readable release notes: Tasks
 
-**Status:** In progress: code done, VM checks recorded below; Narrator and Tab check pending (T9)
+**Status:** Done (2026-11-07)
 **Design:** [design.md](design.md)
 
 Tick a task only when its verification passes. Keep tasks small enough for one commit.
@@ -34,7 +34,7 @@ Manual checks run in the CartonStash-Test VM (or Windows Sandbox), never on the 
 
 ## Manual checks
 
-- [ ] **T9.** In the VM, on a build from this branch, record the results in the log below. *(R1.1 to R1.9, R2.1 to R2.12)*
+- [x] **T9.** In the VM, on a build from this branch, record the results in the log below. *(R1.1 to R1.9, R2.1 to R2.12)*
   - WinGet's text: Git (section titles in bold, bullets), ripgrep (wrapped items, quote), GitHub.cli (the `#` lines stay plain), Firefox (blank lines between items), a long one collapsed with "Show more" only when it's taller than about 10 lines.
   - From GitHub: PowerToys (button, header, the repeated title heading dropped, the table scrolls sideways, links open the browser), Notepad++, Windows Terminal. The line breaks match the release page on github.com.
   - A package whose link isn't GitHub (VS Code): link only, no button.
@@ -44,8 +44,8 @@ Manual checks run in the CartonStash-Test VM (or Windows Sandbox), never on the 
   - Keyboard: Tab reaches the button, the links in the notes and "Show more". Narrator reads headings, list items and the loading and message lines.
   - Light, dark and high-contrast themes.
   - Time from the button to drawn notes on a large release (PowerToys `v0.102.2933.0`). If drawing takes over 200 ms, add batching to `NotesView` (design, Error handling).
-  - *2026-11-07: everything above passed in the VM except a hand-run Narrator and Tab pass, which a script can't do; see the log.*
-- [ ] **T10.** Set the requirements, design and tasks to `Done`, and update the roadmap.
+  - *2026-11-07: everything above passed in the VM; the keyboard and screen-reader checks ran as phases F and G (see the log). Narrator's speech itself wasn't listened to: the checks cover what it reads from.*
+- [x] **T10.** Set the requirements, design and tasks to `Done`, and update the roadmap.
 
 ## Manual verification log
 
@@ -60,7 +60,7 @@ in dark, and the button stayed next to Retry. No crashes in any phase.
 | R1.1, R1.2 | 2026-11-07 | Pass | ripgrep: the quote has its bar and no `>` marks, wrapped items joined ("…binaries for / ripgrep."), the colon titles in bold |
 | R1.3 | | Unit test only | GitHub.cli's current notes have no `#` line (a newer release than the sample). `WinGetNotesParserTests.GitHub_cli_hash_lines_are_not_headings` |
 | R1.6, R2.8 | 2026-11-07 | Pass | "Show more" only on ripgrep, Firefox, PowerToys, Notepad++ and Terminal, none on Git; Show more / Show less toggle and keep the link in place |
-| R1.7 | 2026-11-07 | Partial | UI Automation reads the paragraphs and list items in order (TextPattern dump in the logs). Narrator itself not run (T9 stays open) |
+| R1.7 | 2026-11-07 | Pass (not listened) | What Narrator reads from: paragraphs and list items in order (TextPattern), headings at Level4 ("Installer Hashes", "Highlights") and Level5 under the pane's Level2 title, and a LiveRegionChanged event for each status line. Narrator's speech wasn't listened to |
 | R2.1 | 2026-11-07 | Pass | Button on the GitHub links (Git, ripgrep, GitHub CLI, PowerToys, Notepad++, Terminal, Oh My Posh); VS Code (`code.visualstudio.com`): link only |
 | R2.2 | 2026-11-07 | Pass | The section shows the button and no GitHub text until it is pressed. No request was observed before a press: the button-only state survives until then, and the rate-limit run (R2.11) counts down only with presses |
 | R2.3, R2.4 | 2026-11-07 | Pass | PowerToys: header "Release v0.102.3101.0 · 6 November 2026 · from GitHub", the repeated title heading left out, link to v0.102.2933.0, "Installer Hashes" and "Highlights" headings, the 3-column table. Notepad++, Terminal loaded too |
@@ -73,6 +73,7 @@ in dark, and the button stayed next to Retry. No crashes in any phase.
 | R2.11 (limit) | 2026-11-07 | Pass | 48 anonymous requests from the VM used up the limit (12 already used that hour); Oh My Posh then says "GitHub limits requests without sign-in. Try again after 7:23 PM.", which is GitHub's `x-ratelimit-reset` in local time. No Retry, button kept |
 | R2.11 (not found) | | Unit test only | No live package with a missing release tag was found |
 | R2.12 | | Unit test only | `GitHubReleaseNotesServiceTests`: redirects, size cap, timeout |
-| Q5 keyboard | 2026-11-07 | Partial | UI Automation: every link in the notes is keyboard focusable (16 on PowerToys). Tab order not walked by hand |
+| Q5 keyboard | 2026-11-07 | Pass | Real Tab presses (phase F, build `012d`): on PowerToys, Close > Install > the pane's links > 12 links in the notes (installers, `#49950`, `@mvanhorn`) > Show more > Release notes online. Tab reaches the GitHub button (Git, PowerToys) and Retry; Enter on the button loads the notes, Enter on Show more expands and keeps focus on the toggle. After the button goes, focus moves to the next control (Release notes online) |
+| Q5 live region | 2026-11-07 | Pass after a fix | Build `23eb0bd`: no LiveRegionChanged event at all, so a screen reader wouldn't hear the status line. Fixed: the pane raises it when `GitHubNotesStatus` changes (design amended), once per text. Build `012d`: offline, one event for "Loading notes from GitHub…" and one for "Couldn't reach GitHub." (the second after the 15 s timeout, GitHub's address being cached) |
 | Q5 themes | 2026-11-07 | Pass | Light, dark (app theme Dark) and high contrast (system, on then off): text, quote bar, table lines, links and header readable in all three |
 | Load time | 2026-11-07 | Pass | Button to notes shown, network included: PowerToys 0.5 to 2.3 s, Notepad++ 0.5 s, Terminal (long notes) 0.55 s. Drawing wasn't timed on its own; it is part of those times, so no batching added. Revisit if a much longer release feels slow |

@@ -185,6 +185,7 @@
                             Glyph="&#xE946;"
                             Visibility="{x:Bind ViewModel.HasGitHubNotesMessage, Mode=OneWay}" />
                         <TextBlock
+                            x:Name="GitHubStatusText"
                             Grid.Column="1"
                             AutomationProperties.LiveSetting="Polite"
                             Text="{x:Bind ViewModel.GitHubNotesStatus, Mode=OneWay}"

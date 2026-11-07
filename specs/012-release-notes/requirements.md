@@ -1,6 +1,6 @@
 # 012 – Readable release notes: Requirements
 
-**Status:** Approved (2026-11-06), with the proposed answers to Q1 and Q2
+**Status:** Done (2026-11-07). Approved 2026-11-06, with the proposed answers to Q1 and Q2
 **Depends on:** 005
 
 ## Problem

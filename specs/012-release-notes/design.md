@@ -1,6 +1,6 @@
 # 012 – Readable release notes: Design
 
-**Status:** Approved (2026-11-06)
+**Status:** Done (2026-11-07). Approved 2026-11-06, amended during implementation (marked inline)
 **Requirements:** [requirements.md](requirements.md)
 
 ## Overview
@@ -184,7 +184,8 @@ Removed: `ShowAllReleaseNotes`, `ReleaseNotesIsLong`, `ReleaseNotesMaxLines`, `T
   one status line, `GitHubNotesStatus`, a live region (`AutomationProperties.LiveSetting="Polite"`): its text changes from
   "Loading notes from GitHub…" to the message, so a screen reader hears both. *(Amended 2026-11-07 during T7: two lines
   that only appear and disappear wouldn't be announced.)* A `ProgressRing` shows beside it while loading, an info icon
-  beside a message.
+  beside a message. *(Amended 2026-11-07 after the T9 keyboard run: `LiveSetting` alone raised no LiveRegionChanged event in
+  the VM, so the pane's code-behind raises it each time `GitHubNotesStatus` changes, a view-only concern under A3.)*
 
 ## Data flow
 
