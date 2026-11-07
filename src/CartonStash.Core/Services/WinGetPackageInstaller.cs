@@ -49,10 +49,16 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
                 OperationKind.Uninstall => await UninstallAsync(found, package.Name, logPath, progress, cancellationToken),
                 _ => await InstallAsync(kind, found, package.Name, acceptAgreements, logPath, progress, cancellationToken),
             };
-            if (kind == OperationKind.Upgrade && outcome.Result == OperationResult.Succeeded && WinGetHost.IsAppInstaller(package))
+            switch (CheckAfter(kind, outcome, package))
             {
-                connection.Invalidate();
-                outcome = AfterAppInstallerUpdate(outcome, await OldVersionStillInstalledAsync(package));
+                case CheckAfterOperation.AppInstaller:
+                    connection.Invalidate();
+                    outcome = AfterAppInstallerUpdate(outcome, await OldVersionStillInstalledAsync(package));
+                    break;
+                case CheckAfterOperation.InstalledVersion:
+                    connection.Invalidate();
+                    outcome = AfterUpdate(outcome, package.InstalledVersion, await InstalledAfterUpdateAsync(package), package.Name);
+                    break;
             }
             return outcome;
         }
@@ -152,6 +158,57 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
         {
             return null;
         }
+    }
+
+    internal enum CheckAfterOperation
+    {
+        None,
+        AppInstaller,
+        InstalledVersion,
+    }
+
+    /// <summary>Which re-read a finished operation gets: App Installer's own (004 R6.1, 013 R2.4), the version (013 R2.1), or none (R2.5).</summary>
+    internal static CheckAfterOperation CheckAfter(OperationKind kind, OperationOutcome outcome, PackageInfo package) =>
+        kind != OperationKind.Upgrade || outcome.Result != OperationResult.Succeeded ? CheckAfterOperation.None
+        : WinGetHost.IsAppInstaller(package) ? CheckAfterOperation.AppInstaller
+        : CheckAfterOperation.InstalledVersion;
+
+    /// <summary>The package as WinGet lists it after an update (013 R2.1).</summary>
+    internal sealed record InstalledAfterUpdate(string? Version, bool UpdateAvailable);
+
+    /// <summary>013 R2.1: reads the package again. Null when it can't be read: a failed check is never an error of its own (R2.3).</summary>
+    private async Task<InstalledAfterUpdate?> InstalledAfterUpdateAsync(PackageInfo package)
+    {
+        try
+        {
+            var found = await connection.FindByIdAsync(package.Id, package.Source, localFirst: true, CancellationToken.None);
+            return new InstalledAfterUpdate(found.InstalledVersion?.Version, found.IsUpdateAvailable);
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// 013 R2.2, R2.3: a warning when WinGet said Ok but still lists the old version with an update; otherwise the outcome
+    /// unchanged. Comparing with the old version, not the new one: installers often list a different version than the
+    /// manifest's, so "not the new version" would warn after good updates.
+    /// </summary>
+    internal static OperationOutcome AfterUpdate(OperationOutcome outcome, string? versionBefore, InstalledAfterUpdate? after, string packageName = "")
+    {
+        if (after is not { Version: { } version, UpdateAvailable: true } || versionBefore is null
+            || !string.Equals(version, versionBefore, StringComparison.Ordinal))
+        {
+            return outcome;
+        }
+        var name = string.IsNullOrWhiteSpace(packageName) ? "the package" : packageName;
+        return outcome with
+        {
+            Result = OperationResult.SucceededUnconfirmed,
+            Message = $"WinGet finished without an error, but Windows still lists {name} {version}. "
+                + $"The installer may still be finishing, or {name} may update itself the next time it starts.",
+        };
     }
 
     /// <summary>The outcome of an App Installer update once WinGet's installed list was read again (004 R6.1).</summary>
