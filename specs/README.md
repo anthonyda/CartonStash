@@ -48,6 +48,6 @@ If implementation reveals the spec is wrong, **stop, update the spec first**, th
 | 009 | [Activity pane](009-activity-pane/)                    | Done (card redesign, operation logs, pin the pane; issues #2, #3, #4); high-contrast check pending; amendment R2.7 (log privacy note): code done, visual check pending; amendment R2.8–R2.10 (WinGet's record in the log): done, released in v1.0.3 |
 | 010 | [Background update checks](010-background-updates/)    | Done, including amendment R3.14 (startup entry for a missed check at sign-in); issue #14 |
 | 011 | [Source failures and missing WinGet](011-source-resilience/) | In progress: code done; high-contrast check and R3.5 pending |
-| 012 | [Readable release notes](012-release-notes/)           | In progress: requirements and design approved 2026-11-06 |
+| 012 | [Readable release notes](012-release-notes/)           | In progress: code done, VM checks passed; Narrator and Tab check pending |
 
 Suggested build order: 002 → 003 → 004 → 005 → 006 → 007 (006's scope setting slots into 003's installer when it lands).
