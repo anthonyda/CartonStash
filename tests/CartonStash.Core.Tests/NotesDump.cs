@@ -12,11 +12,9 @@ internal static class NotesDump
 {
     /// <summary>
     /// Compares with an expected text written as a multi-line literal. Those hold the file's own line endings, which are
-    /// CRLF on a Windows checkout with autocrlf (CI), while the notes model always uses "
-".
+    /// CRLF on a Windows checkout with autocrlf (CI), while the notes model always uses LF.
     /// </summary>
-    public static void Same(string expected, string actual) => Assert.Equal(expected.ReplaceLineEndings("
-"), actual);
+    public static void Same(string expected, string actual) => Assert.Equal(expected.ReplaceLineEndings("\n"), actual);
 
     public static string Describe(NotesDocument? doc)
     {
