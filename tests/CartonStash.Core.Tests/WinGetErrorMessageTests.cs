@@ -367,4 +367,39 @@ public class WinGetErrorMessageTests
 
         Assert.Equal("The installer failed with error code 0.", outcome.Message);
     }
+
+    [Theory] // 013 R3.1: Miniconda3, 2026-11-03 to 07, reported as CatalogError
+    [InlineData(InstallResultStatus.CatalogError)]
+    [InlineData(InstallResultStatus.InstallError)]
+    public void An_update_denied_in_place_says_what_to_do(InstallResultStatus status)
+    {
+        var outcome = WinGetPackageInstaller.MapInstallResult(OperationKind.Upgrade, status, 0, false, InstallScope.Any,
+            WinGetPackageInstaller.UpgradeNotSupported, "Miniconda3");
+
+        Assert.Equal(OperationResult.Failed, outcome.Result);
+        Assert.False(outcome.Retryable);
+        Assert.Equal("Miniconda3 can't be updated in place: its publisher asks for it to be uninstalled first. "
+            + "To get the new version, uninstall it, then install it again.", outcome.Message);
+        Assert.DoesNotContain("internet", outcome.Message);
+    }
+
+    [Fact] // 013 R4.2: other catalog errors keep the internet message, and Retry
+    public void Other_catalog_errors_keep_the_internet_message()
+    {
+        var outcome = WinGetPackageInstaller.MapInstallResult(OperationKind.Upgrade, InstallResultStatus.CatalogError, 0, false, InstallScope.Any,
+            unchecked((int)0x80072EE7), "A");
+
+        Assert.Contains("internet connection", outcome.Message);
+        Assert.True(outcome.Retryable);
+    }
+
+    [Fact] // 013 R3.1 is for updates only
+    public void An_install_with_that_code_is_not_called_an_update()
+    {
+        var outcome = WinGetPackageInstaller.MapInstallResult(OperationKind.Install, InstallResultStatus.CatalogError, 0, false, InstallScope.Any,
+            WinGetPackageInstaller.UpgradeNotSupported, "A");
+
+        Assert.DoesNotContain("in place", outcome.Message);
+        Assert.True(outcome.Retryable);
+    }
 }

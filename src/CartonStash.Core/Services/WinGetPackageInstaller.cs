@@ -238,6 +238,17 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
         };
     }
 
+    /// <summary>APPINSTALLER_CLI_ERROR_INSTALL_UPGRADE_NOT_SUPPORTED: the manifest denies an in-place update (013 R3.1).</summary>
+    internal const int UpgradeNotSupported = unchecked((int)0x8A150114);
+
+    /// <summary>013 R3.1: what to do instead. The app doesn't do it itself (R3.2, constitution P2).</summary>
+    internal static string UpgradeNotSupportedMessage(string packageName)
+    {
+        var name = string.IsNullOrWhiteSpace(packageName) ? "This package" : packageName;
+        return $"{name} can't be updated in place: its publisher asks for it to be uninstalled first. "
+            + "To get the new version, uninstall it, then install it again.";
+    }
+
     /// <summary>CO_E_APPNOTFOUND: WinGet couldn't start a program, seen for the EA app's missing uninstaller (013 R1.2).</summary>
     internal const int AppNotFound = unchecked((int)0x800401F5);
 
@@ -291,6 +302,9 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
         var done = kind == OperationKind.Upgrade ? "Updated" : "Installed";
         return status switch
         {
+            // 013 R3.1: whatever the status (WinGet reports CatalogError), the code says the update isn't allowed in place.
+            not InstallResultStatus.Ok when kind == OperationKind.Upgrade && extendedError == UpgradeNotSupported =>
+                Failed(UpgradeNotSupportedMessage(packageName)) with { Retryable = false },
             InstallResultStatus.Ok when rebootRequired =>
                 new(OperationResult.SucceededRestartRequired, $"{done}. Restart your PC to finish."),
             InstallResultStatus.Ok => new(OperationResult.Succeeded, $"{done} successfully."),
