@@ -56,6 +56,21 @@ public class GitHubReleaseNotesServiceTests
     }
 
     [Fact]
+    public async Task A_user_agent_the_header_cant_hold_falls_back_to_the_name() // R2.3
+    {
+        var handler = new FakeHandler((_, _) => Task.FromResult(Json(BatJson)));
+        var service = new GitHubReleaseNotesService(handler, "CartonStash/1.0 (odd version)");
+        await service.GetGitHubNotesAsync(Bat, default);
+        Assert.Equal("CartonStash", handler.Requests[0].Headers.UserAgent.ToString());
+    }
+
+    [Fact]
+    public void The_apps_user_agent_is_name_and_version() // R2.3
+    {
+        Assert.Matches(@"^CartonStash/\d+\.\d+\.\d+", CartonStash.Core.AppInfo.UserAgent);
+    }
+
+    [Fact]
     public async Task Loaded_release() // R2.4
     {
         var (service, _) = Create(() => Json(BatJson));

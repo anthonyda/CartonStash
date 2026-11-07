@@ -10,7 +10,7 @@ public class SearchViewModelTests
     {
         var app = new TestApp();
         app.Packages.Search = search;
-        return new SearchViewModel(app.Packages, app.Actions, app.Agreements);
+        return new SearchViewModel(app.Packages, app.Actions, app.Agreements, app.ReleaseNotes);
     }
 
     private static SearchViewModel Create(Func<string, IReadOnlyList<PackageInfo>> search) =>
@@ -48,7 +48,7 @@ public class SearchViewModelTests
         var app = new TestApp();
         app.Packages.Search = (_, _) => Task.FromResult<IReadOnlyList<PackageInfo>>([Pkg("Git.Git")]);
         app.Packages.SourceFailures = [new SourceFailure("msstore", "'msstore' can't be reached.", 0)];
-        var vm = new SearchViewModel(app.Packages, app.Actions, app.Agreements);
+        var vm = new SearchViewModel(app.Packages, app.Actions, app.Agreements, app.ReleaseNotes);
         vm.Query = "git";
 
         await vm.SearchCommand.ExecuteAsync(null);
@@ -63,7 +63,7 @@ public class SearchViewModelTests
     {
         var app = new TestApp();
         app.Packages.SourceFailures = [new SourceFailure("msstore", "'msstore' failed.", 0)];
-        var vm = new SearchViewModel(app.Packages, app.Actions, app.Agreements);
+        var vm = new SearchViewModel(app.Packages, app.Actions, app.Agreements, app.ReleaseNotes);
         vm.Query = "git";
         await vm.SearchCommand.ExecuteAsync(null);
 

@@ -10,7 +10,7 @@ public class PackageDetailsViewModelTests
     private static (TestApp App, PackageDetailsViewModel Vm) Create()
     {
         var app = new TestApp();
-        return (app, new PackageDetailsViewModel(app.Packages));
+        return (app, new PackageDetailsViewModel(app.Packages, app.ReleaseNotes));
     }
 
     private static PackageRowViewModel Row(TestApp app, PackageInfo package) => new(package, app.Actions, RowActions.All);

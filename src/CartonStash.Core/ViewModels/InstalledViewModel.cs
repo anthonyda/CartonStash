@@ -13,11 +13,11 @@ public sealed partial class InstalledViewModel : ObservableObject
     private readonly PackageActions _actions;
     private List<PackageRowViewModel> _all = [];
 
-    public InstalledViewModel(InstalledPackagesStore store, PackageActions actions, IPackageService packages)
+    public InstalledViewModel(InstalledPackagesStore store, PackageActions actions, IPackageService packages, IReleaseNotesService releaseNotes)
     {
         _store = store;
         _actions = actions;
-        Details = new PackageDetailsViewModel(packages);
+        Details = new PackageDetailsViewModel(packages, releaseNotes);
         _store.PropertyChanged += OnStoreChanged;
         RowOperationTracker.Track(actions, () => _all);
         Rebuild();

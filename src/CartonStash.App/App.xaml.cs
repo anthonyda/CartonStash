@@ -156,6 +156,8 @@ public partial class App : Application
             .AddSingleton<IPackageService, WinGetPackageService>()
             .AddSingleton<IPackageInstaller, WinGetPackageInstaller>()
             .AddSingleton<IRunningPrograms, RunningPrograms>() // 003 R7.2
+            // GitHub release notes, only when the user asks (012 R2.2)
+            .AddSingleton<IReleaseNotesService>(_ => new GitHubReleaseNotesService(AppInfo.UserAgent))
             .AddSingleton<IWinGetRecordReader, WinGetRecordReader>()
             .AddSingleton<IOperationLogStore, OperationLogStore>()
             .AddSingleton<PackageOperationQueue>()

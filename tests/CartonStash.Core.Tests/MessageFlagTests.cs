@@ -25,7 +25,7 @@ public class MessageFlagTests
     {
         var app = new TestApp();
         app.Packages.Search = (_, _) => throw new WinGetException("Couldn't search.", null);
-        var vm = new SearchViewModel(app.Packages, app.Actions, app.Agreements) { Query = "git" };
+        var vm = new SearchViewModel(app.Packages, app.Actions, app.Agreements, app.ReleaseNotes) { Query = "git" };
         await vm.SearchCommand.ExecuteAsync(null);
         Assert.True(vm.HasError);
 
@@ -43,7 +43,7 @@ public class MessageFlagTests
         var app = new TestApp();
         app.Packages.Search = (_, _) => Task.FromResult<IReadOnlyList<PackageInfo>>([]);
         app.Packages.SourceFailures = [new SourceFailure("msstore", "'msstore' can't be reached.", 0)];
-        var vm = new SearchViewModel(app.Packages, app.Actions, app.Agreements) { Query = "nothing" };
+        var vm = new SearchViewModel(app.Packages, app.Actions, app.Agreements, app.ReleaseNotes) { Query = "nothing" };
         await vm.SearchCommand.ExecuteAsync(null);
         Assert.True(vm.HasEmptyMessage);
         Assert.True(vm.HasSourceNotice);
@@ -64,7 +64,7 @@ public class MessageFlagTests
     {
         var app = new TestApp();
         app.Packages.Installed = _ => throw new WinGetException("Couldn't list packages.", null);
-        var vm = new InstalledViewModel(app.Store, app.Actions, app.Packages);
+        var vm = new InstalledViewModel(app.Store, app.Actions, app.Packages, app.ReleaseNotes);
         await vm.LoadAsync();
         Assert.True(vm.HasError);
 
@@ -81,7 +81,7 @@ public class MessageFlagTests
     {
         var app = new TestApp();
         app.Packages.Installed = _ => throw new WinGetException("Couldn't list packages.", null);
-        var vm = new UpdatesViewModel(app.Store, app.Actions, app.Packages, app.Settings);
+        var vm = new UpdatesViewModel(app.Store, app.Actions, app.Packages, app.Settings, app.ReleaseNotes);
         await vm.LoadAsync();
         Assert.True(vm.HasError);
 
@@ -157,7 +157,7 @@ public class MessageFlagTests
     public async Task Details_error_and_partial_note_clear_on_the_next_package()
     {
         var app = new TestApp();
-        var vm = new PackageDetailsViewModel(app.Packages);
+        var vm = new PackageDetailsViewModel(app.Packages, app.ReleaseNotes);
         app.Packages.Details = (_, _) => throw new WinGetException("Couldn't load.", null);
         await vm.LoadAsync(Row(app, "A"));
         Assert.True(vm.HasError);
@@ -176,7 +176,7 @@ public class MessageFlagTests
     public async Task Details_sections_leave_with_the_package_that_had_them()
     {
         var app = new TestApp();
-        var vm = new PackageDetailsViewModel(app.Packages);
+        var vm = new PackageDetailsViewModel(app.Packages, app.ReleaseNotes);
         app.Packages.Details = (_, _) => Task.FromResult<PackageDetails?>(new PackageDetails
         {
             Publisher = "P",
@@ -209,5 +209,57 @@ public class MessageFlagTests
 
         Assert.All(flags, name => Assert.False(Flag(name), name));
         Assert.All(flags, name => Assert.Contains(name, changed));
+    }
+
+    [Fact]
+    public async Task Release_notes_flags_leave_with_the_package_that_had_them() // 012
+    {
+        var app = new TestApp();
+        var vm = new PackageDetailsViewModel(app.Packages, app.ReleaseNotes);
+        app.Packages.Details = (_, _) => Task.FromResult<PackageDetails?>(new PackageDetails
+        {
+            ReleaseNotes = "- one",
+            ReleaseNotesUrl = "https://github.com/sharkdp/bat/releases/tag/v0.26.1",
+        });
+        app.ReleaseNotes.Get = (_, _) => Task.FromResult(new GitHubNotesResult(GitHubNotesOutcome.Unreachable));
+        await vm.LoadAsync(Row(app, "Full"));
+        await vm.LoadGitHubNotesCommand.ExecuteAsync(null);
+
+        string[] flags =
+        [
+            nameof(vm.HasReleaseNotes), nameof(vm.ShowReleaseNotesSection), nameof(vm.CanShowGitHubNotes),
+            nameof(vm.HasGitHubNotesMessage), nameof(vm.CanRetryGitHubNotes),
+        ];
+        bool Flag(string name) => (bool)typeof(PackageDetailsViewModel).GetProperty(name)!.GetValue(vm)!;
+        Assert.All(flags, name => Assert.True(Flag(name), name));
+
+        app.Packages.Details = (_, _) => Task.FromResult<PackageDetails?>(new PackageDetails());
+        var changed = Watch(vm);
+        await vm.LoadAsync(Row(app, "Bare"));
+
+        Assert.All(flags, name => Assert.False(Flag(name), name));
+        Assert.All(flags, name => Assert.Contains(name, changed));
+    }
+
+    [Fact]
+    public async Task Notes_from_GitHub_leave_with_the_package_that_had_them() // 012
+    {
+        var app = new TestApp();
+        var vm = new PackageDetailsViewModel(app.Packages, app.ReleaseNotes);
+        var release = new GitHubRelease("sharkdp", "bat", "v0.26.1");
+        app.ReleaseNotes.Cache[release] = new GitHubNotes("v0.26.1", null, new Uri("https://github.com/sharkdp/bat/releases/tag/v0.26.1"), "- a");
+        app.Packages.Details = (_, _) => Task.FromResult<PackageDetails?>(new PackageDetails
+        {
+            ReleaseNotesUrl = "https://github.com/sharkdp/bat/releases/tag/v0.26.1",
+        });
+        await vm.LoadAsync(Row(app, "Full"));
+        Assert.True(vm.NotesFromGitHub);
+
+        app.Packages.Details = (_, _) => Task.FromResult<PackageDetails?>(new PackageDetails());
+        var changed = Watch(vm);
+        await vm.LoadAsync(Row(app, "Bare"));
+
+        Assert.False(vm.NotesFromGitHub);
+        Assert.Contains(nameof(vm.NotesFromGitHub), changed);
     }
 }

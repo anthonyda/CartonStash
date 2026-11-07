@@ -18,12 +18,12 @@ public sealed partial class UpdatesViewModel : ObservableObject
     private IReadOnlyList<string> _excludedIds = [];
     private IReadOnlyList<PackageRowViewModel> _selected = [];
 
-    public UpdatesViewModel(InstalledPackagesStore store, PackageActions actions, IPackageService packages, ISettings settings)
+    public UpdatesViewModel(InstalledPackagesStore store, PackageActions actions, IPackageService packages, ISettings settings, IReleaseNotesService releaseNotes)
     {
         _store = store;
         _actions = actions;
         _settings = settings;
-        Details = new PackageDetailsViewModel(packages);
+        Details = new PackageDetailsViewModel(packages, releaseNotes);
         _store.PropertyChanged += OnStoreChanged;
         _settings.Changed += OnSettingsChanged;
         RowOperationTracker.Track(actions, () => Updates.Concat(Excluded));

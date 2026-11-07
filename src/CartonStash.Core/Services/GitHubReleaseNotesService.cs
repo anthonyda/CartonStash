@@ -41,7 +41,8 @@ public sealed class GitHubReleaseNotesService : IReleaseNotesService
     public GitHubReleaseNotesService(HttpMessageHandler handler, string userAgent, TimeSpan? timeout = null, TimeProvider? time = null)
     {
         _client = new HttpClient(handler) { Timeout = Timeout.InfiniteTimeSpan };
-        _userAgent = userAgent;
+        // A version the header can't hold (spaces, odd characters) mustn't make every request fail.
+        _userAgent = ProductInfoHeaderValue.TryParse(userAgent, out _) ? userAgent : AppInfo.Name;
         _timeout = timeout ?? DefaultTimeout;
         _time = time ?? TimeProvider.System;
     }

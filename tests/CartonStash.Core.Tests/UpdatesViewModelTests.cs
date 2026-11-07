@@ -10,7 +10,7 @@ public class UpdatesViewModelTests
     {
         var app = new TestApp();
         app.SetInstalled(installed);
-        var vm = new UpdatesViewModel(app.Store, app.Actions, app.Packages, app.Settings);
+        var vm = new UpdatesViewModel(app.Store, app.Actions, app.Packages, app.Settings, app.ReleaseNotes);
         await vm.LoadAsync();
         return (app, vm);
     }
@@ -93,8 +93,8 @@ public class UpdatesViewModelTests
     {
         var app = new TestApp();
         app.SetInstalled(Pkg.Installed("A", update: true));
-        var installed = new InstalledViewModel(app.Store, app.Actions, app.Packages);
-        var updates = new UpdatesViewModel(app.Store, app.Actions, app.Packages, app.Settings);
+        var installed = new InstalledViewModel(app.Store, app.Actions, app.Packages, app.ReleaseNotes);
+        var updates = new UpdatesViewModel(app.Store, app.Actions, app.Packages, app.Settings, app.ReleaseNotes);
 
         await installed.LoadAsync();
         await updates.LoadAsync();
@@ -201,7 +201,7 @@ public class UpdatesViewModelTests
         var a = Pkg.Installed("Microsoft.WSL", "WSL Update") with { InstalledId = "ARP-old" };
         var b = Pkg.Installed("Microsoft.WSL", "WSL") with { InstalledId = "MSIX-new", IsPrimaryMatch = false };
         app.SetInstalled(a, b);
-        var vm = new InstalledViewModel(app.Store, app.Actions, app.Packages);
+        var vm = new InstalledViewModel(app.Store, app.Actions, app.Packages, app.ReleaseNotes);
         await vm.LoadAsync();
 
         app.Queue.Enqueue(OperationKind.Uninstall, b);
@@ -223,7 +223,7 @@ public class UpdatesViewModelTests
     public void Not_up_to_date_before_loading() // R4.1: no badge, no empty state until loaded
     {
         var app = new TestApp();
-        var vm = new UpdatesViewModel(app.Store, app.Actions, app.Packages, app.Settings);
+        var vm = new UpdatesViewModel(app.Store, app.Actions, app.Packages, app.Settings, app.ReleaseNotes);
 
         Assert.Null(vm.Count);
         Assert.False(vm.IsUpToDate);
