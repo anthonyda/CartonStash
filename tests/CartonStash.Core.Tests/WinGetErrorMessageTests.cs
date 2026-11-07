@@ -277,4 +277,94 @@ public class WinGetErrorMessageTests
         Assert.DoesNotContain(stillInstalled == true ? "successfully" : "Restart CartonStash", outcome.Message);
         Assert.Equal("WinGet status: Ok", outcome.Details);
     }
+
+    private static string? Describe(int hresult) => hresult == unchecked((int)0x80070005) ? "Access is denied." : null;
+
+    [Theory] // 013 R1.1: no exit code, so WinGet's error is shown instead of "error code 0"
+    [InlineData(OperationKind.Install, "The install failed")]
+    [InlineData(OperationKind.Upgrade, "The update failed")]
+    public void An_install_error_without_exit_code_shows_WinGets_error(OperationKind kind, string start)
+    {
+        var outcome = WinGetPackageInstaller.MapInstallResult(kind, InstallResultStatus.InstallError, 0, false, InstallScope.Any,
+            unchecked((int)0x80070005), "EA app", describe: Describe);
+
+        Assert.Equal(OperationResult.Failed, outcome.Result);
+        Assert.Equal($"{start}: WinGet reported \"Access is denied.\" (0x80070005).", outcome.Message);
+        Assert.DoesNotContain("error code 0", outcome.Message);
+    }
+
+    [Fact] // 013 R1.1: WinGet's own codes have no description
+    public void Without_a_description_the_code_is_shown_alone()
+    {
+        var outcome = WinGetPackageInstaller.MapInstallResult(OperationKind.Upgrade, InstallResultStatus.InstallError, 0, false, InstallScope.Any,
+            unchecked((int)0x8A150006), "EA app", describe: Describe);
+
+        Assert.Equal("The update failed: WinGet reported error 0x8A150006.", outcome.Message);
+    }
+
+    [Fact] // 013 R1.1
+    public void A_describer_that_throws_falls_back_to_the_code()
+    {
+        var message = WinGetPackageInstaller.NoExitCodeMessage(OperationKind.Install, unchecked((int)0x80070005), "A",
+            _ => throw new InvalidOperationException());
+
+        Assert.Equal("The install failed: WinGet reported error 0x80070005.", message);
+    }
+
+    [Fact] // 013 R1.1, for uninstalls
+    public void An_uninstall_error_without_exit_code_shows_WinGets_error()
+    {
+        var outcome = WinGetPackageInstaller.MapUninstallResult(UninstallResultStatus.UninstallError, 0, false,
+            unchecked((int)0x80070005), "EA app", describe: Describe);
+
+        Assert.Equal("The uninstall failed: WinGet reported \"Access is denied.\" (0x80070005).", outcome.Message);
+    }
+
+    [Theory] // 013 R1.2: a program WinGet needed wasn't found (the EA app's missing uninstaller, 2026-11-05 to 07)
+    [InlineData(OperationKind.Upgrade, unchecked((int)0x800401F5), "to update EA app: it wasn't found (0x800401F5)")]
+    [InlineData(OperationKind.Install, unchecked((int)0x80070002), "to install EA app: it wasn't found (0x80070002)")]
+    public void A_missing_program_says_so(OperationKind kind, int extendedError, string expected)
+    {
+        var outcome = WinGetPackageInstaller.MapInstallResult(kind, InstallResultStatus.InstallError, 0, false, InstallScope.Any,
+            extendedError, "EA app", describe: Describe);
+
+        Assert.Contains("WinGet couldn't start a program needed " + expected, outcome.Message);
+        Assert.Contains("Repairing or reinstalling EA app from its publisher may fix this.", outcome.Message);
+    }
+
+    [Fact] // 013 R1.2, for uninstalls
+    public void A_missing_uninstaller_says_so()
+    {
+        var outcome = WinGetPackageInstaller.MapUninstallResult(UninstallResultStatus.UninstallError, 0, false,
+            unchecked((int)0x800401F5), "EA app", describe: Describe);
+
+        Assert.StartsWith("WinGet couldn't start a program needed to uninstall EA app", outcome.Message);
+    }
+
+    [Fact] // 013 R1.3: a real exit code keeps today's message
+    public void A_real_exit_code_keeps_the_usual_message()
+    {
+        var outcome = WinGetPackageInstaller.MapInstallResult(OperationKind.Upgrade, InstallResultStatus.InstallError, 1603, false, InstallScope.Any,
+            unchecked((int)0x800401F5), "EA app", describe: Describe);
+
+        Assert.Equal("The installer failed with error code 1603.", outcome.Message);
+    }
+
+    [Fact] // 013 R1.3: the in-use messages (003 R7) still come first
+    public void In_use_still_comes_first_without_exit_code()
+    {
+        var outcome = WinGetPackageInstaller.MapInstallResult(OperationKind.Upgrade, InstallResultStatus.InstallError, 0, false, InstallScope.Any,
+            WinGetPackageInstaller.PackageInUse, "EA app", describe: Describe);
+
+        Assert.Contains("is running", outcome.Message);
+    }
+
+    [Fact] // 013 R1.1: no extended error either: today's message
+    public void No_extended_error_keeps_the_usual_message()
+    {
+        var outcome = WinGetPackageInstaller.MapInstallResult(OperationKind.Install, InstallResultStatus.InstallError, 0, false, InstallScope.Any,
+            0, "A", describe: Describe);
+
+        Assert.Equal("The installer failed with error code 0.", outcome.Message);
+    }
 }
