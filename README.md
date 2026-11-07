@@ -87,7 +87,9 @@ The Store version keeps them in its own app-data folder. A build of your own use
 
 **What does CartonStash connect to?**
 WinGet does the searching and downloading. CartonStash itself only loads package icons, over https, from the addresses in
-package manifests, so those hosts can see your IP address. It has no telemetry of its own.
+package manifests, so those hosts can see your IP address. When you press **Show notes from GitHub** in a package's
+details, it also asks `api.github.com` for that one release's notes, without signing in; GitHub can see your IP address
+too. It has no telemetry of its own.
 
 ## Build from source
 

@@ -29,7 +29,7 @@ Manual checks run in the CartonStash-Test VM (or Windows Sandbox), never on the 
 
 ## Docs and packaging
 
-- [ ] **T8.** PRIVACY.md: add a "Release notes from GitHub" bullet under Internet connections and update the date. README: extend the network sentence. Add `THIRD-PARTY-NOTICES.md` (Markdig's BSD-2 notice and the existing MIT dependencies), included in the app package as content. Add a "New" entry to the next version's CHANGELOG section. *(R3.1)*
+- [x] **T8.** PRIVACY.md: add a "Release notes from GitHub" bullet under Internet connections and update the date. README: extend the network sentence. Add `THIRD-PARTY-NOTICES.md` (Markdig's BSD-2 notice and the existing MIT dependencies), included in the app package as content. Add a "New" entry to the next version's CHANGELOG section. *(R3.1)*
   - Verify: review in the PR. `.\tools\Publish-Release.ps1` output holds `THIRD-PARTY-NOTICES.md` in both the zip and the MSIX.
 
 ## Manual checks
