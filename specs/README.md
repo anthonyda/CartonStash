@@ -50,5 +50,6 @@ If implementation reveals the spec is wrong, **stop, update the spec first**, th
 | 011 | [Source failures and missing WinGet](011-source-resilience/) | In progress: code done; high-contrast check and R3.5 pending |
 | 012 | [Readable release notes](012-release-notes/)           | Done (2026-11-07) |
 | 013 | [Honest operation results](013-honest-results/)        | Done (2026-11-07); R2.2 checked by unit tests only |
+| 014 | [Install a chosen version](014-choose-version/)        | Draft: requirements only |
 
 Suggested build order: 002 → 003 → 004 → 005 → 006 → 007 (006's scope setting slots into 003's installer when it lands).
