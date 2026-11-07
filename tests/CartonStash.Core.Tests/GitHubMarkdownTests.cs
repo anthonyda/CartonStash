@@ -40,7 +40,7 @@ public class GitHubMarkdownTests
     [Fact]
     public void Nested_numbered_and_task_lists() // R2.4
     {
-        Assert.Equal("""
+        NotesDump.Same("""
             - one
               1. a
               2. b
@@ -70,7 +70,7 @@ public class GitHubMarkdownTests
     [Fact]
     public void Pipe_table_with_a_header_row() // R2.4
     {
-        Assert.Equal("""
+        NotesDump.Same("""
             table: Name | Hash
             table: **x64** | `ABC`
             """, Parse("| Name | Hash |\n| --- | --- |\n| **x64** | `ABC` |"));

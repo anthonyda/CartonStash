@@ -18,7 +18,7 @@ public class WinGetNotesParserTests
             - The executables included in the 32-bit MinGit had corrupt code-signatures, which has been fixed.
             - Upgrades the included brotli component to v1.2.1 to address CVE-2026-111497.
             """;
-        Assert.Equal("""
+        NotesDump.Same("""
             P: Changes since Git for Windows v2.56.0(3) (October 22nd 2026)⏎This is another urgent security bug fix release, addressing CVE-2026-111497.
             P: **Bug Fixes**
             - The executables included in the 32-bit MinGit had corrupt code-signatures, which has been fixed.
@@ -42,7 +42,7 @@ public class WinGetNotesParserTests
               BUG #3376:
               Fix gitignore matching bug when searching across multiple directories.
             """;
-        Assert.Equal("""
+        NotesDump.Same("""
             P: Sponsorship is appreciated!⏎This release fixes a number of bugs.
             > P: In case you haven't heard of it before, ripgrep is a line-oriented search⏎tool that recursively searches the current directory for a regex pattern.
             P: **Platform support:**
@@ -62,7 +62,7 @@ public class WinGetNotesParserTests
             Syntaxes
             - Update quadlet syntax mapping to include *.{build,pod} files #3484 (@cyqsimon)
             """;
-        Assert.Equal("""
+        NotesDump.Same("""
             P: v0.26.1
             P: **Features**
             - Add paging to '-h' and '--help' see PR #3478 (@MuntasirSZN)
@@ -82,7 +82,7 @@ public class WinGetNotesParserTests
 
             - Saved passwords are now available from the sidebar by default.
             """;
-        Assert.Equal("""
+        NotesDump.Same("""
             P: Version 159.0, first offered to Release channel users on October 27, 2026
             P: **New**
             - Sharing on macOS now uses the native macOS share picker.
@@ -99,7 +99,7 @@ public class WinGetNotesParserTests
             # Attach files when creating or editing an issue
             gh issue create --attach './repro.png#The error state'
             """;
-        Assert.Equal("""
+        NotesDump.Same("""
             P: Attach images and videos to issues and pull requests⏎The repeatable --attach flag uploads local images and videos:⏎# Attach files when creating or editing an issue⏎gh issue create --attach './repro.png#The error state'
             """, Parse(gh));
     }
@@ -114,7 +114,7 @@ public class WinGetNotesParserTests
             Developers
             The installer has been updated to use Electron v37.6.0.
             """;
-        Assert.Equal("""
+        NotesDump.Same("""
             P: **No longer broken**
             - Fixed Global Search reporting inaccurate result count.
             - Bases: file.hasTag('#tag') is no longer case-sensitive.
@@ -134,7 +134,7 @@ public class WinGetNotesParserTests
             * three
             • four
             """;
-        Assert.Equal("""
+        NotesDump.Same("""
             - one
               - one.a
                 - one.a.i
@@ -148,7 +148,7 @@ public class WinGetNotesParserTests
     [Fact]
     public void Text_after_a_list_ends_it() // R1.1
     {
-        Assert.Equal("""
+        NotesDump.Same("""
             - item
             P: After the list.
             """, Parse("- item\nAfter the list."));
@@ -157,7 +157,7 @@ public class WinGetNotesParserTests
     [Fact]
     public void Blank_line_then_text_ends_the_list() // R1.1, R1.5
     {
-        Assert.Equal("""
+        NotesDump.Same("""
             - item
             P: Indented later.
             """, Parse("- item\n\n  Indented later."));
@@ -166,7 +166,7 @@ public class WinGetNotesParserTests
     [Fact]
     public void Quote_lines_form_one_quote_and_a_bare_marker_splits_paragraphs() // R1.2
     {
-        Assert.Equal("""
+        NotesDump.Same("""
             > P: first⏎second
             > P: third
             """, Parse("> first\n> second\n>\n> third"));
