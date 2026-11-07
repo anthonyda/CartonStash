@@ -14,14 +14,14 @@ public sealed partial class SearchViewModel : ObservableObject
     private readonly SourceAgreementCheck _agreements;
     private CancellationTokenSource? _currentSearch;
 
-    public SearchViewModel(IPackageService packages, PackageActions actions, SourceAgreementCheck agreements)
+    public SearchViewModel(IPackageService packages, PackageActions actions, SourceAgreementCheck agreements, IReleaseNotesService releaseNotes)
     {
         _packages = packages;
         _actions = actions;
         _agreements = agreements;
         agreements.Changed += (_, _) => NotInUseNotice = DescribeNotInUse(agreements.NotAccepted);
         NotInUseNotice = DescribeNotInUse(agreements.NotAccepted);
-        Details = new PackageDetailsViewModel(packages);
+        Details = new PackageDetailsViewModel(packages, releaseNotes);
         RowOperationTracker.Track(actions, () => Results);
     }
 

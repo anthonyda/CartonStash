@@ -4,6 +4,11 @@ What's new in each version of CartonStash. Get it from the [Microsoft Store](htt
 
 ## 1.2.0
 
+### New
+
+- **Release notes are easier to read.** In a package's details, lists show as lists and quotes as quotes, and section titles such as "Bug Fixes" stand out, instead of a block of text full of `-` and `>` marks. Web addresses in the notes are links.
+- **Read a release's notes from GitHub without leaving the app.** Many packages only link to their GitHub release page. For those, the details now offer **Show notes from GitHub**, which shows that release's notes with their headings, lists, tables and code. CartonStash only contacts GitHub when you press the button, images in the notes are never loaded, and links open in your browser. If GitHub can't be reached or has had too many requests from your network, the app says so and when to try again.
+
 ### Fixed
 
 - **Results say what really happened.** Three kinds of results used to mislead:

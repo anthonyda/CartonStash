@@ -216,10 +216,5 @@ public sealed partial class SettingsViewModel : ObservableObject
         }
     }
 
-    private static string ReadAppVersion()
-    {
-        var version = typeof(SettingsViewModel).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0.0.0";
-        var plus = version.IndexOf('+'); // drop the commit hash the SDK appends
-        return plus > 0 ? version[..plus] : version;
-    }
+    private static string ReadAppVersion() => AppInfo.Version;
 }

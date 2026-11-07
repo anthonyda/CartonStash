@@ -94,7 +94,7 @@ public class SourceAgreementCheckTests
             searches++;
             return Task.FromResult<IReadOnlyList<PackageInfo>>([]);
         };
-        var vm = new SearchViewModel(app.Packages, app.Actions, app.Agreements) { Query = "git" };
+        var vm = new SearchViewModel(app.Packages, app.Actions, app.Agreements, app.ReleaseNotes) { Query = "git" };
         await app.Agreements.RunAsync();
         Assert.Contains("msstore", vm.NotInUseNotice);
         Assert.True(vm.HasNotInUseNotice);
@@ -110,7 +110,7 @@ public class SourceAgreementCheckTests
     public async Task Search_shows_the_notice_when_every_source_is_left_out() // R3.10
     {
         var app = App(Store(AgreementStatus.Declined));
-        var vm = new SearchViewModel(app.Packages, app.Actions, app.Agreements) { Query = "git" };
+        var vm = new SearchViewModel(app.Packages, app.Actions, app.Agreements, app.ReleaseNotes) { Query = "git" };
         await app.Agreements.RunAsync();
 
         await vm.SearchCommand.ExecuteAsync(null);

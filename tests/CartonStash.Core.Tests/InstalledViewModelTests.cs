@@ -11,7 +11,7 @@ public class InstalledViewModelTests
     {
         var app = new TestApp();
         app.SetInstalled(installed);
-        return (app, new InstalledViewModel(app.Store, app.Actions, app.Packages));
+        return (app, new InstalledViewModel(app.Store, app.Actions, app.Packages, app.ReleaseNotes));
     }
 
     [Fact]

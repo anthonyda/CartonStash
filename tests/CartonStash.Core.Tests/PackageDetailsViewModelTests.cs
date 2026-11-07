@@ -10,7 +10,7 @@ public class PackageDetailsViewModelTests
     private static (TestApp App, PackageDetailsViewModel Vm) Create()
     {
         var app = new TestApp();
-        return (app, new PackageDetailsViewModel(app.Packages));
+        return (app, new PackageDetailsViewModel(app.Packages, app.ReleaseNotes));
     }
 
     private static PackageRowViewModel Row(TestApp app, PackageInfo package) => new(package, app.Actions, RowActions.All);
@@ -93,21 +93,6 @@ public class PackageDetailsViewModelTests
         await vm.LoadAsync(Row(app, Pkg.Installed("A")));
 
         Assert.Equal("2.0 · 1.0 (installed) · 0.9", vm.VersionsText);
-    }
-
-    [Fact]
-    public async Task Long_release_notes_are_collapsed_until_show_more() // R2.2
-    {
-        var (app, vm) = Create();
-        var notes = string.Join("\n", Enumerable.Range(1, 30).Select(i => $"line {i}"));
-        app.Packages.Details = (_, _) => Task.FromResult<PackageDetails?>(new PackageDetails { ReleaseNotes = notes });
-
-        await vm.LoadAsync(Row(app, Pkg.Remote("A")));
-
-        Assert.True(vm.ReleaseNotesIsLong);
-        Assert.Equal(PackageDetailsViewModel.CollapsedReleaseNoteLines, vm.ReleaseNotesMaxLines);
-        vm.ToggleReleaseNotesCommand.Execute(null);
-        Assert.Equal(0, vm.ReleaseNotesMaxLines);
     }
 
     [Fact]

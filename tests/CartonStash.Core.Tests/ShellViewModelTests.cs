@@ -10,7 +10,7 @@ public class ShellViewModelTests
     private static (TestApp App, ShellViewModel Shell, UpdatesViewModel Updates) Create(bool settingsReset = false)
     {
         var app = new TestApp();
-        var updates = new UpdatesViewModel(app.Store, app.Actions, app.Packages, app.Settings);
+        var updates = new UpdatesViewModel(app.Store, app.Actions, app.Packages, app.Settings, app.ReleaseNotes);
         var shell = new ShellViewModel(app.Queue, updates, app.Dialogs, new FakeSettings { WasReset = settingsReset });
         return (app, shell, updates);
     }
@@ -29,7 +29,7 @@ public class ShellViewModelTests
     private static (TestApp App, ShellViewModel Shell, FakeRestarter Restarter) CreateWithRestarter(bool started = true)
     {
         var app = new TestApp();
-        var updates = new UpdatesViewModel(app.Store, app.Actions, app.Packages, app.Settings);
+        var updates = new UpdatesViewModel(app.Store, app.Actions, app.Packages, app.Settings, app.ReleaseNotes);
         var restarter = new FakeRestarter(started);
         return (app, new ShellViewModel(app.Queue, updates, app.Dialogs, new FakeSettings(), app.Actions.Host, restarter), restarter);
     }

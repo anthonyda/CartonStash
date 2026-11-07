@@ -58,6 +58,11 @@
     <Content Include="Assets\*.png" />
   </ItemGroup>
 
+  <!-- Spec 012: Markdig's BSD-2 license asks for its notice in binary distributions; the MIT ones are listed too. -->
+  <ItemGroup>
+    <Content Include="..\..\THIRD-PARTY-NOTICES.md" Link="THIRD-PARTY-NOTICES.md" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\CartonStash.Core\CartonStash.Core.csproj" />
   </ItemGroup>

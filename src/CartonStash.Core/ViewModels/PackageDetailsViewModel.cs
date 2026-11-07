@@ -1,3 +1,4 @@
+using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CartonStash.Core.Models;
@@ -15,13 +16,49 @@ public enum DetailsState
     Error,
 }
 
-/// <summary>The details pane (spec 005). Each list page owns one.</summary>
-public sealed partial class PackageDetailsViewModel(IPackageService packages) : ObservableObject
+/// <summary>The details pane (spec 005). Each list page owns one. Release notes: spec 012.</summary>
+public sealed partial class PackageDetailsViewModel(IPackageService packages, IReleaseNotesService releaseNotes) : ObservableObject
 {
-    /// <summary>Release notes longer than this are collapsed behind "Show more" (005 R2.2).</summary>
-    public const int CollapsedReleaseNoteLines = 10;
-
     private CancellationTokenSource? _currentLoad;
+
+    /// <summary>The GitHub request; cancelled by another package or by closing the pane (012 R2.10).</summary>
+    private CancellationTokenSource? _notesLoad;
+
+    /// <summary>
+    /// Formatted release notes: WinGet's text (012 R1), replaced by GitHub's notes once loaded (R2.4).
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasReleaseNotes), nameof(ShowReleaseNotesSection))]
+    public partial NotesDocument? ReleaseNotes { get; private set; }
+
+    /// <summary>Set when the release-notes URL is a GitHub release page (012 R2.1).</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanShowGitHubNotes), nameof(ShowReleaseNotesSection))]
+    public partial GitHubRelease? GitHubRelease { get; private set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanShowGitHubNotes), nameof(ShowReleaseNotesSection), nameof(GitHubNotesStatus), nameof(HasGitHubNotesStatus))]
+    public partial bool IsLoadingGitHubNotes { get; private set; }
+
+    /// <summary>GitHub answered, with or without notes: the button has done its job.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanShowGitHubNotes), nameof(ShowReleaseNotesSection))]
+    public partial bool GitHubNotesLoaded { get; private set; }
+
+    /// <summary>What went wrong asking GitHub, or that the release has no notes (012 R2.11).</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasGitHubNotesMessage), nameof(ShowReleaseNotesSection), nameof(GitHubNotesStatus), nameof(HasGitHubNotesStatus))]
+    public partial string? GitHubNotesMessage { get; private set; }
+
+    /// <summary>Only when trying again can help: no connection, or a failure (012 R2.11).</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanShowGitHubNotes), nameof(ShowReleaseNotesSection))]
+    public partial bool CanRetryGitHubNotes { get; private set; }
+
+    /// <summary>"{title} · {date} · from GitHub" while GitHub's notes are shown (012 R2.4).</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(NotesFromGitHub))]
+    public partial string? GitHubNotesHeader { get; private set; }
 
     [ObservableProperty]
     public partial bool IsOpen { get; private set; }
@@ -37,7 +74,7 @@ public sealed partial class PackageDetailsViewModel(IPackageService packages) : 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HomepageUri), nameof(PublisherUri), nameof(SupportUri), nameof(PrivacyUri),
         nameof(LicenseUri), nameof(ReleaseNotesUri), nameof(TagsText), nameof(VersionsText),
-        nameof(ReleaseNotesIsLong), nameof(HasReleaseNotes), nameof(HasPublisher), nameof(HasShortDescription),
+        nameof(HasPublisher), nameof(HasShortDescription),
         nameof(HasDescription), nameof(HasLicense), nameof(HasHomepageUri), nameof(HasPublisherUri), nameof(HasSupportUri),
         nameof(HasPrivacyUri), nameof(HasLicenseUri), nameof(HasReleaseNotesUri), nameof(HasTags), nameof(HasVersions))]
     public partial PackageDetails? Details { get; private set; }
@@ -46,9 +83,6 @@ public sealed partial class PackageDetailsViewModel(IPackageService packages) : 
     [NotifyPropertyChangedFor(nameof(HasError))]
     public partial string? ErrorMessage { get; private set; }
 
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ReleaseNotesMaxLines))]
-    public partial bool ShowAllReleaseNotes { get; set; }
 
     public bool IsLoading => State == DetailsState.Loading;
 
@@ -85,12 +119,27 @@ public sealed partial class PackageDetailsViewModel(IPackageService packages) : 
     public bool HasTags => TagsText is not null;
     public bool HasVersions => VersionsText is not null;
 
-    public bool HasReleaseNotes => Details?.ReleaseNotes is not null;
+    public bool HasReleaseNotes => ReleaseNotes is { Blocks.Count: > 0 };
 
-    public bool ReleaseNotesIsLong => Details?.ReleaseNotes is { } notes && notes.Split('\n').Length > CollapsedReleaseNoteLines;
+    public bool HasGitHubNotesMessage => GitHubNotesMessage is not null;
 
-    /// <summary>0 means unlimited (TextBlock.MaxLines).</summary>
-    public int ReleaseNotesMaxLines => ShowAllReleaseNotes ? 0 : CollapsedReleaseNoteLines;
+    /// <summary>
+    /// The pane's one status line, a live region: its text changes from loading to the outcome, so a screen reader
+    /// hears both (Q5).
+    /// </summary>
+    public string? GitHubNotesStatus => IsLoadingGitHubNotes ? "Loading notes from GitHub…" : GitHubNotesMessage;
+
+    public bool HasGitHubNotesStatus => GitHubNotesStatus is not null;
+
+    public bool NotesFromGitHub => GitHubNotesHeader is not null;
+
+    /// <summary>The "Show notes from GitHub" button (012 R2.1, R2.2). Retry takes its place when it's offered.</summary>
+    public bool CanShowGitHubNotes => GitHubRelease is not null && !IsLoadingGitHubNotes && !GitHubNotesLoaded && !CanRetryGitHubNotes;
+
+    /// <summary>The section also shows for a package that has only a GitHub link.</summary>
+    public bool ShowReleaseNotesSection => HasReleaseNotes || CanShowGitHubNotes || IsLoadingGitHubNotes || HasGitHubNotesMessage;
+
+
 
     /// <summary>Newest first, the installed one marked (005 R2.1).</summary>
     public string? VersionsText
@@ -120,7 +169,7 @@ public sealed partial class PackageDetailsViewModel(IPackageService packages) : 
         IsOpen = true;
         Details = null;
         ErrorMessage = null;
-        ShowAllReleaseNotes = false;
+        ResetReleaseNotes();
         State = DetailsState.Loading;
 
         try
@@ -131,7 +180,15 @@ public sealed partial class PackageDetailsViewModel(IPackageService packages) : 
                 return;
             }
             Details = details;
+            ReleaseNotes = WinGetNotesParser.Parse(details?.ReleaseNotes);
+            GitHubRelease = GitHubRelease.TryParse(details?.ReleaseNotesUrl);
             State = details is null ? DetailsState.Partial : DetailsState.Loaded;
+
+            // 012 R2.9: notes loaded earlier this session show at once, with no request.
+            if (GitHubRelease is { } release && releaseNotes.TryGetCached(release) is { } cached)
+            {
+                await ShowGitHubNotesAsync(cached, load.Token);
+            }
         }
         catch (OperationCanceledException) when (load.IsCancellationRequested)
         {
@@ -156,17 +213,112 @@ public sealed partial class PackageDetailsViewModel(IPackageService packages) : 
     public void Close()
     {
         _currentLoad?.Cancel();
+        CancelGitHubNotes();
         IsOpen = false;
     }
 
+    /// <summary>"Show notes from GitHub" and Retry (012 R2.2, R2.3). Only ever runs on the user's press.</summary>
     [RelayCommand]
-    private void ToggleReleaseNotes() => ShowAllReleaseNotes = !ShowAllReleaseNotes;
+    private async Task LoadGitHubNotesAsync()
+    {
+        if (GitHubRelease is not { } release)
+        {
+            return;
+        }
+        CancelGitHubNotes();
+        using var load = new CancellationTokenSource();
+        _notesLoad = load;
+        GitHubNotesMessage = null;
+        CanRetryGitHubNotes = false;
+        IsLoadingGitHubNotes = true;
+        try
+        {
+            var result = await releaseNotes.GetGitHubNotesAsync(release, load.Token);
+            if (load.IsCancellationRequested)
+            {
+                return; // R2.10: a late answer is dropped
+            }
+            if (result.Notes is { } notes)
+            {
+                await ShowGitHubNotesAsync(notes, load.Token);
+            }
+            else
+            {
+                ShowGitHubFailure(result);
+            }
+        }
+        catch (OperationCanceledException) when (load.IsCancellationRequested)
+        {
+        }
+        catch (Exception) when (!load.IsCancellationRequested)
+        {
+            ShowGitHubFailure(new GitHubNotesResult(GitHubNotesOutcome.Failed));
+        }
+        finally
+        {
+            if (_notesLoad == load)
+            {
+                _notesLoad = null;
+                IsLoadingGitHubNotes = false;
+            }
+        }
+    }
+
+    private async Task ShowGitHubNotesAsync(GitHubNotes notes, CancellationToken cancellationToken)
+    {
+        // Bodies can be long (up to 125,000 characters): parse off the UI thread.
+        var doc = await Task.Run(() => GitHubMarkdown.Parse(notes.Body, notes.Page, notes.Title), cancellationToken);
+        if (cancellationToken.IsCancellationRequested)
+        {
+            return;
+        }
+        GitHubNotesLoaded = true;
+        if (doc.Blocks.Count == 0)
+        {
+            // WinGet's text, if any, stays.
+            GitHubNotesMessage = "This GitHub release has no notes.";
+            return;
+        }
+        ReleaseNotes = doc;
+        GitHubNotesHeader = notes.PublishedAt is { } published
+            ? $"{notes.Title} · {published.ToLocalTime().ToString("d MMMM yyyy", CultureInfo.CurrentCulture)} · from GitHub"
+            : $"{notes.Title} · from GitHub";
+    }
+
+    /// <summary>R2.11: WinGet's notes stay; a short line says what happened.</summary>
+    private void ShowGitHubFailure(GitHubNotesResult result)
+    {
+        (GitHubNotesMessage, CanRetryGitHubNotes) = result.Outcome switch
+        {
+            GitHubNotesOutcome.Unreachable => ("Couldn't reach GitHub.", true),
+            GitHubNotesOutcome.RateLimited when result.RetryAt is { } at =>
+                ($"GitHub limits requests without sign-in. Try again after {at.ToLocalTime().ToString("t", CultureInfo.CurrentCulture)}.", false),
+            GitHubNotesOutcome.NotFound => ("GitHub has no release with this tag.", false),
+            _ => ("Couldn't load the notes from GitHub.", true),
+        };
+    }
+
+    private void CancelGitHubNotes()
+    {
+        _notesLoad?.Cancel();
+        _notesLoad = null;
+        IsLoadingGitHubNotes = false;
+    }
+
+    private void ResetReleaseNotes()
+    {
+        CancelGitHubNotes();
+        ReleaseNotes = null;
+        GitHubRelease = null;
+        GitHubNotesLoaded = false;
+        GitHubNotesMessage = null;
+        CanRetryGitHubNotes = false;
+        GitHubNotesHeader = null;
+    }
+
 
     /// <summary>Only web links are opened; anything else (file:, ms-settings:…) stays plain text (005 security).</summary>
-    public static Uri? SafeUri(string? url) =>
-        Uri.TryCreate(url, UriKind.Absolute, out var uri) && (uri.Scheme == Uri.UriSchemeHttps || uri.Scheme == Uri.UriSchemeHttp)
-            ? uri
-            : null;
+    public static Uri? SafeUri(string? url) => WebLinks.SafeUri(url);
 
     /// <summary>Icons load with no user action, so only https (005 R6.1). Links stay on <see cref="SafeUri"/>: the user clicks those.</summary>
     public static Uri? SafeIconUri(string? url) =>

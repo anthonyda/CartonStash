@@ -12,6 +12,25 @@ internal static class Pkg
         new(id, name ?? id, "1.0", source.Length > 0 ? (update ? "2.0" : "1.0") : null, source, update);
 }
 
+/// <summary>Spec 012: GitHub release notes, scripted. Records every request; only what a test puts in <see cref="Cache"/> is cached.</summary>
+internal sealed class FakeReleaseNotes : IReleaseNotesService
+{
+    public Func<GitHubRelease, CancellationToken, Task<GitHubNotesResult>> Get { get; set; } =
+        (_, _) => Task.FromResult(new GitHubNotesResult(GitHubNotesOutcome.NotFound));
+
+    public List<(GitHubRelease Release, CancellationToken Token)> Requests { get; } = [];
+
+    public Dictionary<GitHubRelease, GitHubNotes> Cache { get; } = [];
+
+    public Task<GitHubNotesResult> GetGitHubNotesAsync(GitHubRelease release, CancellationToken cancellationToken)
+    {
+        Requests.Add((release, cancellationToken));
+        return Get(release, cancellationToken);
+    }
+
+    public GitHubNotes? TryGetCached(GitHubRelease release) => Cache.GetValueOrDefault(release);
+}
+
 internal sealed class FakePackageService : IPackageService
 {
     public Func<string, CancellationToken, Task<IReadOnlyList<PackageInfo>>> Search { get; set; } =
@@ -225,6 +244,8 @@ internal sealed class TestApp
     public SourceAgreementCheck Agreements { get; }
 
     public FakePackageService Packages { get; } = new();
+
+    public FakeReleaseNotes ReleaseNotes { get; } = new();
 
     public ScriptedInstaller Installer { get; } = new();
 
