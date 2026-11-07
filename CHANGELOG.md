@@ -2,6 +2,15 @@
 
 What's new in each version of CartonStash. Get it from the [Microsoft Store](https://apps.microsoft.com/detail/9MT37M7DBZRK).
 
+## 1.2.0
+
+### Fixed
+
+- **Results say what really happened.** Three kinds of results used to mislead:
+  - An update that failed before any installer ran said "The installer failed with error code 0." It now shows WinGet's own error code, with Windows' description of it when there is one. When a program WinGet needed is missing, as with a damaged EA app install, it says so and suggests repairing or reinstalling the package.
+  - An update that WinGet reported as done, while Windows still lists the old version, said "Updated successfully" and came back on the next check. Autodesk Fusion does this, because it updates itself when it starts. The app now shows a warning, "Update not confirmed", instead.
+  - A package whose publisher doesn't allow updating in place, such as Miniconda3, failed with "Check your internet connection." The app now says it can't be updated in place, and that you can uninstall it and install it again. It no longer offers Retry, which would fail the same way.
+
 ## 1.1.2
 
 ### Fixed

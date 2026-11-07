@@ -21,7 +21,7 @@ Manual checks run in the CartonStash-Test VM (or Windows Sandbox), never on the 
 
 ## Docs
 
-- [ ] **T6.** CHANGELOG: a "Fixed" entry in the next version's section for the three messages. *(R1, R2, R3)*
+- [x] **T6.** CHANGELOG: a "Fixed" entry in the next version's section for the three messages. *(R1, R2, R3)*
   - Verify: review in the PR.
 
 ## Manual checks
