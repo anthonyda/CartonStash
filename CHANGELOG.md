@@ -2,6 +2,12 @@
 
 What's new in each version of CartonStash. Get it from the [Microsoft Store](https://apps.microsoft.com/detail/9MT37M7DBZRK).
 
+## 1.1.2
+
+### Fixed
+
+- **CartonStash says when a program is running and blocks its update.** Updating a package while it was open, for example Claude Code with `claude` running in a terminal, failed with only "The installer failed with error code 0x8A150003." The app now names the program that holds its files, for example "Claude Code is running (claude.exe), so it couldn't be updated. Close it, then press Retry." The same goes for an uninstall, and for installers that report the program as running. CartonStash never closes the program for you, and it only looks for running programs after such a failure.
+
 ## 1.1.1
 
 Two fixes for updates that said one thing and did another.
