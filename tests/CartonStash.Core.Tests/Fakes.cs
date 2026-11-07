@@ -156,6 +156,8 @@ internal sealed class ScriptedInstaller : IPackageInstaller
     public void Complete(string id, OperationResult result = OperationResult.Succeeded, string message = "ok") =>
         _running[id].Done.SetResult(new OperationOutcome(result, message));
 
+    public void Complete(string id, OperationOutcome outcome) => _running[id].Done.SetResult(outcome);
+
     public void Throw(string id, Exception ex) => _running[id].Done.SetException(ex);
 }
 

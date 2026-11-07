@@ -62,6 +62,7 @@ public sealed partial class OperationCard : UserControl
             OperationState.Running => ("", "NeutralIcon"), // sync
             OperationState.Succeeded => ("", "SuccessIcon"), // check
             OperationState.RestartRequired => ("", "CautionIcon"), // warning
+            OperationState.Unconfirmed => ("", "CautionIcon"), // warning (013 R2.2)
             OperationState.Cancelled => ("", "NeutralIcon"), // cross
             _ => ("", "CriticalIcon"), // error badge
         };

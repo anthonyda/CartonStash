@@ -9,6 +9,13 @@ What's new in each version of CartonStash. Get it from the [Microsoft Store](htt
 - **Release notes are easier to read.** In a package's details, lists show as lists and quotes as quotes, and section titles such as "Bug Fixes" stand out, instead of a block of text full of `-` and `>` marks. Web addresses in the notes are links.
 - **Read a release's notes from GitHub without leaving the app.** Many packages only link to their GitHub release page. For those, the details now offer **Show notes from GitHub**, which shows that release's notes with their headings, lists, tables and code. CartonStash only contacts GitHub when you press the button, images in the notes are never loaded, and links open in your browser. If GitHub can't be reached or has had too many requests from your network, the app says so and when to try again.
 
+### Fixed
+
+- **Results say what really happened.** Three kinds of results used to mislead:
+  - An update that failed before any installer ran said "The installer failed with error code 0." It now shows WinGet's own error code, with Windows' description of it when there is one. When a program WinGet needed is missing, as with a damaged EA app install, it says so and suggests repairing or reinstalling the package.
+  - An update that WinGet reported as done, while Windows still lists the old version, said "Updated successfully" and came back on the next check. Autodesk Fusion does this, because it updates itself when it starts. The app now shows a warning, "Update not confirmed", instead.
+  - A package whose publisher doesn't allow updating in place, such as Miniconda3, failed with "Check your internet connection." The app now says it can't be updated in place, and that you can uninstall it and install it again. It no longer offers Retry, which would fail the same way.
+
 ## 1.1.2
 
 ### Fixed

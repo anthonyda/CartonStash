@@ -49,10 +49,16 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
                 OperationKind.Uninstall => await UninstallAsync(found, package.Name, logPath, progress, cancellationToken),
                 _ => await InstallAsync(kind, found, package.Name, acceptAgreements, logPath, progress, cancellationToken),
             };
-            if (kind == OperationKind.Upgrade && outcome.Result == OperationResult.Succeeded && WinGetHost.IsAppInstaller(package))
+            switch (CheckAfter(kind, outcome, package))
             {
-                connection.Invalidate();
-                outcome = AfterAppInstallerUpdate(outcome, await OldVersionStillInstalledAsync(package));
+                case CheckAfterOperation.AppInstaller:
+                    connection.Invalidate();
+                    outcome = AfterAppInstallerUpdate(outcome, await OldVersionStillInstalledAsync(package));
+                    break;
+                case CheckAfterOperation.InstalledVersion:
+                    connection.Invalidate();
+                    outcome = AfterUpdate(outcome, package.InstalledVersion, await InstalledAfterUpdateAsync(package), package.Name);
+                    break;
             }
             return outcome;
         }
@@ -154,6 +160,57 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
         }
     }
 
+    internal enum CheckAfterOperation
+    {
+        None,
+        AppInstaller,
+        InstalledVersion,
+    }
+
+    /// <summary>Which re-read a finished operation gets: App Installer's own (004 R6.1, 013 R2.4), the version (013 R2.1), or none (R2.5).</summary>
+    internal static CheckAfterOperation CheckAfter(OperationKind kind, OperationOutcome outcome, PackageInfo package) =>
+        kind != OperationKind.Upgrade || outcome.Result != OperationResult.Succeeded ? CheckAfterOperation.None
+        : WinGetHost.IsAppInstaller(package) ? CheckAfterOperation.AppInstaller
+        : CheckAfterOperation.InstalledVersion;
+
+    /// <summary>The package as WinGet lists it after an update (013 R2.1).</summary>
+    internal sealed record InstalledAfterUpdate(string? Version, bool UpdateAvailable);
+
+    /// <summary>013 R2.1: reads the package again. Null when it can't be read: a failed check is never an error of its own (R2.3).</summary>
+    private async Task<InstalledAfterUpdate?> InstalledAfterUpdateAsync(PackageInfo package)
+    {
+        try
+        {
+            var found = await connection.FindByIdAsync(package.Id, package.Source, localFirst: true, CancellationToken.None);
+            return new InstalledAfterUpdate(found.InstalledVersion?.Version, found.IsUpdateAvailable);
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// 013 R2.2, R2.3: a warning when WinGet said Ok but still lists the old version with an update; otherwise the outcome
+    /// unchanged. Comparing with the old version, not the new one: installers often list a different version than the
+    /// manifest's, so "not the new version" would warn after good updates.
+    /// </summary>
+    internal static OperationOutcome AfterUpdate(OperationOutcome outcome, string? versionBefore, InstalledAfterUpdate? after, string packageName = "")
+    {
+        if (after is not { Version: { } version, UpdateAvailable: true } || versionBefore is null
+            || !string.Equals(version, versionBefore, StringComparison.Ordinal))
+        {
+            return outcome;
+        }
+        var name = string.IsNullOrWhiteSpace(packageName) ? "the package" : packageName;
+        return outcome with
+        {
+            Result = OperationResult.SucceededUnconfirmed,
+            Message = $"WinGet finished without an error, but Windows still lists {name} {version}. "
+                + $"The installer may still be finishing, or {name} may update itself the next time it starts.",
+        };
+    }
+
     /// <summary>The outcome of an App Installer update once WinGet's installed list was read again (004 R6.1).</summary>
     /// <param name="oldVersionStillInstalled">Null when the list couldn't be read: report what WinGet said.</param>
     internal static OperationOutcome AfterAppInstallerUpdate(OperationOutcome outcome, bool? oldVersionStillInstalled) =>
@@ -238,13 +295,73 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
         };
     }
 
+    /// <summary>APPINSTALLER_CLI_ERROR_INSTALL_UPGRADE_NOT_SUPPORTED: the manifest denies an in-place update (013 R3.1).</summary>
+    internal const int UpgradeNotSupported = unchecked((int)0x8A150114);
+
+    /// <summary>013 R3.1: what to do instead. The app doesn't do it itself (R3.2, constitution P2).</summary>
+    internal static string UpgradeNotSupportedMessage(string packageName)
+    {
+        var name = string.IsNullOrWhiteSpace(packageName) ? "This package" : packageName;
+        return $"{name} can't be updated in place: its publisher asks for it to be uninstalled first. "
+            + "To get the new version, uninstall it, then install it again.";
+    }
+
+    /// <summary>CO_E_APPNOTFOUND: WinGet couldn't start a program, seen for the EA app's missing uninstaller (013 R1.2).</summary>
+    internal const int AppNotFound = unchecked((int)0x800401F5);
+
+    /// <summary>HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND) (013 R1.2).</summary>
+    internal const int FileNotFound = unchecked((int)0x80070002);
+
+    /// <summary>
+    /// 013 R1.1, R1.2: the message when WinGet failed with an error but no installer exit code. It doesn't say the installer
+    /// never ran: that's likely, but WinGet can also fail after it (constitution P1).
+    /// </summary>
+    internal static string NoExitCodeMessage(OperationKind kind, int extendedError, string packageName, Func<int, string?> describe)
+    {
+        var name = string.IsNullOrWhiteSpace(packageName) ? "the package" : packageName;
+        var code = $"0x{extendedError:X8}";
+        if (extendedError is AppNotFound or FileNotFound)
+        {
+            var purpose = kind switch
+            {
+                OperationKind.Upgrade => "update",
+                OperationKind.Uninstall => "uninstall",
+                _ => "install",
+            };
+            return $"WinGet couldn't start a program needed to {purpose} {name}: it wasn't found ({code}). "
+                + $"Repairing or reinstalling {name} from its publisher may fix this.";
+        }
+        var noun = kind switch
+        {
+            OperationKind.Upgrade => "The update",
+            OperationKind.Uninstall => "The uninstall",
+            _ => "The install",
+        };
+        string? text;
+        try
+        {
+            text = describe(extendedError);
+        }
+        catch (Exception)
+        {
+            text = null; // a description is a bonus, never an error of its own
+        }
+        return string.IsNullOrWhiteSpace(text)
+            ? $"{noun} failed: WinGet reported error {code}."
+            : $"{noun} failed: WinGet reported \"{text}\" ({code}).";
+    }
+
     // Readable outcomes (003 R5.2, R5.3, R7; 004 NoApplicableUpgrade; 006 scope hint).
     internal static OperationOutcome MapInstallResult(OperationKind kind, InstallResultStatus status, uint installerErrorCode, bool rebootRequired,
-        InstallScope scope, int extendedError = 0, string packageName = "", IReadOnlyList<string>? runningFiles = null)
+        InstallScope scope, int extendedError = 0, string packageName = "", IReadOnlyList<string>? runningFiles = null,
+        Func<int, string?>? describe = null)
     {
         var done = kind == OperationKind.Upgrade ? "Updated" : "Installed";
         return status switch
         {
+            // 013 R3.1: whatever the status (WinGet reports CatalogError), the code says the update isn't allowed in place.
+            not InstallResultStatus.Ok when kind == OperationKind.Upgrade && extendedError == UpgradeNotSupported =>
+                Failed(UpgradeNotSupportedMessage(packageName)) with { Retryable = false },
             InstallResultStatus.Ok when rebootRequired =>
                 new(OperationResult.SucceededRestartRequired, $"{done}. Restart your PC to finish."),
             InstallResultStatus.Ok => new(OperationResult.Succeeded, $"{done} successfully."),
@@ -252,6 +369,8 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
                 Failed("The downloaded file doesn't match the package's checksum, so it wasn't installed. The publisher's site may have changed; try again later."),
             InstallResultStatus.DownloadError => Failed("The download failed. Check your internet connection and try again."),
             InstallResultStatus.InstallError when InUseMessage(kind, extendedError, packageName, runningFiles) is { } inUse => Failed(inUse),
+            InstallResultStatus.InstallError when installerErrorCode == 0 && extendedError != 0 =>
+                Failed(NoExitCodeMessage(kind, extendedError, packageName, describe ?? ErrorDescriptions.Describe)),
             InstallResultStatus.InstallError => Failed($"The installer failed with error code {FormatCode(installerErrorCode)}."),
             InstallResultStatus.BlockedByPolicy => Failed("Blocked by a group policy on this PC."),
             InstallResultStatus.NoApplicableInstallers => Failed(scope == InstallScope.Any
@@ -266,13 +385,15 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
     }
 
     internal static OperationOutcome MapUninstallResult(UninstallResultStatus status, uint uninstallerErrorCode, bool rebootRequired,
-        int extendedError = 0, string packageName = "", IReadOnlyList<string>? runningFiles = null) => status switch
+        int extendedError = 0, string packageName = "", IReadOnlyList<string>? runningFiles = null, Func<int, string?>? describe = null) => status switch
     {
         UninstallResultStatus.Ok when rebootRequired =>
             new(OperationResult.SucceededRestartRequired, "Uninstalled. Restart your PC to finish."),
         UninstallResultStatus.Ok => new(OperationResult.Succeeded, "Uninstalled successfully."),
         UninstallResultStatus.UninstallError when InUseMessage(OperationKind.Uninstall, extendedError, packageName, runningFiles) is { } inUse =>
             Failed(inUse),
+        UninstallResultStatus.UninstallError when uninstallerErrorCode == 0 && extendedError != 0 =>
+            Failed(NoExitCodeMessage(OperationKind.Uninstall, extendedError, packageName, describe ?? ErrorDescriptions.Describe)),
         UninstallResultStatus.UninstallError => Failed($"The uninstaller failed with error code {FormatCode(uninstallerErrorCode)}."),
         UninstallResultStatus.BlockedByPolicy => Failed("Blocked by a group policy on this PC."),
         UninstallResultStatus.CatalogError => Failed("Couldn't read the installed packages."),

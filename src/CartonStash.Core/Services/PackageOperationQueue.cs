@@ -201,6 +201,7 @@ public sealed class PackageOperationQueue(IPackageInstaller installer, IOperatio
     {
         operation.Percent = null;
         operation.Phase = OperationPhase.Done;
+        operation.Retryable = outcome.Retryable; // before Result, which notifies CanRetry
         operation.Result = outcome.Result;
         operation.Message = outcome.Message;
         operation.Details = outcome.Details;
