@@ -176,6 +176,19 @@ public class ShellViewModelTests
     }
 
     [Fact]
+    public void An_unconfirmed_update_is_a_warning() // 013 R2.2
+    {
+        var (app, shell, _) = Create();
+
+        app.Queue.Enqueue(OperationKind.Upgrade, Pkg.Installed("Autodesk.Fusion", update: true));
+        app.Installer.Complete("Autodesk.Fusion", OperationResult.SucceededUnconfirmed, "Windows still lists Autodesk Fusion 2706.1.14.");
+
+        Assert.Equal(NotificationSeverity.Warning, shell.NotificationSeverity);
+        Assert.Contains("Update not confirmed", shell.NotificationTitle);
+        Assert.DoesNotContain("successfully", shell.NotificationMessage);
+    }
+
+    [Fact]
     public void Restart_required_is_a_warning() // R5.3
     {
         var (app, shell, _) = Create();
