@@ -163,10 +163,7 @@ public sealed partial class PackageDetailsViewModel(IPackageService packages) : 
     private void ToggleReleaseNotes() => ShowAllReleaseNotes = !ShowAllReleaseNotes;
 
     /// <summary>Only web links are opened; anything else (file:, ms-settings:…) stays plain text (005 security).</summary>
-    public static Uri? SafeUri(string? url) =>
-        Uri.TryCreate(url, UriKind.Absolute, out var uri) && (uri.Scheme == Uri.UriSchemeHttps || uri.Scheme == Uri.UriSchemeHttp)
-            ? uri
-            : null;
+    public static Uri? SafeUri(string? url) => WebLinks.SafeUri(url);
 
     /// <summary>Icons load with no user action, so only https (005 R6.1). Links stay on <see cref="SafeUri"/>: the user clicks those.</summary>
     public static Uri? SafeIconUri(string? url) =>

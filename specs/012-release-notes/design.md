@@ -53,7 +53,7 @@ The parser reads lines (CRLF normalised, tabs counted as 4 spaces) and classifie
 | `^\s*[-*•]\s+text` | list item. Its indent is the marker's column. A deeper indent than the current item nests under it; a shallower one closes levels back to the matching one (R1.1) |
 | indented, no marker, right after a list item | joins that item with a line break (ripgrep's wrapped items, R1.1, R1.5) |
 | `^\s*>` | quote line, marker and one space removed. Consecutive lines form one quote (R1.2) |
-| ≤ 40 chars, no final `.` `!` `?`, and the next non-blank line is a list item | bold paragraph (R1.9). Not a heading, so screen readers don't announce a structure that isn't there |
+| ≤ 40 chars, no final `.` `!` `?`, and the very next line is a list item (as R1.9 says; a blank line in between doesn't count) | bold paragraph (R1.9). Not a heading, so screen readers don't announce a structure that isn't there |
 | anything else | paragraph text. Lines in a row are joined with line breaks (R1.5) |
 
 Inline scan, left to right on each line (R1.3, R1.4):

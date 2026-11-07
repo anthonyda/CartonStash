@@ -1,6 +1,6 @@
 # 012 – Readable release notes: Tasks
 
-**Status:** Draft (2026-11-06)
+**Status:** In progress (started 2026-11-07)
 **Design:** [design.md](design.md)
 
 Tick a task only when its verification passes. Keep tasks small enough for one commit.
@@ -8,7 +8,7 @@ Manual checks run in the CartonStash-Test VM (or Windows Sandbox), never on the 
 
 ## Core
 
-- [ ] **T1.** `NotesDocument`, `NotesBlock` and `NotesInline` records, and `NotesDocument.PlainText`. Then `WinGetNotesParser`: line kinds, nesting, continuation lines, quotes, section titles, and the inline scan. Save the samples from requirements as test fixtures (Git, ripgrep, bat, Firefox, GitHub.cli, Obsidian). *(R1.1 to R1.5, R1.8, R1.9)*
+- [x] **T1.** `NotesDocument`, `NotesBlock` and `NotesInline` records, and `NotesDocument.PlainText`. Then `WinGetNotesParser`: line kinds, nesting, continuation lines, quotes, section titles, and the inline scan. Save the samples from requirements as test fixtures (Git, ripgrep, bat, Firefox, GitHub.cli, Obsidian). *(R1.1 to R1.5, R1.8, R1.9)*
   - Verify: `WinGetNotesParserTests`: one test per fixture, plus nesting then un-nesting, a blank line between items, a lone `*` and backtick, a `#` line (GitHub.cli) staying plain, `[x](file:///c:/)` staying as written, a bare URL ending in `).`, a URL holding `(`, a 41-character line above a list (not bold), a line ending in `.` above a list (not bold), and a parser exception giving `PlainText`.
 - [ ] **T2.** `GitHubRelease.TryParse`. *(R2.1)*
   - Verify: `GitHubReleaseTests`: the 8 GitHub URLs from the requirements sample are accepted. Refused: `http:`, `www.github.com`, a port, user info, `/releases`, `/releases/latest`, `/releases/tag/` (empty tag), an owner or repo with bad characters, a non-GitHub host. A tag holding `/` is read whole; query and fragment are ignored.
