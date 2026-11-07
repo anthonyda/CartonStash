@@ -96,21 +96,6 @@ public class PackageDetailsViewModelTests
     }
 
     [Fact]
-    public async Task Long_release_notes_are_collapsed_until_show_more() // R2.2
-    {
-        var (app, vm) = Create();
-        var notes = string.Join("\n", Enumerable.Range(1, 30).Select(i => $"line {i}"));
-        app.Packages.Details = (_, _) => Task.FromResult<PackageDetails?>(new PackageDetails { ReleaseNotes = notes });
-
-        await vm.LoadAsync(Row(app, Pkg.Remote("A")));
-
-        Assert.True(vm.ReleaseNotesIsLong);
-        Assert.Equal(PackageDetailsViewModel.CollapsedReleaseNoteLines, vm.ReleaseNotesMaxLines);
-        vm.ToggleReleaseNotesCommand.Execute(null);
-        Assert.Equal(0, vm.ReleaseNotesMaxLines);
-    }
-
-    [Fact]
     public async Task Close_hides_the_pane() // R4.1
     {
         var (app, vm) = Create();

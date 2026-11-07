@@ -19,9 +19,6 @@ public enum DetailsState
 /// <summary>The details pane (spec 005). Each list page owns one. Release notes: spec 012.</summary>
 public sealed partial class PackageDetailsViewModel(IPackageService packages, IReleaseNotesService releaseNotes) : ObservableObject
 {
-    /// <summary>Release notes longer than this are collapsed behind "Show more" (005 R2.2).</summary>
-    public const int CollapsedReleaseNoteLines = 10;
-
     private CancellationTokenSource? _currentLoad;
 
     /// <summary>The GitHub request; cancelled by another package or by closing the pane (012 R2.10).</summary>
@@ -40,7 +37,7 @@ public sealed partial class PackageDetailsViewModel(IPackageService packages, IR
     public partial GitHubRelease? GitHubRelease { get; private set; }
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(CanShowGitHubNotes), nameof(ShowReleaseNotesSection))]
+    [NotifyPropertyChangedFor(nameof(CanShowGitHubNotes), nameof(ShowReleaseNotesSection), nameof(GitHubNotesStatus), nameof(HasGitHubNotesStatus))]
     public partial bool IsLoadingGitHubNotes { get; private set; }
 
     /// <summary>GitHub answered, with or without notes: the button has done its job.</summary>
@@ -50,7 +47,7 @@ public sealed partial class PackageDetailsViewModel(IPackageService packages, IR
 
     /// <summary>What went wrong asking GitHub, or that the release has no notes (012 R2.11).</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasGitHubNotesMessage), nameof(ShowReleaseNotesSection))]
+    [NotifyPropertyChangedFor(nameof(HasGitHubNotesMessage), nameof(ShowReleaseNotesSection), nameof(GitHubNotesStatus), nameof(HasGitHubNotesStatus))]
     public partial string? GitHubNotesMessage { get; private set; }
 
     /// <summary>Only when trying again can help: no connection, or a failure (012 R2.11).</summary>
@@ -76,7 +73,7 @@ public sealed partial class PackageDetailsViewModel(IPackageService packages, IR
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HomepageUri), nameof(PublisherUri), nameof(SupportUri), nameof(PrivacyUri),
         nameof(LicenseUri), nameof(ReleaseNotesUri), nameof(TagsText), nameof(VersionsText),
-        nameof(ReleaseNotesIsLong), nameof(HasPublisher), nameof(HasShortDescription),
+        nameof(HasPublisher), nameof(HasShortDescription),
         nameof(HasDescription), nameof(HasLicense), nameof(HasHomepageUri), nameof(HasPublisherUri), nameof(HasSupportUri),
         nameof(HasPrivacyUri), nameof(HasLicenseUri), nameof(HasReleaseNotesUri), nameof(HasTags), nameof(HasVersions))]
     public partial PackageDetails? Details { get; private set; }
@@ -85,9 +82,6 @@ public sealed partial class PackageDetailsViewModel(IPackageService packages, IR
     [NotifyPropertyChangedFor(nameof(HasError))]
     public partial string? ErrorMessage { get; private set; }
 
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ReleaseNotesMaxLines))]
-    public partial bool ShowAllReleaseNotes { get; set; }
 
     public bool IsLoading => State == DetailsState.Loading;
 
@@ -128,6 +122,14 @@ public sealed partial class PackageDetailsViewModel(IPackageService packages, IR
 
     public bool HasGitHubNotesMessage => GitHubNotesMessage is not null;
 
+    /// <summary>
+    /// The pane's one status line, a live region: its text changes from loading to the outcome, so a screen reader
+    /// hears both (Q5).
+    /// </summary>
+    public string? GitHubNotesStatus => IsLoadingGitHubNotes ? "Loading notes from GitHub…" : GitHubNotesMessage;
+
+    public bool HasGitHubNotesStatus => GitHubNotesStatus is not null;
+
     public bool NotesFromGitHub => GitHubNotesHeader is not null;
 
     /// <summary>The "Show notes from GitHub" button (012 R2.1, R2.2).</summary>
@@ -136,10 +138,7 @@ public sealed partial class PackageDetailsViewModel(IPackageService packages, IR
     /// <summary>The section also shows for a package that has only a GitHub link.</summary>
     public bool ShowReleaseNotesSection => HasReleaseNotes || CanShowGitHubNotes || IsLoadingGitHubNotes || HasGitHubNotesMessage;
 
-    public bool ReleaseNotesIsLong => Details?.ReleaseNotes is { } notes && notes.Split('\n').Length > CollapsedReleaseNoteLines;
 
-    /// <summary>0 means unlimited (TextBlock.MaxLines).</summary>
-    public int ReleaseNotesMaxLines => ShowAllReleaseNotes ? 0 : CollapsedReleaseNoteLines;
 
     /// <summary>Newest first, the installed one marked (005 R2.1).</summary>
     public string? VersionsText
@@ -169,7 +168,6 @@ public sealed partial class PackageDetailsViewModel(IPackageService packages, IR
         IsOpen = true;
         Details = null;
         ErrorMessage = null;
-        ShowAllReleaseNotes = false;
         ResetReleaseNotes();
         State = DetailsState.Loading;
 
@@ -317,8 +315,6 @@ public sealed partial class PackageDetailsViewModel(IPackageService packages, IR
         GitHubNotesHeader = null;
     }
 
-    [RelayCommand]
-    private void ToggleReleaseNotes() => ShowAllReleaseNotes = !ShowAllReleaseNotes;
 
     /// <summary>Only web links are opened; anything else (file:, ms-settings:…) stays plain text (005 security).</summary>
     public static Uri? SafeUri(string? url) => WebLinks.SafeUri(url);

@@ -109,10 +109,32 @@ public class PackageDetailsReleaseNotesTests
         Assert.True(vm.IsLoadingGitHubNotes);
         Assert.False(vm.CanShowGitHubNotes);
         Assert.True(vm.ShowReleaseNotesSection);
+        Assert.Equal("Loading notes from GitHub…", vm.GitHubNotesStatus);
 
         answer.SetResult(GitHubNotesResult.Loaded(BatNotes));
         await press;
         Assert.False(vm.IsLoadingGitHubNotes);
+        Assert.False(vm.HasGitHubNotesStatus);
+    }
+
+    [Fact]
+    public async Task The_status_line_goes_from_loading_to_the_outcome() // R2.3, R2.11, Q5: one live region
+    {
+        var (app, vm) = Create();
+        var answer = new TaskCompletionSource<GitHubNotesResult>();
+        app.ReleaseNotes.Get = (_, _) => answer.Task;
+        await vm.LoadAsync(Row(app, "A"));
+        var changed = new List<string?>();
+        vm.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+
+        var press = vm.LoadGitHubNotesCommand.ExecuteAsync(null);
+        Assert.Equal("Loading notes from GitHub…", vm.GitHubNotesStatus);
+        answer.SetResult(new GitHubNotesResult(GitHubNotesOutcome.Unreachable));
+        await press;
+
+        Assert.Equal("Couldn't reach GitHub.", vm.GitHubNotesStatus);
+        Assert.True(vm.HasGitHubNotesStatus);
+        Assert.Contains(nameof(vm.GitHubNotesStatus), changed);
     }
 
     [Fact]

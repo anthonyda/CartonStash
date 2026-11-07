@@ -24,7 +24,7 @@ Manual checks run in the CartonStash-Test VM (or Windows Sandbox), never on the 
 
 - [x] **T6.** `NotesView` control: builds its elements from the document (paragraphs, headings with `HeadingLevel`, lists, quotes, code, tables, rules, links through `Launcher`), uses only theme brushes, and handles collapsing with "Show more" / "Show less". *(R1.6, R1.7, R2.4, R2.8)*
   - Verify: `dotnet build`. The on-screen checks are in T9.
-- [ ] **T7.** `PackageDetailsPane`: put `NotesView` in place of the `TextBlock`, and add the button, header, loading line and message line with Retry, each with an accessible name and a live region where the design says. (`App.xaml.cs` registers `IReleaseNotesService`, with its own `SocketsHttpHandler` and the `CartonStash/{version}` user agent, since T5: the list view models need it.) Remove `ShowAllReleaseNotes`, `ReleaseNotesIsLong`, `ReleaseNotesMaxLines` and `ToggleReleaseNotesCommand` from the view model, along with their test. *(R2.1, R2.3, R2.11)*
+- [x] **T7.** `PackageDetailsPane`: put `NotesView` in place of the `TextBlock`, and add the button, header, loading line and message line with Retry, each with an accessible name and a live region where the design says. (`App.xaml.cs` registers `IReleaseNotesService`, with its own `SocketsHttpHandler` and the `CartonStash/{version}` user agent, since T5: the list view models need it.) Remove `ShowAllReleaseNotes`, `ReleaseNotesIsLong`, `ReleaseNotesMaxLines` and `ToggleReleaseNotesCommand` from the view model, along with their test. *(R2.1, R2.3, R2.11)*
   - Verify: `dotnet build`, then `dotnet test`. The on-screen checks are in T9.
 
 ## Docs and packaging

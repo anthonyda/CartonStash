@@ -228,7 +228,7 @@ public class MessageFlagTests
         string[] flags =
         [
             nameof(vm.HasReleaseNotes), nameof(vm.ShowReleaseNotesSection), nameof(vm.CanShowGitHubNotes),
-            nameof(vm.HasGitHubNotesMessage), nameof(vm.CanRetryGitHubNotes),
+            nameof(vm.HasGitHubNotesMessage), nameof(vm.CanRetryGitHubNotes), nameof(vm.HasGitHubNotesStatus),
         ];
         bool Flag(string name) => (bool)typeof(PackageDetailsViewModel).GetProperty(name)!.GetValue(vm)!;
         Assert.All(flags, name => Assert.True(Flag(name), name));

@@ -4,8 +4,7 @@
     x:Class="CartonStash.App.Controls.PackageDetailsPane"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:controls="using:CartonStash.App.Controls"
-    xmlns:ui="using:CartonStash.App">
+    xmlns:controls="using:CartonStash.App.Controls">
 
     <Grid
         Background="{ThemeResource SolidBackgroundFillColorSecondaryBrush}"
@@ -147,20 +146,58 @@
                     <TextBlock Text="{x:Bind ViewModel.TagsText, Mode=OneWay}" TextWrapping="Wrap" />
                 </StackPanel>
 
-                <!-- R2.2 -->
-                <StackPanel Spacing="4" Visibility="{x:Bind ViewModel.HasReleaseNotes, Mode=OneWay}">
+                <!-- R2.2, spec 012 -->
+                <StackPanel Spacing="8" Visibility="{x:Bind ViewModel.ShowReleaseNotesSection, Mode=OneWay}">
                     <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}" Text="Release notes" />
+                    <!-- 012 R2.4: title, date, and where the notes come from -->
                     <TextBlock
-                        IsTextSelectionEnabled="True"
-                        MaxLines="{x:Bind ViewModel.ReleaseNotesMaxLines, Mode=OneWay}"
-                        Text="{x:Bind ViewModel.Details.ReleaseNotes, Mode=OneWay}"
-                        TextTrimming="CharacterEllipsis"
-                        TextWrapping="Wrap" />
-                    <HyperlinkButton
-                        Padding="0"
-                        Command="{x:Bind ViewModel.ToggleReleaseNotesCommand, Mode=OneWay}"
-                        Content="{x:Bind ui:Ui.Choose(ViewModel.ShowAllReleaseNotes, 'Show less', 'Show more'), Mode=OneWay}"
-                        Visibility="{x:Bind ViewModel.ReleaseNotesIsLong, Mode=OneWay}" />
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Text="{x:Bind ViewModel.GitHubNotesHeader, Mode=OneWay}"
+                        TextWrapping="Wrap"
+                        Visibility="{x:Bind ViewModel.NotesFromGitHub, Mode=OneWay}" />
+                    <!-- 012 R1, R2.4 to R2.8 -->
+                    <controls:NotesView Document="{x:Bind ViewModel.ReleaseNotes, Mode=OneWay}" Visibility="{x:Bind ViewModel.HasReleaseNotes, Mode=OneWay}" />
+                    <!-- 012 R2.1, R2.2: only on the user's press -->
+                    <Button
+                        AutomationProperties.Name="Show release notes from GitHub"
+                        Command="{x:Bind ViewModel.LoadGitHubNotesCommand, Mode=OneWay}"
+                        Content="Show notes from GitHub"
+                        Visibility="{x:Bind ViewModel.CanShowGitHubNotes, Mode=OneWay}" />
+                    <!-- 012 R2.3, R2.11: one status line, loading then the outcome -->
+                    <Grid ColumnSpacing="8" Visibility="{x:Bind ViewModel.HasGitHubNotesStatus, Mode=OneWay}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ProgressRing
+                            Width="16"
+                            Height="16"
+                            VerticalAlignment="Top"
+                            AutomationProperties.AccessibilityView="Raw"
+                            IsActive="{x:Bind ViewModel.IsLoadingGitHubNotes, Mode=OneWay}"
+                            Visibility="{x:Bind ViewModel.IsLoadingGitHubNotes, Mode=OneWay}" />
+                        <FontIcon
+                            VerticalAlignment="Top"
+                            AutomationProperties.AccessibilityView="Raw"
+                            FontSize="16"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            Glyph="&#xE946;"
+                            Visibility="{x:Bind ViewModel.HasGitHubNotesMessage, Mode=OneWay}" />
+                        <TextBlock
+                            Grid.Column="1"
+                            AutomationProperties.LiveSetting="Polite"
+                            Text="{x:Bind ViewModel.GitHubNotesStatus, Mode=OneWay}"
+                            TextWrapping="Wrap" />
+                        <HyperlinkButton
+                            Grid.Column="2"
+                            Padding="0"
+                            VerticalAlignment="Top"
+                            AutomationProperties.Name="Retry loading the notes from GitHub"
+                            Command="{x:Bind ViewModel.LoadGitHubNotesCommand, Mode=OneWay}"
+                            Content="Retry"
+                            Visibility="{x:Bind ViewModel.CanRetryGitHubNotes, Mode=OneWay}" />
+                    </Grid>
                 </StackPanel>
                 <HyperlinkButton
                     Padding="0"

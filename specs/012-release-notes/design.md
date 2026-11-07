@@ -177,8 +177,11 @@ Removed: `ShowAllReleaseNotes`, `ReleaseNotesIsLong`, `ReleaseNotesMaxLines`, `T
   (200 px), clipped. After layout, the control compares the content's desired height with that limit and shows "Show more"
   only when it is taller. "Show more" / "Show less" is a `HyperlinkButton` below the content; it keeps focus when pressed.
   A new `Document` collapses again.
-- The button: `Button` "Show notes from GitHub", accessible name "Show release notes from GitHub". The loading line is a small
-  `ProgressRing` and text, announced through a live region (`AutomationProperties.LiveSetting="Polite"`), as is the message line.
+- The button: `Button` "Show notes from GitHub", accessible name "Show release notes from GitHub". Loading and the outcome share
+  one status line, `GitHubNotesStatus`, a live region (`AutomationProperties.LiveSetting="Polite"`): its text changes from
+  "Loading notes from GitHub…" to the message, so a screen reader hears both. *(Amended 2026-11-07 during T7: two lines
+  that only appear and disappear wouldn't be announced.)* A `ProgressRing` shows beside it while loading, an info icon
+  beside a message.
 
 ## Data flow
 
