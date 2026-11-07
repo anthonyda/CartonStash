@@ -109,8 +109,8 @@ straight away when a package is opened again.
 ### Markdown conversion (R2.4 to R2.7)
 
 - Markdig 1.4.2 (BSD-2-Clause) with `UsePipeTables`, `UseTaskLists`, `UseEmphasisExtras(Strikethrough)` and
-  `UseAutoLinks`. Line breaks inside a paragraph are kept as line breaks, as GitHub shows them in release notes. This is checked
-  against a live release page during implementation.
+  `UseAutoLinks`. Line breaks inside a paragraph are kept as line breaks, as GitHub shows them in release notes. Checked
+  2026-11-07: ripgrep 15.2.0's page has a `<br>` where its notes have a line break inside a paragraph.
 - Blocks: `HeadingBlock` → Heading (level 1 to 6). `ParagraphBlock` → Paragraph. `ListBlock` → List (ordered, start number,
   task check state per item). `QuoteBlock` → Quote. `FencedCodeBlock` / `CodeBlock` → CodeBlock (text only; no highlighting).
   `Table` → Table (first row is the header). `ThematicBreakBlock` → Rule. Anything else is converted to its plain text.

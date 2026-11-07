@@ -5,6 +5,7 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.WindowsPackageManager.ComInterop" GeneratePathProperty="true" />
     <PackageReference Include="CommunityToolkit.Mvvm" />
+    <PackageReference Include="Markdig" /> <!-- spec 012: GitHub release notes -->
   </ItemGroup>
 
   <!-- The package only copies its native factory DLL into *this* project's output. Re-publish it as
