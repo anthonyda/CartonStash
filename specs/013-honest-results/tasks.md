@@ -8,7 +8,7 @@ Manual checks run in the CartonStash-Test VM (or Windows Sandbox), never on the 
 
 ## Core
 
-- [ ] **T1.** Model changes: `OperationResult.SucceededUnconfirmed`, `OperationState.Unconfirmed`, `OperationOutcome.Retryable` (init, default true), `PackageOperation.Retryable` set in `PackageOperationQueue.Finish`, and `IsSuccess`, `CanRetry`, `State`, `StatusText` ("Update not confirmed") for both. `ShellViewModel.ShowOutcome` maps the new result to a warning, and `OperationCard` maps `OperationState.Unconfirmed` to `CautionIcon`, in the same commit so the build stays green (Q4). *(R2.2)*
+- [x] **T1.** Model changes: `OperationResult.SucceededUnconfirmed`, `OperationState.Unconfirmed`, `OperationOutcome.Retryable` (init, default true), `PackageOperation.Retryable` set in `PackageOperationQueue.Finish`, and `IsSuccess`, `CanRetry`, `State`, `StatusText` ("Update not confirmed") for both. `ShellViewModel.ShowOutcome` maps the new result to a warning, and `OperationCard` maps `OperationState.Unconfirmed` to `CautionIcon`, in the same commit so the build stays green (Q4). *(R2.2)*
   - Verify: `PackageOperationQueueTests`: `SucceededUnconfirmed` gives `IsSuccess`, no `CanRetry`, `State == Unconfirmed`, "Update not confirmed". A `Failed` outcome with `Retryable = false` gives no `CanRetry`; an ordinary `Failed` and a `Cancelled` still do. `ShellViewModelTests`: warning severity for the new result. `dotnet build`.
 - [ ] **T2.** `ErrorDescriptions.Describe(int hresult)` on `FormatMessageW` (`DllImport`, `FROM_SYSTEM | IGNORE_INSERTS`), trimmed, null when Windows has no text. *(R1.1)*
   - Verify: `ErrorDescriptionsTests`: `0x80070005` and `0x800401F5` give non-empty text with no trailing line break; `0x8A150114` and `0x8A150101` give null.

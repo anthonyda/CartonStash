@@ -27,6 +27,9 @@ public enum OperationResult
 
     /// <summary>App Installer updated, but WinGet runs from it: the new version starts with CartonStash (004 R6.1).</summary>
     SucceededAppRestartRequired,
+
+    /// <summary>WinGet reported success for an update, but the old version is still installed and still has an update (013 R2.2).</summary>
+    SucceededUnconfirmed,
     Failed,
     Cancelled,
 }
@@ -41,6 +44,9 @@ public enum OperationState
     Running,
     Succeeded,
     RestartRequired,
+
+    /// <summary>An update WinGet reported as done, but the old version is still listed (013 R2.2).</summary>
+    Unconfirmed,
     Failed,
     Cancelled,
 }
@@ -49,7 +55,11 @@ public enum OperationState
 /// <param name="Details">Technical lines for the log (WinGet status, exit code, extended error), 009 R2.2.</param>
 public sealed record OperationOutcome(OperationResult Result, string Message, string? Details = null)
 {
-    public bool IsSuccess => Result is OperationResult.Succeeded or OperationResult.SucceededRestartRequired or OperationResult.SucceededAppRestartRequired;
+    public bool IsSuccess => Result is OperationResult.Succeeded or OperationResult.SucceededRestartRequired or OperationResult.SucceededAppRestartRequired
+        or OperationResult.SucceededUnconfirmed;
+
+    /// <summary>False when retrying would fail the same way, so a failure offers no Retry (013 R3.1).</summary>
+    public bool Retryable { get; init; } = true;
 }
 
 /// <summary>
@@ -104,6 +114,9 @@ public sealed partial class PackageOperation : ObservableObject
     /// <summary>Technical result lines for the log (009 R2.2).</summary>
     public string? Details { get; internal set; }
 
+    /// <summary>From the outcome: false when Retry would fail the same way (013 R3.1). Set before <see cref="Result"/>.</summary>
+    public bool Retryable { get; internal set; } = true;
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(StatusText), nameof(IsIndeterminate), nameof(ProgressValue))]
     public partial double? Percent { get; internal set; }
@@ -133,6 +146,7 @@ public sealed partial class PackageOperation : ObservableObject
         (not OperationPhase.Done, _) => OperationState.Running,
         (_, OperationResult.Succeeded) => OperationState.Succeeded,
         (_, OperationResult.SucceededRestartRequired or OperationResult.SucceededAppRestartRequired) => OperationState.RestartRequired,
+        (_, OperationResult.SucceededUnconfirmed) => OperationState.Unconfirmed,
         (_, OperationResult.Cancelled) => OperationState.Cancelled,
         _ => OperationState.Failed,
     };
@@ -154,11 +168,13 @@ public sealed partial class PackageOperation : ObservableObject
     /// <summary>WinGet can only stop an operation before the installer itself runs (003 R3.2).</summary>
     public bool CanCancel => Phase is OperationPhase.Queued or OperationPhase.Downloading;
 
-    public bool IsSuccess => Result is OperationResult.Succeeded or OperationResult.SucceededRestartRequired or OperationResult.SucceededAppRestartRequired;
+    public bool IsSuccess => Result is OperationResult.Succeeded or OperationResult.SucceededRestartRequired or OperationResult.SucceededAppRestartRequired
+        or OperationResult.SucceededUnconfirmed;
 
     public bool IsFailure => Result is OperationResult.Failed;
 
-    public bool CanRetry => Result is OperationResult.Failed or OperationResult.Cancelled;
+    // No Retry on a warning, and none where WinGet would refuse the same way again (013 R2.2, R3.1).
+    public bool CanRetry => (Result is OperationResult.Failed && Retryable) || Result is OperationResult.Cancelled;
 
     /// <summary>The card offers Restart CartonStash (004 R6.3).</summary>
     public bool CanRestartApp => Result is OperationResult.SucceededAppRestartRequired;
@@ -184,6 +200,7 @@ public sealed partial class PackageOperation : ObservableObject
         (_, OperationResult.Succeeded) => DoneText,
         (_, OperationResult.SucceededRestartRequired) => $"{DoneText} · restart required",
         (_, OperationResult.SucceededAppRestartRequired) => $"{DoneText} · restart CartonStash",
+        (_, OperationResult.SucceededUnconfirmed) => "Update not confirmed",
         (_, OperationResult.Cancelled) => "Cancelled",
         _ => "Failed",
     };

@@ -154,6 +154,48 @@ public class PackageOperationQueueTests
     }
 
     [Fact]
+    public void An_unconfirmed_update_is_a_warning_without_Retry() // 013 R2.2
+    {
+        var app = new TestApp();
+        var op = app.Queue.Enqueue(OperationKind.Upgrade, Pkg.Installed("Autodesk.Fusion", update: true));
+
+        app.Installer.Complete("Autodesk.Fusion", OperationResult.SucceededUnconfirmed, "WinGet finished without an error, but…");
+
+        Assert.True(op.IsSuccess);
+        Assert.False(op.IsFailure);
+        Assert.False(op.CanRetry);
+        Assert.Equal(OperationState.Unconfirmed, op.State);
+        Assert.Equal("Update not confirmed", op.StatusText);
+    }
+
+    [Fact]
+    public void A_failure_that_would_repeat_offers_no_Retry() // 013 R3.1
+    {
+        var app = new TestApp();
+        var op = app.Queue.Enqueue(OperationKind.Upgrade, Pkg.Installed("Anaconda.Miniconda3", update: true));
+
+        app.Installer.Complete("Anaconda.Miniconda3", new OperationOutcome(OperationResult.Failed, "can't be updated in place") { Retryable = false });
+
+        Assert.True(op.IsFailure);
+        Assert.False(op.CanRetry);
+        Assert.False(op.RetryCommand.CanExecute(null));
+        Assert.Equal(OperationState.Failed, op.State);
+    }
+
+    [Fact]
+    public void Ordinary_failures_and_cancellations_keep_Retry() // 013 R4.2
+    {
+        var app = new TestApp();
+        var failed = app.Queue.Enqueue(OperationKind.Install, Pkg.Remote("A"));
+        app.Installer.Complete("A", OperationResult.Failed, "The installer failed with error code 1603.");
+        Assert.True(failed.CanRetry);
+
+        var cancelled = app.Queue.Enqueue(OperationKind.Install, Pkg.Remote("B"));
+        app.Installer.Complete("B", OperationResult.Cancelled, "Cancelled.");
+        Assert.True(cancelled.CanRetry);
+    }
+
+    [Fact]
     public void Retry_keeps_the_acceptance() // 004 R7.3
     {
         var app = new TestApp();
