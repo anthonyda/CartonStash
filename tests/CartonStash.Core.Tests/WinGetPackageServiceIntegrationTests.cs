@@ -204,7 +204,7 @@ public class WinGetPackageServiceIntegrationTests
         Assert.False(string.IsNullOrEmpty(details.Publisher));
         Assert.StartsWith("https://", details.HomepageUrl);
         Assert.True(details.Versions.Count > 1);
-        Assert.Equal(git.AvailableVersion, details.Versions[0]); // newest first
+        Assert.Equal(git.AvailableVersion, details.Versions[0].Version); // newest first
     }
 
     [Fact]

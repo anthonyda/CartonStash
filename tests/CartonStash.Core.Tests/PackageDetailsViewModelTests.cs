@@ -88,7 +88,7 @@ public class PackageDetailsViewModelTests
     public async Task Versions_newest_first_with_installed_marked() // R2.1
     {
         var (app, vm) = Create();
-        app.Packages.Details = (_, _) => Task.FromResult<PackageDetails?>(new PackageDetails { Versions = ["2.0", "1.0", "0.9"] });
+        app.Packages.Details = (_, _) => Task.FromResult<PackageDetails?>(new PackageDetails { Versions = [new("2.0", VersionDirection.Newer), new("1.0", VersionDirection.Installed), new("0.9", VersionDirection.Older)] });
 
         await vm.LoadAsync(Row(app, Pkg.Installed("A")));
 

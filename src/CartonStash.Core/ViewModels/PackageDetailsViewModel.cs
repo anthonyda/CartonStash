@@ -141,6 +141,10 @@ public sealed partial class PackageDetailsViewModel(IPackageService packages, IR
 
 
 
+    /// <summary>"1.0 (installed)" for the installed version, else the version (005 R2.1).</summary>
+    internal static string VersionLabel(PackageVersion v, string? installed) =>
+        v.Direction == VersionDirection.Installed || v.Version == installed ? $"{v.Version} (installed)" : v.Version;
+
     /// <summary>Newest first, the installed one marked (005 R2.1).</summary>
     public string? VersionsText
     {
@@ -152,7 +156,7 @@ public sealed partial class PackageDetailsViewModel(IPackageService packages, IR
             }
             const int shown = 15;
             var installed = Row?.Package.InstalledVersion;
-            var parts = d.Versions.Take(shown).Select(v => v == installed ? $"{v} (installed)" : v);
+            var parts = d.Versions.Take(shown).Select(v => VersionLabel(v, installed));
             var text = string.Join(" · ", parts);
             return d.Versions.Count > shown ? $"{text} · and {d.Versions.Count - shown} older" : text;
         }

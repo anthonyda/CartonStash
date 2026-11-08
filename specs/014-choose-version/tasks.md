@@ -18,7 +18,7 @@ every commit (Q4). Manual checks run in the CartonStash-Test VM (or Windows Sand
 
 ## Core
 
-- [ ] **T2.** `PackageVersion` and `VersionDirection`. `PackageDetails.Versions` becomes `IReadOnlyList<PackageVersion>`.
+- [x] **T2.** `PackageVersion` and `VersionDirection`. `PackageDetails.Versions` becomes `IReadOnlyList<PackageVersion>`.
   `ReadVersions` sets the direction through a pure `Direction(CompareResult?, bool installed, bool primaryMatch)`.
   `VersionsText` reads `.Version`. *(R1.1, R1.2)*
   - Verify: `VersionDirectionTests`: `Greater` → `Older`, `Lesser` → `Newer`, `Equal` → `Installed`, `Unknown` →
