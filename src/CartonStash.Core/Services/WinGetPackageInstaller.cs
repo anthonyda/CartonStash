@@ -10,18 +10,18 @@ namespace CartonStash.Core.Services;
 /// </summary>
 public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettings settings, IRunningPrograms runningPrograms) : IPackageInstaller
 {
-    public async Task<IReadOnlyList<Agreement>> GetAgreementsAsync(PackageInfo package, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<Agreement>> GetAgreementsAsync(PackageInfo package, string? version = null, CancellationToken cancellationToken = default)
     {
         var found = await connection.FindByIdAsync(package.Id, package.Source, localFirst: false, cancellationToken);
-        var version = found.DefaultInstallVersion;
-        if (version is null)
+        var info = found.DefaultInstallVersion;
+        if (info is null)
         {
             return [];
         }
 
         return await Task.Run<IReadOnlyList<Agreement>>(() =>
         {
-            var agreements = version.GetCatalogPackageMetadata().Agreements;
+            var agreements = info.GetCatalogPackageMetadata().Agreements;
             var list = new List<Agreement>(agreements.Count);
             for (var i = 0; i < agreements.Count; i++)
             {
@@ -35,7 +35,7 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
         }, cancellationToken);
     }
 
-    public async Task<OperationOutcome> RunAsync(OperationKind kind, PackageInfo package, bool acceptAgreements, string? logPath,
+    public async Task<OperationOutcome> RunAsync(OperationKind kind, PackageInfo package, bool acceptAgreements, string? version, string? logPath,
         IProgress<OperationProgress> progress, CancellationToken cancellationToken)
     {
         // Re-find the package; COM objects never leave this class (A2).

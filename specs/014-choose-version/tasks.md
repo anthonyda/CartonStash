@@ -24,7 +24,7 @@ every commit (Q4). Manual checks run in the CartonStash-Test VM (or Windows Sand
   - Verify: `VersionDirectionTests`: `Greater` → `Older`, `Lesser` → `Newer`, `Equal` → `Installed`, `Unknown` →
     `Unknown`, not installed → `NotInstalled`, not a primary match → `Unknown`. Existing `VersionsText` tests pass.
     `dotnet build`.
-- [ ] **T3.** The version through the queue: `string? version = null` on `IPackageInstaller.GetAgreementsAsync` and
+- [x] **T3.** The version through the queue: `string? version = null` on `IPackageInstaller.GetAgreementsAsync` and
   `RunAsync`; `PackageOperation.Version` and `ExcludeOnSuccess`; `PackageOperationQueue.Enqueue(..., version,
   excludeOnSuccess)` passes the version on, and Retry reuses it; `Title` names the version; the log's
   "Chosen version" line. Update the fake installer to record the version. *(R2.1, R2.3, R2.4)*

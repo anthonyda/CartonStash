@@ -51,6 +51,21 @@ public enum OperationState
     Cancelled,
 }
 
+/// <summary>
+/// What an operation does beyond its kind (spec 014). <see cref="Default"/> is every operation before 014: WinGet's
+/// default version, nothing after it.
+/// </summary>
+public sealed record OperationOptions
+{
+    public static OperationOptions Default { get; } = new();
+
+    /// <summary>The version the user chose; null for WinGet's default (014 R2.1, R2.4).</summary>
+    public string? Version { get; init; }
+
+    /// <summary>Leave the package out of update checks once the operation succeeds (014 R3.2).</summary>
+    public bool ExcludeOnSuccess { get; init; }
+}
+
 /// <summary>How an operation ended, with a message the user can read (003 R5.2).</summary>
 /// <param name="Details">Technical lines for the log (WinGet status, exit code, extended error), 009 R2.2.</param>
 public sealed record OperationOutcome(OperationResult Result, string Message, string? Details = null)
@@ -74,8 +89,10 @@ public sealed partial class PackageOperation : ObservableObject
     private readonly Action _restartApp;
 
     internal PackageOperation(OperationKind kind, PackageInfo package, bool acceptAgreements,
-        Action<PackageOperation> cancel, Action<PackageOperation> retry, Action<PackageOperation> showLog, Action restartApp)
+        Action<PackageOperation> cancel, Action<PackageOperation> retry, Action<PackageOperation> showLog, Action restartApp,
+        OperationOptions? options = null)
     {
+        Options = options ?? OperationOptions.Default;
         _restartApp = restartApp;
         Kind = kind;
         Package = package;
@@ -94,6 +111,12 @@ public sealed partial class PackageOperation : ObservableObject
 
     /// <summary>The user already accepted the package's agreements (003 R1.3).</summary>
     public bool AcceptAgreements { get; }
+
+    /// <summary>The chosen version and what follows the operation (014). Retry keeps them (R2.3).</summary>
+    public OperationOptions Options { get; }
+
+    /// <summary>The version the user chose, or null for WinGet's default (014 R2.1).</summary>
+    public string? Version => Options.Version;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsActive), nameof(CanCancel), nameof(StatusText), nameof(IsIndeterminate), nameof(State), nameof(HasLog))]
@@ -183,7 +206,8 @@ public sealed partial class PackageOperation : ObservableObject
 
     public double ProgressValue => Percent ?? 0;
 
-    public string Title => $"{Verb} {Package.Name}";
+    /// <summary>"Install PowerToys 0.101.0" when a version was chosen (014 R2.1).</summary>
+    public string Title => Version is { } version ? $"{Verb} {Package.Name} {version}" : $"{Verb} {Package.Name}";
 
     /// <summary>Short status for rows and the Activity pane (003 R3.1).</summary>
     public string StatusText => (Phase, Result) switch

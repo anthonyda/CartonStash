@@ -58,14 +58,14 @@ public sealed class PackageOperationQueue(IPackageInstaller installer, IOperatio
     }
 
     /// <summary>Queues an operation, or returns the one already active for this package (R4.2).</summary>
-    public PackageOperation Enqueue(OperationKind kind, PackageInfo package, bool acceptAgreements = false)
+    public PackageOperation Enqueue(OperationKind kind, PackageInfo package, bool acceptAgreements = false, OperationOptions? options = null)
     {
         if (Find(package) is { IsActive: true } active)
         {
             return active;
         }
 
-        var operation = new PackageOperation(kind, package, acceptAgreements, Cancel, Retry, o => LogRequested?.Invoke(this, o), RequestRestart);
+        var operation = new PackageOperation(kind, package, acceptAgreements, Cancel, Retry, o => LogRequested?.Invoke(this, o), RequestRestart, options);
         Operations.Insert(0, operation);
         Start(operation);
         return operation;
@@ -176,7 +176,7 @@ public sealed class PackageOperationQueue(IPackageInstaller installer, IOperatio
                         operation.Percent = p.Percent;
                     }
                 });
-                outcome = await installer.RunAsync(operation.Kind, operation.Package, operation.AcceptAgreements, operation.LogFilePath, progress, cancellation.Token);
+                outcome = await installer.RunAsync(operation.Kind, operation.Package, operation.AcceptAgreements, operation.Version, operation.LogFilePath, progress, cancellation.Token);
             }
             catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
             {

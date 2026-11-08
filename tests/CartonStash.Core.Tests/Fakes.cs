@@ -126,17 +126,27 @@ internal sealed class ScriptedInstaller : IPackageInstaller
 
     public bool AgreementsFail { get; set; }
 
-    public Task<IReadOnlyList<Agreement>> GetAgreementsAsync(PackageInfo package, CancellationToken cancellationToken = default) =>
-        AgreementsFail
+    /// <summary>The version each agreement read asked for (014 R2.2).</summary>
+    public List<string?> AgreementVersions { get; } = [];
+
+    /// <summary>The version each operation ran with (014 R2.1).</summary>
+    public List<string?> Versions { get; } = [];
+
+    public Task<IReadOnlyList<Agreement>> GetAgreementsAsync(PackageInfo package, string? version = null, CancellationToken cancellationToken = default)
+    {
+        AgreementVersions.Add(version);
+        return AgreementsFail
             ? Task.FromException<IReadOnlyList<Agreement>>(new WinGetException("Couldn't reach the source.", null))
             : Task.FromResult(AgreementsById.GetValueOrDefault(package.Id, Agreements));
+    }
 
     public List<string?> LogPaths { get; } = [];
 
-    public Task<OperationOutcome> RunAsync(OperationKind kind, PackageInfo package, bool acceptAgreements, string? logPath,
+    public Task<OperationOutcome> RunAsync(OperationKind kind, PackageInfo package, bool acceptAgreements, string? version, string? logPath,
         IProgress<OperationProgress> progress, CancellationToken cancellationToken)
     {
         Calls.Add((kind, package.Id, acceptAgreements));
+        Versions.Add(version);
         LogPaths.Add(logPath);
         if (AutoComplete is { } outcome)
         {
