@@ -8,6 +8,7 @@ What's new in each version of CartonStash. Get it from the [Microsoft Store](htt
 
 - **Release notes are easier to read.** In a package's details, lists show as lists and quotes as quotes, and section titles such as "Bug Fixes" stand out, instead of a block of text full of `-` and `>` marks. Web addresses in the notes are links.
 - **Read a release's notes from GitHub without leaving the app.** Many packages only link to their GitHub release page. For those, the details now offer **Show notes from GitHub**, which shows that release's notes with their headings, lists, tables and code. CartonStash only contacts GitHub when you press the button, images in the notes are never loaded, and links open in your browser. If GitHub can't be reached or has had too many requests from your network, the app says so and when to try again.
+- **Install the version you choose, or go back after a bad update.** In a package's details, pick a version in **Available versions** to install it, update to it, or go back to it. Going back asks first and, unless you untick the box, leaves the package out of update checks, so **Update all** doesn't bring the newer version back. Many installers won't install over a newer version: when that happens, the result offers **Uninstall, then install**, which asks first, because the program's settings may be lost.
 
 ### Fixed
 

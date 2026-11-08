@@ -34,7 +34,8 @@ what it does, its license and what changed, without leaving the app.
 
 ## Out of scope
 
-- Installing a specific (older) version. The version list is information only in v1.
+- ~~Installing a specific (older) version. The version list is information only in v1.~~ *Replaced by
+  [014](../014-choose-version/requirements.md) (2026-11-08): the version list now installs the version you choose.*
 - Screenshots, ratings, reviews: not in WinGet data.
 
 ## Open questions

@@ -88,7 +88,7 @@ every commit (Q4). Manual checks run in the CartonStash-Test VM (or Windows Sand
 
 ## Docs
 
-- [ ] **T11.** 005's out-of-scope line marked as replaced by 014. A CHANGELOG "New" entry in the next version's
+- [x] **T11.** 005's out-of-scope line marked as replaced by 014. A CHANGELOG "New" entry in the next version's
   section. A README feature-list sentence about installing a chosen version. *(Replaces 005 out of scope)*
   - Verify: review in the PR.
 
