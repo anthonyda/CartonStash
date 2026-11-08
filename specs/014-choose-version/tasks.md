@@ -82,7 +82,7 @@ every commit (Q4). Manual checks run in the CartonStash-Test VM (or Windows Sand
 
 ## Tests against WinGet
 
-- [ ] **T10.** Integration test: `GetDetailsAsync` on a package installed on the test runner returns one `Installed`
+- [x] **T10.** Integration test: `GetDetailsAsync` on a package installed on the test runner returns one `Installed`
   version, and `Older` and `Newer` directions that match the order of the list. Tagged `Category=Integration`. *(R1.2)*
   - Verify: `dotnet test --filter Category=Integration` passes.
 

@@ -208,6 +208,29 @@ public class WinGetPackageServiceIntegrationTests
     }
 
     [Fact]
+    public async Task Versions_of_an_installed_package_have_directions_in_order() // 014 R1.2
+    {
+        // Any package from the winget source installed on this machine whose installed version the source still lists.
+        var installed = await _service.GetInstalledAsync();
+        PackageDetails? details = null;
+        foreach (var package in installed.Where(p => p.Source == "winget" && p.IsPrimaryMatch).Take(15))
+        {
+            var d = await _service.GetDetailsAsync(package);
+            if (d is { Versions.Count: > 1 } && d.Versions.Any(v => v.Direction == VersionDirection.Installed))
+            {
+                details = d;
+                break;
+            }
+        }
+        Assert.NotNull(details);
+
+        var installedAt = details.Versions.ToList().FindIndex(v => v.Direction == VersionDirection.Installed);
+        Assert.Single(details.Versions, v => v.Direction == VersionDirection.Installed);
+        Assert.All(details.Versions.Take(installedAt), v => Assert.Equal(VersionDirection.Newer, v.Direction)); // newest first
+        Assert.All(details.Versions.Skip(installedAt + 1), v => Assert.Contains(v.Direction, new[] { VersionDirection.Older, VersionDirection.Unknown }));
+    }
+
+    [Fact]
     public async Task Sources_include_winget_and_version_is_known() // 006 R3.1, R4.1
     {
         var sources = await _service.GetSourcesAsync();
