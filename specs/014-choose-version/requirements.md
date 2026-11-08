@@ -1,6 +1,6 @@
 # 014 – Install a chosen version: Requirements
 
-**Status:** Draft
+**Status:** Approved (2026-11-08), with the proposed answers to Q1, Q2 and Q4. Q3 waits for the VM check (design T1)
 **Depends on:** 003 (operation queue, agreements, results), 004 (updates), 005 (details pane, R2.1 version list),
 010 (R5 exclusions from update checks)
 **Replaces:** 005's out-of-scope line "Installing a specific (older) version. The version list is information only in v1."
@@ -46,7 +46,7 @@ reason to look at it is a bad update: the user wants the version that worked, an
 | R2.2 | US1   | When the chosen version has license agreements, the app shall show that version's agreements, not the latest version's, and go ahead only if the user accepts (003 R1.3, 004 R7.1). |
 | R2.3 | US1   | **Retry** shall install the same chosen version again, reusing the acceptance the user gave (004 R7.3). |
 | R2.4 | –     | The row's Install and Update buttons, **Update selected** and **Update all** shall keep installing WinGet's default version, unchanged. |
-| R2.5 | US1   | When the operation succeeds, the app shall refresh the installed data (002 R1.3) and show the version WinGet reports afterwards. If that isn't the chosen version, then the result shall say so and shall not say the operation succeeded. |
+| R2.5 | US1   | When the operation succeeds, the app shall refresh the installed data (002 R1.3) and show the version WinGet reports afterwards. If WinGet still lists the version that was installed before, then the result shall say so and shall not say the operation succeeded. *(Amended 2026-11-08 during design: was "if that isn't the chosen version". 013 found that installers often list a different version than the manifest's, so that test would warn after good installs.)* |
 
 ### R3. Going back to an older version
 
