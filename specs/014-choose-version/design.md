@@ -15,8 +15,7 @@ Whether a version is newer or older is decided in `WinGetPackageService` with Wi
 on each version (R1.2). The pane only reads it.
 
 Going back is the uncertain part: WinGet's behaviour for an older version over an installed one isn't documented for
-the COM API. T1 measures it in the test VM before anything else is built, and the "Going back" section below lists
-what T1 can change.
+the COM API. T1 measured it in the test VM before anything else was built; the "Going back" section has the results.
 
 ## Components
 
@@ -24,13 +23,14 @@ what T1 can change.
 |-------|------|----------------|---------------|
 | Core/Models | `PackageVersion`, `VersionDirection` | One available version and how it compares with the installed one (R1.1, R1.2) | New |
 | Core/Models | `PackageDetails` | `Versions` becomes `IReadOnlyList<PackageVersion>` | Changed |
-| Core/Models | `PackageOperation` | `Version` (null = default), `ExcludeOnSuccess`; `Title` names the version (R2.1) | Changed |
+| Core/Models | `PackageOperation` | `Version` (null = default), `ExcludeOnSuccess`, `GoingBack`, `PreviousVersion`, `ThenInstall`, `AfterUninstall`; `Title` names the version (R2.1); `CanUninstallThenInstall`, `CanInstallPrevious` and their commands (R3.5, R3.7) | Changed |
 | Core/Services | `WinGetPackageService` | `ReadVersions` adds the direction from WinGet's comparer | Changed |
 | Core/Services | `IPackageInstaller`, `WinGetPackageInstaller` | `version` parameter on `GetAgreementsAsync` and `RunAsync`; `PackageVersionId`; 013's check after going back; R3.3 message | Changed |
 | Core/Services | `PackageOperationQueue` | `Enqueue(..., version, excludeOnSuccess)`; passes the version to the installer | Changed |
 | Core/Services | `OperationLogStore` | A "Chosen version" line in the log (R2.1) | Changed |
 | Core/Services | `IDialogService` | `ConfirmWithOptionAsync` for the going-back confirmation and its box (R3.1, R3.2) | Changed |
-| Core/ViewModels | `PackageActions` | `InstallVersionAsync(package, version)`; adds the exclusion after success (R3.2); takes `ISettings` | Changed |
+| Core/ViewModels | `PackageActions` | `InstallVersionAsync(package, version)`; adds the exclusion after success (R3.2); `UninstallThenInstallAsync` and the chained install (R3.5, R3.6); `InstallPrevious` (R3.7); takes `ISettings` | Changed |
+| App/Controls | `OperationCard.xaml` | The two new buttons, as Restart CartonStash is shown today (R3.5, R3.7) | Changed |
 | Core/ViewModels | `PackageDetailsViewModel` | The version list, the selected version, its action and `Show all versions` (R1) | Changed |
 | App/Services | `DialogService` | `ConfirmWithOptionAsync`: a ContentDialog with a CheckBox | Changed |
 | App/Controls | `PackageDetailsPane.xaml` | "Available versions" becomes a list with one action button (R1.1, R1.3, R1.4) | Changed |
@@ -62,42 +62,85 @@ today.
 | One version (R2.2) | `CatalogPackage.GetPackageVersionInfo(PackageVersionId)` | Its `GetCatalogPackageMetadata().Agreements` for the chosen version's agreements |
 | Install it (R2.1) | `InstallOptions.PackageVersionId` | The `PackageVersionId` found in `AvailableVersions` by `Version` (ordinal). If it isn't there any more (source updated since the pane opened), the operation fails with "This version is no longer available from {source}." and no Retry |
 | Newer (R1.1) | `UpgradePackageAsync` | As today, with the version set |
-| Older (R3) | `InstallPackageAsync` or `UpgradePackageAsync`, `Force`? | Decided by T1, see below |
+| Older (R3) | `InstallPackageAsync`, no `Force` | Measured in T1, see below |
 
 The COM objects never leave the services (A2): the version crosses the boundary as a string and is looked up again
 when the operation runs, the same way the package itself is found again today.
 
 ## Going back (R3)
 
-**T1 (test VM, before T2).** For each installer type below, install the latest version, then try an older one through a
-small console tool on the COM API: `InstallPackageAsync` and `UpgradePackageAsync`, each without and with `Force`.
-Record WinGet's status, extended error, installer exit code, and what Windows lists afterwards.
+**Measured in T1 (2026-11-08, test VM, WinGet 1.29.380).** A console tool on the COM API installed each package's
+latest version, then tried the previous one with each call, without and with `Force`, then uninstalled and installed
+the previous one. A clean checkpoint was restored for each package. The logs are in `C:\VMs\CartonStash-Test\logs\t014-*`.
 
-| Type | Candidate package | Why |
-|------|-------------------|-----|
-| MSI | `7zip.7zip` (MSI installer) | MSI refuses a downgrade by default unless the product allows it |
-| NSIS | `Notepad++.Notepad++` | Usually installs over anything |
-| Inno | `Git.Git` | Has its own downgrade prompt, silent mode skips it |
-| MSIX | `Microsoft.WindowsTerminal` | Windows refuses an older MSIX unless it's removed first |
-| Portable | `jqlang.jq` | WinGet manages the files itself |
+| Type | Package | `InstallPackageAsync` with the older version | Uninstall, then install it |
+|------|---------|----------------------------------------------|----------------------------|
+| Portable | `jqlang.jq` 1.8.2 → 1.8.1 | **Goes back** | (not needed) |
+| NSIS | `Notepad++.Notepad++` (nullsoft) 8.9.9 → 8.9.8.1 | **Goes back** | Works |
+| MSI (WiX) | `Notepad++.Notepad++` (wix), `Microsoft.PowerShell` (wix) | `InstallError`, exit 1603, `0x8A150049`. The MSI log says "A newer version of … is already installed." | Works |
+| Inno | `Git.Git` 2.56.0.4 → 2.56.0.3 | `InstallError`, exit 1, `0x8A150006`. The installer asks "Do you really want to downgrade?" and silent mode answers No. | Works |
+| MSIX | `Microsoft.PowerShell` (msix) 7.6.9.0 → 7.6.8.0 | `InstallError`, `0x80070002`: Windows stages the older package and refuses to register it | Works |
+| MSIX, ships with Windows | `Microsoft.WindowsTerminal` 1.25 → 1.24 | `InstallError`, `0x80070002` | **Fails**: the uninstall works, then the older version still won't register, so nothing is left installed |
 
-**What T1 decides, written into this design before T2 starts:**
+Also measured:
 
-- **The call.** The working assumption is `InstallPackageAsync` with the version: the CLI's
-  `winget install --version` takes this path, and `UpgradePackageAsync` refuses anything that isn't newer.
-- **`Force` (Q3).** Set it only if T1 shows some packages go back with it and not without it, and only after this
-  design names what else `Force` lets through. Otherwise it stays off.
-- **The refusal codes for R3.3.** The extended errors and statuses WinGet returns when an installer won't go back.
-  WinGet's own names suggest `APPINSTALLER_CLI_ERROR_INSTALL_DOWNGRADE` and
-  `APPINSTALLER_CLI_ERROR_INSTALL_ALREADY_INSTALLED`, but the values are taken from T1, not assumed.
+- `UpgradePackageAsync` with an older version refuses every time, before any download: `NoApplicableUpgrade`,
+  `0x8A15004F`.
+- `Force` changed nothing in any case.
+- Updating to a version newer than the installed one but not the latest (`UpgradePackageAsync` with that version)
+  works for portable, NSIS and MSI. So does installing an older version when the package isn't installed.
+- Every refusal left the installed version as it was: trying costs a download, nothing more.
 
-The R3.3 message is a new arm in `MapInstallResult`, ahead of the generic error arm and after the in-use arm (003 R7
-still wins), only for an operation going back:
+**Decisions:**
 
-> {name} couldn't go back to {version}: its installer doesn't install over a newer version. To go back, uninstall
+- **The call:** `InstallPackageAsync` with `PackageVersionId` for going back and for `Unknown`; `UpgradePackageAsync`
+  with `PackageVersionId` for `Newer`; `InstallPackageAsync` for `NotInstalled`.
+- **`Force` (Q3):** never set. It changed nothing, and it would let other warnings through.
+- **R3.3 can't rely on a code.** The refusals are an installer's generic failure (MSI 1603, Inno exit 1) or a generic
+  Windows error (`0x80070002`). They're the same codes as other failures. So the R3.3 message applies to any
+  `InstallError` while going back, after the in-use arm (003 R7 still wins). It says "may", because the cause isn't
+  certain:
+
+> {name} couldn't go back to {version}. Its installer may not install over a newer version. To go back, uninstall
 > {name}, then install {version} from its details.
 
-It's not retryable (013 R3.1), because Retry would fail the same way.
+  It stays retryable: unlike 013 R3.1, the cause isn't known.
+
+**Open, for the maintainer (from T1):** going back directly works only for portable and NSIS packages. MSI, Inno and
+MSIX packages, which are most of the catalog, need an uninstall first. **Decided 2026-11-08 (Q5):** the app offers
+it, below.
+
+## Uninstall, then install (R3.4 to R3.7)
+
+**Where it's offered.** A failed going-back operation (`GoingBack`, `Kind == Install`, `Result == Failed`, outcome from
+the R3.3 arm, so not 003 R7's in-use case) has `CanUninstallThenInstall`. Its Activity card shows
+**Uninstall, then install {version}** next to Retry. The command raises the queue's `UninstallThenInstallRequested`,
+which `PackageActions` handles, the way Restart CartonStash goes through `RestartRequested` today.
+
+**The confirmation (R3.5).** `ConfirmAsync`:
+
+- Title: "Uninstall {name}, then install {version}?"
+- Message: "{name} {installed} will be uninstalled, then {version} installed. Settings and data that {name} keeps may
+  be lost. Apps that come as an MSIX package always lose them."
+- Buttons: "Uninstall, then install", "Cancel".
+
+**The chain.** On confirm, `PackageActions` queues an `Uninstall` of the row's installed entry (the same one as 003
+R2.2) with `ThenInstall = version`, `PreviousVersion = installed` and the failed operation's `ExcludeOnSuccess` and
+agreement acceptance. The queue's one-operation-per-package rule (003 R4.2) would refuse a second operation queued
+next to it, so the install is queued from the `Completed` handler instead:
+
+- Uninstall `IsSuccess` → queue `Install` with the version, `AfterUninstall = true`, `PreviousVersion` and the same flags.
+- Uninstall failed or cancelled → nothing more (R3.6). Its result is an ordinary uninstall result.
+
+**After the install (R3.7).** `PackageOperationQueue.Finish` passes an `AfterUninstall` failure through a pure
+`AfterUninstallOutcome(outcome, name, version)`, which puts first: "{name} is no longer installed: it was uninstalled
+to make way for {version}, and then that install failed." The installer's reason follows. Such an operation has
+`CanInstallPrevious`: **Install {previous version}**, which queues an ordinary install of `PreviousVersion`, with no
+going-back flags and no exclusion. If the source no longer has that version, the "no longer available" result
+applies. Retry stays, and installs the chosen version again.
+
+**What isn't chained.** The app never uninstalls without this confirmation, never chains more than one uninstall and
+one install, and never installs the previous version on its own: each step after a failure is a button.
 
 ## The confirmation (R3.1, R3.2)
 
@@ -127,7 +170,7 @@ Pane: select version → action button
        ├─ Older / Unknown → ConfirmWithOptionAsync; Cancel → nothing (R3.1)
        ├─ AskAgreementsAsync(package, version.Version) (R2.2)
        └─ queue.Enqueue(kind, package, accepted, version.Version, excludeOnSuccess)
-            kind: NotInstalled → Install; Newer → Upgrade; Older / Unknown → per T1
+            kind: NotInstalled → Install; Newer → Upgrade; Older / Unknown → Install (T1)
   → WinGetPackageInstaller.RunAsync(..., version)
        ├─ find PackageVersionId (missing → "no longer available")
        ├─ Install/UpgradePackageAsync with PackageVersionId
@@ -177,8 +220,10 @@ One list and one button, rather than a button per version, so a package with 80 
 | R2.4 | Existing row and Update all tests pass a null version (unit) |
 | R2.5 | `AfterUpdate` cases for a chosen version over an installed one (unit) |
 | R3.1, R3.2 | `PackageActions`: dialog shown for Older and Unknown, not for Newer; cancel queues nothing; exclusion added on success only, not on unconfirmed or failure (unit) |
-| R3.3 | `MapInstallResult` arm with T1's codes (unit) |
-| R3.4 | No uninstall is queued anywhere in the flow (unit); review |
+| R3.3 | `MapInstallResult` arm: any `InstallError` while going back, after the in-use arm (unit) |
+| R3.4, R3.5 | `PackageActions`: an uninstall is queued only after the R3.5 confirmation; Cancel queues nothing; the install is queued only after the uninstall succeeds, with the version and flags (unit) |
+| R3.6 | A failed or cancelled uninstall queues no install (unit) |
+| R3.7 | `AfterUninstallOutcome` wording; `CanInstallPrevious` only after an `AfterUninstall` failure; it queues the previous version without flags (unit) |
 | All | VM: the T1 packages, through the app: install an old version, update to a middle one, go back, Retry after a refusal, exclusion appears in Settings; keyboard and Narrator names; light, dark, high contrast |
 | Live | Integration test: `GetDetailsAsync` on an installed package returns directions consistent with `IsUpdateAvailable` |
 

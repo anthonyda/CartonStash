@@ -1,6 +1,6 @@
 # 014 – Install a chosen version: Requirements
 
-**Status:** Approved (2026-11-08), with the proposed answers to Q1, Q2 and Q4. Q3 waits for the VM check (design T1)
+**Status:** Approved (2026-11-08), with the proposed answers to Q1, Q2 and Q4; Q3 and Q5 decided after T1 (amendments R2.5, R3.3 to R3.7)
 **Depends on:** 003 (operation queue, agreements, results), 004 (updates), 005 (details pane, R2.1 version list),
 010 (R5 exclusions from update checks)
 **Replaces:** 005's out-of-scope line "Installing a specific (older) version. The version list is information only in v1."
@@ -16,9 +16,11 @@ reason to look at it is a bad update: the user wants the version that worked, an
 
 - `CatalogPackage.AvailableVersions` (the list the pane already shows) and `GetPackageVersionInfo` for one version.
 - `InstallOptions.PackageVersionId` installs or upgrades to that version instead of the default.
-- `InstallOptions.Force` exists. **Not yet checked:** what `InstallPackageAsync` and `UpgradePackageAsync` do with a
-  version older than the installed one (refuse, install over it, or uninstall first), with and without `Force`, for
-  the common installer types (MSI, Inno, NSIS, MSIX, portable). That is the design's first task, run in the test VM.
+- `InstallOptions.Force` exists.
+- **Measured in T1 (2026-11-08, test VM):** an install of an older version over the installed one goes back for
+  portable and NSIS packages. MSI, Inno and MSIX installers refuse it, and the refusal leaves the installed version
+  as it was. All of them go back after an uninstall, except Windows Terminal, which ships with Windows. `Force`
+  changes nothing. See design.md, "Going back".
 
 ## User stories
 
@@ -54,8 +56,11 @@ reason to look at it is a bad update: the user wants the version that worked, an
 |------|-------|-----------|
 | R3.1 | US2   | When the user chooses **Go back to this version**, the app shall ask for confirmation naming the package, the installed version and the chosen one, and saying that some installers can't go back and that the program's settings may not carry over. It shall queue nothing unless the user confirms (constitution P2). |
 | R3.2 | US2   | That confirmation shall offer **Leave this package out of update checks** (010 R5), checked by default, so that Update all and the background checks don't bring the newer version back. The exclusion shall be added only when the operation succeeds. |
-| R3.3 | US2   | If WinGet or the installer refuses to go back, then the result shall say that this package's installer can't go back to an older version from here, and suggest uninstalling it and then installing the chosen version. WinGet's status and codes stay in the operation log (009 R2.2). |
-| R3.4 | US2   | The app shall never uninstall the package on its own as part of going back. If going back needs an uninstall first, the user does it (constitution P2). |
+| R3.3 | US2   | If going back fails with an installer error, then the result shall say that the installer may not install over a newer version, and suggest uninstalling the package and then installing the chosen version. WinGet's status and codes stay in the operation log (009 R2.2). *(Amended 2026-11-08 after T1: was "if WinGet or the installer refuses". The refusals use the installers' generic failure codes, so the app can't tell them from other failures.)* |
+| R3.4 | US2   | The app shall uninstall the package as part of going back only when the user chooses R3.5's action and confirms it (constitution P2). *(Amended 2026-11-08, Q5: was "never … the user does it".)* |
+| R3.5 | US2   | When going back fails (R3.3), the result shall offer **Uninstall, then install {version}**. When the user presses it, the app shall ask for confirmation naming the package, the installed version and the chosen one, and saying that the program's settings and data may be lost. If the user confirms, the app shall uninstall the package and then, only if the uninstall succeeds, install the chosen version. The R3.2 choice carries over. *(Added 2026-11-08, Q5.)* |
+| R3.6 | US2   | If that uninstall fails, then the app shall install nothing, and the result shall say why, as for any uninstall (003 R5.2). *(Added 2026-11-08, Q5.)* |
+| R3.7 | US2   | If the install fails after the uninstall succeeded, then the result shall say that the package is no longer installed, and offer **Install {previous version}**, the version that was installed before. *(Added 2026-11-08, Q5. T1: Windows Terminal ends this way.)* |
 
 ## Out of scope
 
@@ -75,6 +80,15 @@ reason to look at it is a bad update: the user wants the version that worked, an
 - **Q3. `Force` (see "What WinGet offers").** If WinGet refuses an older version unless `Force` is set, should the app
   set it? *Proposed: decide after the VM check.* `Force` also lets WinGet go on past other non-security warnings, so
   the design has to say exactly what it skips.
+  **Decided 2026-11-08 after T1: no.** `Force` changed nothing for any installer type.
 - **Q4. Overlap with 013 (honest results).** R2.5 checks that WinGet afterwards reports the chosen version. 013, now
   done, already warns when an update reported Ok but the old version is still listed ("Update not confirmed").
   *Proposed:* R2.5 reuses 013's check and its warning, compared against the chosen version instead of the latest.
+- **Q5. Uninstall first (from T1).** Going back directly only works for portable and NSIS packages. For MSI, Inno and
+  MSIX packages the user would have to uninstall and then install the older version, which R3.4 leaves to them.
+  *Proposed:* when going back fails (R3.3), the result offers **Uninstall, then install {version}**. It asks first,
+  saying that the program's settings may be lost, which is certain for MSIX apps: Windows deletes their data. If the
+  install then fails, the result says the package is no longer installed and offers to install the version that was
+  there before. This replaces R3.4 with "only after the user confirms". The alternative is to keep R3.4 and the
+  manual route.
+  **Decided 2026-11-08: offer it.** R3.4 amended, R3.5 to R3.7 added.
