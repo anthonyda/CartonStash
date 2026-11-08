@@ -42,5 +42,11 @@ public enum VersionDirection
 /// <summary>One available version of a package (014 R1.1).</summary>
 public sealed record PackageVersion(string Version, VersionDirection Direction);
 
+/// <summary>A version as the pane's list shows it: "0.102.0 (installed)" (005 R2.1, 014 R1.1).</summary>
+public sealed record VersionItem(PackageVersion Version, string Label)
+{
+    public override string ToString() => Label;
+}
+
 /// <summary>A license or terms text the user must accept (003 R1.3, 006 R3.3).</summary>
 public sealed record Agreement(string Label, string? Text, string? Url);

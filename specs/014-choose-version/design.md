@@ -31,7 +31,7 @@ the COM API. T1 measured it in the test VM before anything else was built; the "
 | Core/Services | `IDialogService` | `ConfirmWithOptionAsync` for the going-back confirmation and its box (R3.1, R3.2) | Changed |
 | Core/ViewModels | `PackageActions` | `InstallVersionAsync(package, version)`; adds the exclusion after success (R3.2); `UninstallThenInstallAsync` and the chained install (R3.5, R3.6); `InstallPrevious` (R3.7); takes `ISettings` | Changed |
 | App/Controls | `OperationCard.xaml` | The two new buttons, as Restart CartonStash is shown today (R3.5, R3.7) | Changed |
-| Core/ViewModels | `PackageDetailsViewModel` | The version list, the selected version, its action and `Show all versions` (R1) | Changed |
+| Core/ViewModels | `PackageDetailsViewModel` | The version list, the selected version, its action and `Show all versions` (R1). The action goes through the row (`PackageRowViewModel.InstallVersionAsync`), which already holds `PackageActions` | Changed |
 | App/Services | `DialogService` | `ConfirmWithOptionAsync`: a ContentDialog with a CheckBox | Changed |
 | App/Controls | `PackageDetailsPane.xaml` | "Available versions" becomes a list with one action button (R1.1, R1.3, R1.4) | Changed |
 
@@ -165,7 +165,7 @@ changed), on a failure, or on a cancel. Retry keeps the flag.
 ```
 Pane: select version → action button
   → PackageDetailsViewModel.RunVersionCommand
-  → PackageActions.InstallVersionAsync(row.Package, version)
+  → Row.InstallVersionAsync(version) → PackageActions.InstallVersionAsync(row.Package, version)
        ├─ queue.Find(package) active → nothing (003 R4.2)
        ├─ Older / Unknown → ConfirmWithOptionAsync; Cancel → nothing (R3.1)
        ├─ AskAgreementsAsync(package, version.Version) (R2.2)

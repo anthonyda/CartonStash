@@ -64,9 +64,9 @@ every commit (Q4). Manual checks run in the CartonStash-Test VM (or Windows Sand
     acceptance and `ExcludeOnSuccess` only after the uninstall succeeds; a failed or cancelled uninstall queues nothing
     more; a failed install after it gets the "no longer installed" wording and `CanInstallPrevious`, which queues the
     previous version with no flags; the exclusion is added after the chained install succeeds.
-- [ ] **T8.** `PackageDetailsViewModel`: `ShownVersions` (10, or all after `ShowAllVersionsCommand`), `HasMoreVersions`,
+- [x] **T8.** `PackageDetailsViewModel`: `ShownVersions` (10, or all after `ShowAllVersionsCommand`), `HasMoreVersions`,
   `SelectedVersion`, `VersionActionText`, `VersionActionName`, `ShowVersionAction`, `CanRunVersion` and `OffersVersionActions`
-  as plain bools and strings, and `RunVersionCommand` calling `PackageActions`. The view model takes `PackageActions`.
+  as plain bools and strings, and `RunVersionCommand` calling `PackageActions`. It goes through the row, which holds `PackageActions` (design, Components).
   Expanding resets when another package opens. *(R1.1, R1.3, R1.4, R1.5)*
   - Verify: `PackageDetailsVersionsTests`: 25 versions → 10 shown, then 25 after Show all, then 10 for the next package;
     the action text and name for each direction ("Go back to PowerToys 0.101.0"); the installed version has no action; no

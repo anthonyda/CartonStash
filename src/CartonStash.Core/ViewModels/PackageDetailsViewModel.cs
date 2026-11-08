@@ -74,6 +74,7 @@ public sealed partial class PackageDetailsViewModel(IPackageService packages, IR
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HomepageUri), nameof(PublisherUri), nameof(SupportUri), nameof(PrivacyUri),
         nameof(LicenseUri), nameof(ReleaseNotesUri), nameof(TagsText), nameof(VersionsText),
+        nameof(ShownVersions), nameof(HasMoreVersions), nameof(OffersVersionActions), nameof(ShowVersionsText),
         nameof(HasPublisher), nameof(HasShortDescription),
         nameof(HasDescription), nameof(HasLicense), nameof(HasHomepageUri), nameof(HasPublisherUri), nameof(HasSupportUri),
         nameof(HasPrivacyUri), nameof(HasLicenseUri), nameof(HasReleaseNotesUri), nameof(HasTags), nameof(HasVersions))]
@@ -82,6 +83,84 @@ public sealed partial class PackageDetailsViewModel(IPackageService packages, IR
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasError))]
     public partial string? ErrorMessage { get; private set; }
+
+    /// <summary>The version picked in the list; its action is the one button under it (014 R1.1).</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowVersionAction), nameof(CanRunVersion), nameof(VersionActionText), nameof(VersionActionName))]
+    [NotifyCanExecuteChangedFor(nameof(RunVersionCommand))]
+    public partial VersionItem? SelectedVersion { get; set; }
+
+    /// <summary>Show all versions was pressed for this package (014 R1.3).</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShownVersions), nameof(HasMoreVersions))]
+    public partial bool ShowingAllVersions { get; private set; }
+
+    /// <summary>The list shows this many until Show all versions (014 R1.3).</summary>
+    public const int VersionsShown = 10;
+
+    /// <summary>014 R1.5: actions only where there's a choice, and only for a package WinGet manages.</summary>
+    public bool OffersVersionActions => Details is { Versions.Count: > 1 } && Row?.Package.IsManaged == true;
+
+    /// <summary>Today's line of text, where no action is offered (014 R1.5).</summary>
+    public bool ShowVersionsText => HasVersions && !OffersVersionActions;
+
+    /// <summary>The newest 10, or all of them (014 R1.3), with the installed one marked.</summary>
+    public IReadOnlyList<VersionItem> ShownVersions => Details is { } d
+        ? [.. d.Versions.Take(ShowingAllVersions ? d.Versions.Count : VersionsShown)
+            .Select(v => new VersionItem(v, VersionLabel(v, Row?.Package.InstalledVersion)))]
+        : [];
+
+    public bool HasMoreVersions => !ShowingAllVersions && Details is { Versions.Count: > VersionsShown };
+
+    /// <summary>The action button shows for a selected version that isn't the installed one (014 R1.1).</summary>
+    public bool ShowVersionAction => OffersVersionActions && SelectedVersion is { Version.Direction: not VersionDirection.Installed };
+
+    /// <summary>Not while the package is queued or being changed (014 R1.5, 003 R4.2).</summary>
+    public bool CanRunVersion => ShowVersionAction && Row?.IsBusy == false;
+
+    public string VersionActionText => SelectedVersion?.Version.Direction switch
+    {
+        VersionDirection.NotInstalled => "Install",
+        VersionDirection.Newer => "Update to this version",
+        VersionDirection.Older => "Go back to this version",
+        _ => "Install this version",
+    };
+
+    /// <summary>The button's accessible name, with the package and the version (014 R1.4).</summary>
+    public string VersionActionName => SelectedVersion is not { } item ? "" : (item.Version.Direction, Row?.Name ?? "", item.Version.Version) switch
+    {
+        (VersionDirection.Newer, var name, var v) => $"Update {name} to {v}",
+        (VersionDirection.Older, var name, var v) => $"Go back to {name} {v}",
+        (_, var name, var v) => $"Install {name} {v}",
+    };
+
+    [RelayCommand]
+    private void ShowAllVersions() => ShowingAllVersions = true;
+
+    [RelayCommand(CanExecute = nameof(CanRunVersion))]
+    private Task RunVersionAsync() => SelectedVersion is { } item && Row is { } row ? row.InstallVersionAsync(item.Version) : Task.CompletedTask;
+
+    // The button follows the row's busy state while the pane is open (014 R1.5).
+    partial void OnRowChanged(PackageRowViewModel? oldValue, PackageRowViewModel? newValue)
+    {
+        if (oldValue is not null)
+        {
+            oldValue.PropertyChanged -= OnRowPropertyChanged;
+        }
+        if (newValue is not null)
+        {
+            newValue.PropertyChanged += OnRowPropertyChanged;
+        }
+    }
+
+    private void OnRowPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(PackageRowViewModel.IsBusy))
+        {
+            OnPropertyChanged(nameof(CanRunVersion));
+            RunVersionCommand.NotifyCanExecuteChanged();
+        }
+    }
 
 
     public bool IsLoading => State == DetailsState.Loading;
@@ -173,6 +252,8 @@ public sealed partial class PackageDetailsViewModel(IPackageService packages, IR
         IsOpen = true;
         Details = null;
         ErrorMessage = null;
+        SelectedVersion = null;
+        ShowingAllVersions = false; // 014 R1.3: per package
         ResetReleaseNotes();
         State = DetailsState.Loading;
 
