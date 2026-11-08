@@ -3,6 +3,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation.Peers;
 using Microsoft.UI.Xaml.Controls;
 using Windows.System;
+using CartonStash.Core.Models;
 using CartonStash.Core.ViewModels;
 
 namespace CartonStash.App.Controls;
@@ -64,6 +65,15 @@ public sealed partial class PackageDetailsPane : UserControl
     {
         get => (PackageDetailsViewModel?)GetValue(ViewModelProperty);
         set => SetValue(ViewModelProperty, value);
+    }
+
+    // 014 R1.1: SelectedItem is an object, which x:Bind can't bind two-way to the view model's VersionItem.
+    private void VersionList_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (ViewModel is { } vm)
+        {
+            vm.SelectedVersion = VersionList.SelectedItem as VersionItem;
+        }
     }
 
     // 005 R1.3: default browser, no embedded web content. The view model only exposes http(s) URIs.

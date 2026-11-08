@@ -75,7 +75,7 @@ every commit (Q4). Manual checks run in the CartonStash-Test VM (or Windows Sand
 
 ## App
 
-- [ ] **T9.** `PackageDetailsPane.xaml`: the "Available versions" section as in the design. A non-scrolling `ListView`
+- [x] **T9.** `PackageDetailsPane.xaml`: the "Available versions" section as in the design. A non-scrolling `ListView`
   bound to `ShownVersions`, the action button under it, **Show all versions**, and today's text when
   `OffersVersionActions` is false. Theme resources only. *(R1.1, R1.3, R1.4, R1.5)*
   - Verify: `dotnet build`; the pane in T12.

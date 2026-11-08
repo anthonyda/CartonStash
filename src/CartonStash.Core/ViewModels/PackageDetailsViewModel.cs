@@ -110,7 +110,7 @@ public sealed partial class PackageDetailsViewModel(IPackageService packages, IR
             .Select(v => new VersionItem(v, VersionLabel(v, Row?.Package.InstalledVersion)))]
         : [];
 
-    public bool HasMoreVersions => !ShowingAllVersions && Details is { Versions.Count: > VersionsShown };
+    public bool HasMoreVersions => OffersVersionActions && !ShowingAllVersions && Details is { Versions.Count: > VersionsShown };
 
     /// <summary>The action button shows for a selected version that isn't the installed one (014 R1.1).</summary>
     public bool ShowVersionAction => OffersVersionActions && SelectedVersion is { Version.Direction: not VersionDirection.Installed };
