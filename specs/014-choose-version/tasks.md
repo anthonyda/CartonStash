@@ -94,7 +94,7 @@ every commit (Q4). Manual checks run in the CartonStash-Test VM (or Windows Sand
 
 ## Manual checks
 
-- [ ] **T12.** In the VM, on a build from this branch, record the results in the log below. *(R1 to R3, Q5)*
+- [x] **T12.** In the VM, on a build from this branch, record the results in the log below. *(R1 to R3, Q5)*
   - Not installed: install an older version of a T1 package, then check it shows as installed with an update available.
   - Update to a middle version (neither the installed one nor the latest).
   - Go back: the confirmation names both versions; Cancel queues nothing; confirm with the box checked → the package is
@@ -124,3 +124,14 @@ every commit (Q4). Manual checks run in the CartonStash-Test VM (or Windows Sand
 | T1, upgrade call | 2026-11-08 | Refuses older | `UpgradePackageAsync` with an older version: `NoApplicableUpgrade`, `0x8A15004F`, for every type |
 | T1, `Force` | 2026-11-08 | No effect | Same result with and without it, for every call and type |
 | T1, middle version | 2026-11-08 | Works | Install an older version from nothing, then `UpgradePackageAsync` to the next one: portable, NSIS, MSI |
+| T12, install older (R1.1) | 2026-11-09 | Pass | jq not installed: **Install** on 1.8.0 → installed 1.8.0, list shows "1.8.0 (installed)", the row shows an update to 1.8.2; the log has "Chosen version: 1.8.0" |
+| T12, middle version (R1.1) | 2026-11-09 | Pass | jq 1.8.0 → **Update to this version** on 1.8.1 → `Upgrade`, updated to 1.8.1 (not the latest) |
+| T12, go back, box checked (R3.1, R3.2) | 2026-11-09 | Pass | jq 1.8.1 → 1.8.0: the dialog names both versions, the box "Leave jq out of update checks" is checked by default; after success `jqlang.jq` is in `ExcludedPackageIds` |
+| T12, refused, box unchecked (R3.3, R3.2) | 2026-11-09 | Pass | PowerShell MSIX 7.6.9.0 → 7.6.8.0, box unticked: Failed with the R3.3 message, `InstallError`, `0x80070002`. Stands in for Git: Inno and MSI need a UAC prompt the test can't answer (their refusal is in T1 and the unit tests) |
+| T12, Retry (R2.3) | 2026-11-09 | Pass | **Retry** on the refused card runs 7.6.8.0 again ("Chosen version: 7.6.8.0"), same result. Cancel during a download wasn't caught: the MSIX update finished in seconds; covered by the unit tests |
+| T12, Uninstall, then install (R3.4, R3.5) | 2026-11-09 | Pass | The card's **Uninstall, then install** names the version; its confirmation says settings may be lost; Cancel queues nothing; confirm → uninstalled 7.6.9.0, then installed 7.6.8.0; not excluded (box was unticked) |
+| T12, no longer installed (R3.7) | 2026-11-09 | Pass | Windows Terminal 1.25.2733.0 → 1.24.12741.0: refused, then Uninstall, then install → the install fails (`0x80070002`) and the card says "Windows Terminal is no longer installed: it was uninstalled to make way for 1.24.12741.0…"; **Install Windows Terminal 1.25.2733.0** brings it back, not excluded |
+| T12, Show all (R1.3) | 2026-11-09 | Pass | PowerShell: 10 versions, then 112 after **Show all versions**, which then hides |
+| T12, keyboard and names (R1.4, Q5) | 2026-11-09 | Pass | Focus in the list, Down → "1.8.1", Space selects, Tab → button "Update jq to 1.8.1". Dialog checkbox and card buttons are found by their accessible names. Enter on the button not pressed (UIA Invoke used for the runs) |
+| T12, themes | 2026-11-09 | Pass | Light, dark and high contrast screenshots of the list: selection and "(installed)" readable |
+| T12, not checked | 2026-11-09 | — | A Store package (msstore isn't accepted in the VM; no actions for one-version packages is a unit test), the notification text, and the Updates page's excluded list. No crashes in any run |
