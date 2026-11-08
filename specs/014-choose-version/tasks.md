@@ -1,6 +1,6 @@
 # 014 – Install a chosen version: Tasks
 
-**Status:** In progress (T1 done 2026-11-08)
+**Status:** Done (2026-11-09)
 **Design:** [design.md](design.md)
 
 Tick a task only when its verification passes. Keep tasks small enough for one commit, and keep the build green at
@@ -107,7 +107,7 @@ every commit (Q4). Manual checks run in the CartonStash-Test VM (or Windows Sand
   - A package with more than 10 versions: Show all versions. A Store package: no actions.
   - Keyboard only: Tab to the list, arrow keys, Tab to the button, Enter. The button's accessible name and the
     checkbox's are read correctly (UI Automation). Light, dark and high contrast.
-- [ ] **T13.** Close: every criterion maps to a passing test or a log entry here, status set to `Done` in all three
+- [x] **T13.** Close: every criterion maps to a passing test or a log entry here, status set to `Done` in all three
   files and in the roadmap.
   - Verify: review.
 

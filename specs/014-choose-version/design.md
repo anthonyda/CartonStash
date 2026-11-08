@@ -1,6 +1,6 @@
 # 014 – Install a chosen version: Design
 
-**Status:** Approved (2026-11-08)
+**Status:** Done (2026-11-09). Approved 2026-11-08
 **Requirements:** [requirements.md](requirements.md)
 
 ## Overview
