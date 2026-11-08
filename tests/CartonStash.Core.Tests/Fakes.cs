@@ -185,6 +185,19 @@ internal sealed class FakeDialogs : IDialogService
         return Task.FromResult(Answer);
     }
 
+    /// <summary>What the checkbox ends as when the user confirms; null keeps what the app proposed (014 R3.2).</summary>
+    public bool? OptionAnswer { get; set; }
+
+    public List<(string Title, string Message, string? Option, bool Checked)> OptionPrompts { get; } = [];
+
+    public Task<(bool Confirmed, bool OptionChecked)> ConfirmWithOptionAsync(string title, string message, string confirmText,
+        string? optionText, bool optionChecked)
+    {
+        OptionPrompts.Add((title, message, optionText, optionChecked));
+        var isChecked = optionText is not null && (OptionAnswer ?? optionChecked);
+        return Task.FromResult((Answer, Answer && isChecked));
+    }
+
     public List<(string Title, string Text, string Folder)> LogsShown { get; } = [];
 
     public Task ShowLogAsync(string title, string text, string folder)

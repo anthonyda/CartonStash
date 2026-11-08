@@ -42,7 +42,7 @@ every commit (Q4). Manual checks run in the CartonStash-Test VM (or Windows Sand
     in-use code while going back → 003 R7's message. `AfterUpdateTests`: a chosen-version install over an installed
     package, same version after with an update → `SucceededUnconfirmed`; a first install → unchanged. The "no longer
     available" outcome is a pure function, tested.
-- [ ] **T5.** `IDialogService.ConfirmWithOptionAsync(title, message, confirmText, optionText, optionChecked)` returning
+- [x] **T5.** `IDialogService.ConfirmWithOptionAsync(title, message, confirmText, optionText, optionChecked)` returning
   `(bool Confirmed, bool OptionChecked)`. `DialogService` in the App builds it as a ContentDialog with a CheckBox
   (keyboard reachable, its label as the accessible name). The test fake records the call and returns a set answer. *(R3.1, R3.2)*
   - Verify: `dotnet build`; the dialog itself in T12.

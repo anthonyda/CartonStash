@@ -95,6 +95,9 @@ public class PackageActionsTests
         public Task<bool> ConfirmAsync(string title, string message, string confirmText, string cancelText = "Cancel") =>
             _inner.ConfirmAsync(title, message, confirmText, cancelText);
 
+        public Task<(bool Confirmed, bool OptionChecked)> ConfirmWithOptionAsync(string title, string message, string confirmText,
+            string? optionText, bool optionChecked) => _inner.ConfirmWithOptionAsync(title, message, confirmText, optionText, optionChecked);
+
         public Task ShowLogAsync(string title, string text, string folder) => _inner.ShowLogAsync(title, text, folder);
 
         public Task<AgreementAnswer> ShowSourceAgreementAsync(SourceInfo source, string? receivesNotice) =>

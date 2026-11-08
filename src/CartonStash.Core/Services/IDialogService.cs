@@ -16,6 +16,13 @@ public interface IDialogService
     /// <summary>Asks a yes/no question. Returns true when the user chose <paramref name="confirmText"/>.</summary>
     Task<bool> ConfirmAsync(string title, string message, string confirmText, string cancelText = "Cancel");
 
+    /// <summary>
+    /// Asks a yes/no question with a checkbox (014 R3.1, R3.2). With <paramref name="optionText"/> null there is no box, and
+    /// <c>OptionChecked</c> is false.
+    /// </summary>
+    Task<(bool Confirmed, bool OptionChecked)> ConfirmWithOptionAsync(string title, string message, string confirmText,
+        string? optionText, bool optionChecked);
+
     /// <summary>Shows agreement texts with Accept / Decline. Returns true when accepted (003 R1.3, 006 R3.3).</summary>
     Task<bool> ShowAgreementsAsync(string title, IReadOnlyList<Agreement> agreements);
 

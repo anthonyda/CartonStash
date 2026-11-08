@@ -34,6 +34,31 @@ public sealed class DialogService(IClipboardService clipboard) : IDialogService
         return await ShowAsync(dialog) == ContentDialogResult.Primary;
     }
 
+    public async Task<(bool Confirmed, bool OptionChecked)> ConfirmWithOptionAsync(string title, string message, string confirmText,
+        string? optionText, bool optionChecked)
+    {
+        var panel = new StackPanel { Spacing = 12 };
+        panel.Children.Add(new TextBlock { Text = message, TextWrapping = TextWrapping.Wrap });
+        CheckBox? box = null;
+        if (optionText is not null)
+        {
+            // The label is the box's accessible name (Q5).
+            box = new CheckBox { Content = new TextBlock { Text = optionText, TextWrapping = TextWrapping.Wrap }, IsChecked = optionChecked };
+            AutomationProperties.SetName(box, optionText);
+            panel.Children.Add(box);
+        }
+        var dialog = new ContentDialog
+        {
+            Title = title,
+            Content = panel,
+            PrimaryButtonText = confirmText,
+            CloseButtonText = "Cancel",
+            DefaultButton = ContentDialogButton.Close, // going back isn't the default either
+        };
+        var confirmed = await ShowAsync(dialog) == ContentDialogResult.Primary;
+        return (confirmed, confirmed && box?.IsChecked == true);
+    }
+
     public async Task<bool> ShowAgreementsAsync(string title, IReadOnlyList<Agreement> agreements)
     {
         var dialog = new ContentDialog
