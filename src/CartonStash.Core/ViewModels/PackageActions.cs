@@ -26,6 +26,9 @@ public sealed class PackageActions(PackageOperationQueue queue, IPackageInstalle
     /// <summary>App Installer's update waiting for a restart, for rows (004 R6.2).</summary>
     public WinGetHost Host { get; } = Track(queue, host ?? new WinGetHost(), settings);
 
+    // Subscribes once, like Host above: a primary-constructor class has no body to do it in.
+    private readonly bool _followUpsWired = FollowUp(queue, dialogs, installer);
+
     // 004 R6.1: the version stays in use until CartonStash restarts. 014 R3.2: the exclusion the user asked for, once it worked.
     private static WinGetHost Track(PackageOperationQueue queue, WinGetHost host, ISettings? settings)
     {
@@ -47,7 +50,75 @@ public sealed class PackageActions(PackageOperationQueue queue, IPackageInstalle
     /// 014 R3.2: only a real success adds the exclusion. Not a warning (nothing changed, 013 R2.2), a failure or a cancel.
     /// </summary>
     internal static bool ExcludesAfter(PackageOperation operation) =>
-        operation.Options.ExcludeOnSuccess && operation.Result is OperationResult.Succeeded or OperationResult.SucceededRestartRequired;
+        operation.Kind != OperationKind.Uninstall && operation.Options.ExcludeOnSuccess
+        && operation.Result is OperationResult.Succeeded or OperationResult.SucceededRestartRequired;
+
+    /// <summary>
+    /// 014 R3.5 to R3.7: the card buttons after going back failed, and the install that follows a successful uninstall. Each
+    /// step after a failure is the user's press; nothing is chained beyond one uninstall and one install.
+    /// </summary>
+    private static bool FollowUp(PackageOperationQueue queue, IDialogService dialogs, IPackageInstaller installer)
+    {
+        queue.FollowUpRequested += async (_, request) =>
+        {
+            var (operation, followUp) = request;
+            if (queue.Find(operation.Package) is { IsActive: true })
+            {
+                return; // 003 R4.2
+            }
+            switch (followUp)
+            {
+                case OperationFollowUp.UninstallThenInstall when operation.CanUninstallThenInstall:
+                    var (title, message, confirmText) = UninstallFirstQuestion(operation);
+                    if (await dialogs.ConfirmAsync(title, message, confirmText))
+                    {
+                        queue.Enqueue(OperationKind.Uninstall, operation.Package, operation.AcceptAgreements, new OperationOptions
+                        {
+                            ThenInstall = operation.Version,
+                            PreviousVersion = operation.Options.PreviousVersion ?? operation.Package.InstalledVersion,
+                            ExcludeOnSuccess = operation.Options.ExcludeOnSuccess, // R3.5: the R3.2 choice carries over
+                        });
+                    }
+                    break;
+                case OperationFollowUp.InstallPrevious when operation.CanInstallPrevious:
+                    var previous = operation.Options.PreviousVersion!;
+                    if (await AskAgreementsAsync(installer, dialogs, operation.Package, previous) is { } accepted)
+                    {
+                        queue.Enqueue(OperationKind.Install, operation.Package, accepted, new OperationOptions { Version = previous });
+                    }
+                    break;
+            }
+        };
+        queue.Completed += (_, operation) =>
+        {
+            // R3.5, R3.6: the install only after the uninstall succeeded. The package isn't installed any more, so the
+            // install is an ordinary one, not going back.
+            if (operation is { Kind: OperationKind.Uninstall, IsSuccess: true, Options.ThenInstall: { } version })
+            {
+                queue.Enqueue(OperationKind.Install, operation.Package with { InstalledVersion = null }, operation.AcceptAgreements, new OperationOptions
+                {
+                    Version = version,
+                    AfterUninstall = true,
+                    PreviousVersion = operation.Options.PreviousVersion,
+                    ExcludeOnSuccess = operation.Options.ExcludeOnSuccess,
+                });
+            }
+        };
+        return true;
+    }
+
+    /// <summary>The R3.5 confirmation: names the package and both versions, and says what may be lost.</summary>
+    internal static (string Title, string Message, string ConfirmText) UninstallFirstQuestion(PackageOperation operation)
+    {
+        var name = operation.Package.Name;
+        var installed = operation.Options.PreviousVersion ?? operation.Package.InstalledVersion;
+        var version = operation.Version;
+        return (
+            $"Uninstall {name}, then install {version}?",
+            $"{name} {installed} will be uninstalled, then {version} installed. Settings and data that {name} keeps may be lost. "
+                + "Apps that come as an MSIX package always lose them.",
+            "Uninstall, then install");
+    }
 
     /// <summary>
     /// 014: installs a version the user chose in the details pane. Going back (or a version WinGet can't compare) asks
@@ -64,6 +135,7 @@ public sealed class PackageActions(PackageOperationQueue queue, IPackageInstalle
         var options = new OperationOptions { Version = version.Version };
         if (version.Direction is VersionDirection.Older or VersionDirection.Unknown)
         {
+            options = options with { GoingBack = package.IsInstalled, PreviousVersion = package.InstalledVersion };
             var (title, message, confirmText) = GoingBackQuestion(package, version);
             var alreadyExcluded = settings?.Current.IsExcluded(package.Id) ?? true;
             var (confirmed, exclude) = await dialogs.ConfirmWithOptionAsync(title, message, confirmText,
@@ -75,7 +147,7 @@ public sealed class PackageActions(PackageOperationQueue queue, IPackageInstalle
             options = options with { ExcludeOnSuccess = exclude };
         }
 
-        if (await AskAgreementsAsync(package, version.Version) is { } accepted)
+        if (await AskAgreementsAsync(installer, dialogs, package, version.Version) is { } accepted)
         {
             var kind = version.Direction == VersionDirection.Newer ? OperationKind.Upgrade : OperationKind.Install;
             queue.Enqueue(kind, package, accepted, options);
@@ -131,7 +203,9 @@ public sealed class PackageActions(PackageOperationQueue queue, IPackageInstalle
     /// Shows the agreements of the version WinGet would install, if it has any (003 R1.3, 004 R7.1). Null when the user
     /// declined; otherwise whether WinGet may treat them as accepted.
     /// </summary>
-    private async Task<bool?> AskAgreementsAsync(PackageInfo package, string? version = null)
+    private Task<bool?> AskAgreementsAsync(PackageInfo package) => AskAgreementsAsync(installer, dialogs, package, null);
+
+    private static async Task<bool?> AskAgreementsAsync(IPackageInstaller installer, IDialogService dialogs, PackageInfo package, string? version)
     {
         IReadOnlyList<Agreement> agreements;
         try

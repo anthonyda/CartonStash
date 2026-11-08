@@ -28,6 +28,9 @@ public sealed class PackageOperationQueue(IPackageInstaller installer, IOperatio
     /// <summary>Raised when the user asks to restart CartonStash to finish App Installer's update (004 R6.3).</summary>
     public event EventHandler? RestartRequested;
 
+    /// <summary>A card's Uninstall, then install or Install {previous version} (014 R3.5, R3.7); PackageActions handles it.</summary>
+    public event EventHandler<(PackageOperation Operation, OperationFollowUp FollowUp)>? FollowUpRequested;
+
     /// <summary>Raised when an operation ends, whatever the result.</summary>
     public event EventHandler<PackageOperation>? Completed;
 
@@ -65,7 +68,8 @@ public sealed class PackageOperationQueue(IPackageInstaller installer, IOperatio
             return active;
         }
 
-        var operation = new PackageOperation(kind, package, acceptAgreements, Cancel, Retry, o => LogRequested?.Invoke(this, o), RequestRestart, options);
+        var operation = new PackageOperation(kind, package, acceptAgreements, Cancel, Retry, o => LogRequested?.Invoke(this, o), RequestRestart, options,
+            (o, followUp) => FollowUpRequested?.Invoke(this, (o, followUp)));
         Operations.Insert(0, operation);
         Start(operation);
         return operation;
@@ -199,9 +203,11 @@ public sealed class PackageOperationQueue(IPackageInstaller installer, IOperatio
 
     private void Finish(PackageOperation operation, OperationOutcome outcome)
     {
+        outcome = AfterUninstallOutcome(outcome, operation);
         operation.Percent = null;
         operation.Phase = OperationPhase.Done;
         operation.Retryable = outcome.Retryable; // before Result, which notifies CanRetry
+        operation.OffersUninstallFirst = outcome.OffersUninstallFirst;
         operation.Result = outcome.Result;
         operation.Message = outcome.Message;
         operation.Details = outcome.Details;
@@ -217,4 +223,17 @@ public sealed class PackageOperationQueue(IPackageInstaller installer, IOperatio
         }
         Completed?.Invoke(this, operation);
     }
+
+    /// <summary>
+    /// 014 R3.7: the install that follows the uninstall of R3.5 didn't happen, so the package is no longer installed. That
+    /// comes first, then the reason.
+    /// </summary>
+    internal static OperationOutcome AfterUninstallOutcome(OperationOutcome outcome, PackageOperation operation) =>
+        operation.Options.AfterUninstall && outcome.Result is OperationResult.Failed or OperationResult.Cancelled
+            ? outcome with
+            {
+                Message = $"{operation.Package.Name} is no longer installed: it was uninstalled to make way for {operation.Version}, "
+                    + $"and then that install didn't finish. {outcome.Message}",
+            }
+            : outcome;
 }

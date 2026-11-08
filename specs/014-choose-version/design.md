@@ -102,7 +102,7 @@ Also measured:
   certain:
 
 > {name} couldn't go back to {version}. Its installer may not install over a newer version. To go back, uninstall
-> {name}, then install {version}.
+> {name}, then install {version}. Uninstall, then install does both.
 
   It stays retryable: unlike 013 R3.1, the cause isn't known.
 

@@ -9,7 +9,7 @@ namespace CartonStash.Core.Tests;
 public class ChosenVersionInstallerTests
 {
     private const string GoBackMessage = "Git couldn't go back to 2.56.0.3. Its installer may not install over a newer version. "
-        + "To go back, uninstall Git, then install 2.56.0.3.";
+        + "To go back, uninstall Git, then install 2.56.0.3. Uninstall, then install does both.";
 
     [Theory] // R3.3
     [InlineData(1603u, 0x8A150049u)]        // MSI: "A newer version is already installed"

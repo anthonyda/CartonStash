@@ -221,7 +221,7 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
     {
         var name = string.IsNullOrWhiteSpace(packageName) ? "The package" : packageName;
         return $"{name} couldn't go back to {version}. Its installer may not install over a newer version. "
-            + $"To go back, uninstall {name}, then install {version}.";
+            + $"To go back, uninstall {name}, then install {version}. Uninstall, then install does both.";
     }
 
     /// <summary>The package as WinGet lists it after an update (013 R2.1).</summary>
@@ -421,7 +421,8 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
                 Failed("The downloaded file doesn't match the package's checksum, so it wasn't installed. The publisher's site may have changed; try again later."),
             InstallResultStatus.DownloadError => Failed("The download failed. Check your internet connection and try again."),
             InstallResultStatus.InstallError when InUseMessage(kind, extendedError, packageName, runningFiles) is { } inUse => Failed(inUse),
-            InstallResultStatus.InstallError when goingBackTo is not null => Failed(GoingBackFailedMessage(packageName, goingBackTo)),
+            InstallResultStatus.InstallError when goingBackTo is not null =>
+                Failed(GoingBackFailedMessage(packageName, goingBackTo)) with { OffersUninstallFirst = true }, // R3.5
             InstallResultStatus.InstallError when installerErrorCode == 0 && extendedError != 0 =>
                 Failed(NoExitCodeMessage(kind, extendedError, packageName, describe ?? ErrorDescriptions.Describe)),
             InstallResultStatus.InstallError => Failed($"The installer failed with error code {FormatCode(installerErrorCode)}."),

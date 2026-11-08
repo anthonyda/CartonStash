@@ -64,6 +64,25 @@ public sealed record OperationOptions
 
     /// <summary>Leave the package out of update checks once the operation succeeds (014 R3.2).</summary>
     public bool ExcludeOnSuccess { get; init; }
+
+    /// <summary>An install of an older (or uncomparable) version over the installed one (014 R3).</summary>
+    public bool GoingBack { get; init; }
+
+    /// <summary>The version installed before going back, for Install {previous version} (014 R3.7).</summary>
+    public string? PreviousVersion { get; init; }
+
+    /// <summary>On an uninstall: the version to install once it succeeded (014 R3.5).</summary>
+    public string? ThenInstall { get; init; }
+
+    /// <summary>An install that follows the uninstall of R3.5: if it fails, the package is gone (014 R3.7).</summary>
+    public bool AfterUninstall { get; init; }
+}
+
+/// <summary>The buttons a finished card may offer after going back failed (014 R3.5, R3.7).</summary>
+public enum OperationFollowUp
+{
+    UninstallThenInstall,
+    InstallPrevious,
 }
 
 /// <summary>How an operation ended, with a message the user can read (003 R5.2).</summary>
@@ -75,6 +94,9 @@ public sealed record OperationOutcome(OperationResult Result, string Message, st
 
     /// <summary>False when retrying would fail the same way, so a failure offers no Retry (013 R3.1).</summary>
     public bool Retryable { get; init; } = true;
+
+    /// <summary>Going back failed at the installer: the card offers Uninstall, then install (014 R3.5).</summary>
+    public bool OffersUninstallFirst { get; init; }
 }
 
 /// <summary>
@@ -87,11 +109,13 @@ public sealed partial class PackageOperation : ObservableObject
     private readonly Action<PackageOperation> _retry;
     private readonly Action<PackageOperation> _showLog;
     private readonly Action _restartApp;
+    private readonly Action<PackageOperation, OperationFollowUp> _followUp;
 
     internal PackageOperation(OperationKind kind, PackageInfo package, bool acceptAgreements,
         Action<PackageOperation> cancel, Action<PackageOperation> retry, Action<PackageOperation> showLog, Action restartApp,
-        OperationOptions? options = null)
+        OperationOptions? options = null, Action<PackageOperation, OperationFollowUp>? followUp = null)
     {
+        _followUp = followUp ?? ((_, _) => { });
         Options = options ?? OperationOptions.Default;
         _restartApp = restartApp;
         Kind = kind;
@@ -140,12 +164,16 @@ public sealed partial class PackageOperation : ObservableObject
     /// <summary>From the outcome: false when Retry would fail the same way (013 R3.1). Set before <see cref="Result"/>.</summary>
     public bool Retryable { get; internal set; } = true;
 
+    /// <summary>From the outcome: going back failed at the installer (014 R3.5). Set before <see cref="Result"/>.</summary>
+    public bool OffersUninstallFirst { get; internal set; }
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(StatusText), nameof(IsIndeterminate), nameof(ProgressValue))]
     public partial double? Percent { get; internal set; }
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(StatusText), nameof(IsSuccess), nameof(IsFailure), nameof(CanRetry), nameof(State), nameof(CanRestartApp))]
+    [NotifyPropertyChangedFor(nameof(StatusText), nameof(IsSuccess), nameof(IsFailure), nameof(CanRetry), nameof(State), nameof(CanRestartApp),
+        nameof(CanUninstallThenInstall), nameof(CanInstallPrevious))]
     [NotifyCanExecuteChangedFor(nameof(RetryCommand))]
     public partial OperationResult? Result { get; internal set; }
 
@@ -198,6 +226,25 @@ public sealed partial class PackageOperation : ObservableObject
 
     // No Retry on a warning, and none where WinGet would refuse the same way again (013 R2.2, R3.1).
     public bool CanRetry => (Result is OperationResult.Failed && Retryable) || Result is OperationResult.Cancelled;
+
+    /// <summary>014 R3.5: going back failed at the installer, not because the program was running (003 R7).</summary>
+    public bool CanUninstallThenInstall => Result is OperationResult.Failed && Options.GoingBack && OffersUninstallFirst && Version is not null;
+
+    /// <summary>"Uninstall, then install 2.56.0.3".</summary>
+    public string UninstallThenInstallText => $"Uninstall, then install {Version}";
+
+    /// <summary>The button's accessible name, with the package (Q5).</summary>
+    public string UninstallThenInstallName => $"Uninstall {Package.Name}, then install {Version}";
+
+    /// <summary>014 R3.7: the install after the uninstall didn't happen, so the package is gone.</summary>
+    public bool CanInstallPrevious => Result is OperationResult.Failed or OperationResult.Cancelled
+        && Options.AfterUninstall && Options.PreviousVersion is not null;
+
+    /// <summary>"Install 2.56.0.4".</summary>
+    public string InstallPreviousText => $"Install {Options.PreviousVersion}";
+
+    /// <summary>The button's accessible name, with the package (Q5).</summary>
+    public string InstallPreviousName => $"Install {Package.Name} {Options.PreviousVersion}";
 
     /// <summary>The card offers Restart CartonStash (004 R6.3).</summary>
     public bool CanRestartApp => Result is OperationResult.SucceededAppRestartRequired;
@@ -254,4 +301,10 @@ public sealed partial class PackageOperation : ObservableObject
 
     [RelayCommand]
     private void RestartApp() => _restartApp();
+
+    [RelayCommand]
+    private void UninstallThenInstall() => _followUp(this, OperationFollowUp.UninstallThenInstall);
+
+    [RelayCommand]
+    private void InstallPrevious() => _followUp(this, OperationFollowUp.InstallPrevious);
 }

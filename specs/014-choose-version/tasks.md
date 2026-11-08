@@ -54,7 +54,7 @@ every commit (Q4). Manual checks run in the CartonStash-Test VM (or Windows Sand
     both versions, Cancel queues nothing; box checked → excluded after `Succeeded`, not after `SucceededUnconfirmed`,
     `Failed` or `Cancelled`; box unchecked → never excluded; already excluded → no box; agreements asked with the chosen
     version; declined agreements queue nothing; no uninstall is queued by `InstallVersionAsync`.
-- [ ] **T7.** Uninstall, then install: `PackageOperation.GoingBack`, `PreviousVersion`, `ThenInstall`, `AfterUninstall`,
+- [x] **T7.** Uninstall, then install: `PackageOperation.GoingBack`, `PreviousVersion`, `ThenInstall`, `AfterUninstall`,
   `CanUninstallThenInstall`, `CanInstallPrevious` and their commands; the queue's `UninstallThenInstallRequested` and
   `InstallPreviousRequested`; `PackageActions.UninstallThenInstallAsync` (the design's confirmation, then the uninstall);
   the chained install from the `Completed` handler; `AfterUninstallOutcome` in `Finish`. The two buttons on
