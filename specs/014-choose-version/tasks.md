@@ -31,7 +31,7 @@ every commit (Q4). Manual checks run in the CartonStash-Test VM (or Windows Sand
   - Verify: `PackageOperationQueueTests`: the installer receives the version; Retry passes the same version and
     acceptance; a null version is passed by every existing path. `PackageOperation` title with and without a version.
     `OperationLogStoreTests`: "Chosen version: 0.101.0" and "Chosen version: default".
-- [ ] **T4.** `WinGetPackageInstaller`: find the `PackageVersionId` in `AvailableVersions` by index (W2), read that
+- [x] **T4.** `WinGetPackageInstaller`: find the `PackageVersionId` in `AvailableVersions` by index (W2), read that
   version's agreements, set `InstallOptions.PackageVersionId`. Going back and `Unknown` use `InstallPackageAsync`,
   `Newer` uses `UpgradePackageAsync`, and `Force` is never set (T1). A missing version fails with "This version is no
   longer available from {source}." and isn't retryable. 013's `AfterUpdate` also runs for an install with a version
