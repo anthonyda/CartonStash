@@ -19,15 +19,15 @@ public enum RowActions
 /// and the Updates page. The queue does the actual work.
 /// </summary>
 public sealed class PackageActions(PackageOperationQueue queue, IPackageInstaller installer, IDialogService dialogs, IPackageService packages,
-    WinGetHost? host = null)
+    ISettings? settings = null, WinGetHost? host = null)
 {
     public PackageOperationQueue Queue => queue;
 
     /// <summary>App Installer's update waiting for a restart, for rows (004 R6.2).</summary>
-    public WinGetHost Host { get; } = Track(queue, host ?? new WinGetHost());
+    public WinGetHost Host { get; } = Track(queue, host ?? new WinGetHost(), settings);
 
-    // 004 R6.1: the version stays in use until CartonStash restarts.
-    private static WinGetHost Track(PackageOperationQueue queue, WinGetHost host)
+    // 004 R6.1: the version stays in use until CartonStash restarts. 014 R3.2: the exclusion the user asked for, once it worked.
+    private static WinGetHost Track(PackageOperationQueue queue, WinGetHost host, ISettings? settings)
     {
         queue.Completed += (_, operation) =>
         {
@@ -35,8 +35,65 @@ public sealed class PackageActions(PackageOperationQueue queue, IPackageInstalle
             {
                 host.SetPending(version);
             }
+            if (ExcludesAfter(operation))
+            {
+                settings?.Update(s => s.WithExcluded(operation.Package.Id));
+            }
         };
         return host;
+    }
+
+    /// <summary>
+    /// 014 R3.2: only a real success adds the exclusion. Not a warning (nothing changed, 013 R2.2), a failure or a cancel.
+    /// </summary>
+    internal static bool ExcludesAfter(PackageOperation operation) =>
+        operation.Options.ExcludeOnSuccess && operation.Result is OperationResult.Succeeded or OperationResult.SucceededRestartRequired;
+
+    /// <summary>
+    /// 014: installs a version the user chose in the details pane. Going back (or a version WinGet can't compare) asks
+    /// first, with the option to leave the package out of update checks (R3.1, R3.2); then the chosen version's
+    /// agreements (R2.2). Nothing while the package is busy (003 R4.2).
+    /// </summary>
+    public async Task InstallVersionAsync(PackageInfo package, PackageVersion version)
+    {
+        if (queue.Find(package) is { IsActive: true } || version.Direction == VersionDirection.Installed)
+        {
+            return;
+        }
+
+        var options = new OperationOptions { Version = version.Version };
+        if (version.Direction is VersionDirection.Older or VersionDirection.Unknown)
+        {
+            var (title, message, confirmText) = GoingBackQuestion(package, version);
+            var alreadyExcluded = settings?.Current.IsExcluded(package.Id) ?? true;
+            var (confirmed, exclude) = await dialogs.ConfirmWithOptionAsync(title, message, confirmText,
+                alreadyExcluded ? null : $"Leave {package.Name} out of update checks", optionChecked: true);
+            if (!confirmed)
+            {
+                return;
+            }
+            options = options with { ExcludeOnSuccess = exclude };
+        }
+
+        if (await AskAgreementsAsync(package, version.Version) is { } accepted)
+        {
+            var kind = version.Direction == VersionDirection.Newer ? OperationKind.Upgrade : OperationKind.Install;
+            queue.Enqueue(kind, package, accepted, options);
+        }
+    }
+
+    /// <summary>The going-back confirmation (014 R3.1): names the package and both versions.</summary>
+    internal static (string Title, string Message, string ConfirmText) GoingBackQuestion(PackageInfo package, PackageVersion version)
+    {
+        var name = package.Name;
+        var v = version.Version;
+        var older = version.Direction == VersionDirection.Older;
+        var doing = older ? $"Going back to {v}" : $"Installing {v}";
+        return (
+            older ? $"Go back to {name} {v}?" : $"Install {name} {v}?",
+            $"{name} {package.InstalledVersion} is installed. {doing} runs that version's installer over it. "
+                + $"Some installers can't go back, and {name}'s settings may not carry over to an older version.",
+            older ? $"Go back to {v}" : $"Install {v}");
     }
 
     /// <summary>The package's icon, for rows (005 R5). Never throws: no icon is fine.</summary>
@@ -74,12 +131,12 @@ public sealed class PackageActions(PackageOperationQueue queue, IPackageInstalle
     /// Shows the agreements of the version WinGet would install, if it has any (003 R1.3, 004 R7.1). Null when the user
     /// declined; otherwise whether WinGet may treat them as accepted.
     /// </summary>
-    private async Task<bool?> AskAgreementsAsync(PackageInfo package)
+    private async Task<bool?> AskAgreementsAsync(PackageInfo package, string? version = null)
     {
         IReadOnlyList<Agreement> agreements;
         try
         {
-            agreements = await installer.GetAgreementsAsync(package);
+            agreements = await installer.GetAgreementsAsync(package, version);
         }
         catch (Exception)
         {

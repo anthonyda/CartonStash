@@ -46,7 +46,7 @@ every commit (Q4). Manual checks run in the CartonStash-Test VM (or Windows Sand
   `(bool Confirmed, bool OptionChecked)`. `DialogService` in the App builds it as a ContentDialog with a CheckBox
   (keyboard reachable, its label as the accessible name). The test fake records the call and returns a set answer. *(R3.1, R3.2)*
   - Verify: `dotnet build`; the dialog itself in T12.
-- [ ] **T6.** `PackageActions.InstallVersionAsync(package, version)`: nothing while the package is busy; for `Older` and
+- [x] **T6.** `PackageActions.InstallVersionAsync(package, version)`: nothing while the package is busy; for `Older` and
   `Unknown`, the design's confirmation (no box when already excluded); the chosen version's agreements; then enqueue
   with the kind for the direction. `PackageActions` takes `ISettings`, and its `Completed` handler adds the exclusion
   for `ExcludeOnSuccess` on `Succeeded` or `SucceededRestartRequired`. Update DI and the test wiring. *(R2.2, R3.1, R3.2, R3.4)*
