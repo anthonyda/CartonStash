@@ -1,6 +1,6 @@
 # 014 – Install a chosen version: Design
 
-**Status:** Done (2026-11-09). Approved 2026-11-08. **Amendment R1.6, R1.7 (2026-11-09): Approved 2026-11-09, with the proposed answer to Q6**
+**Status:** Done (2026-11-09). Approved 2026-11-08. **Amendment R1.6, R1.7 (2026-11-09): Done**, approved with the proposed answer to Q6
 **Requirements:** [requirements.md](requirements.md)
 
 ## Overview
