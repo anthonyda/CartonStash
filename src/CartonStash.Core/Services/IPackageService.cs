@@ -51,11 +51,15 @@ public interface IPackageService
 /// <summary>Runs one install / uninstall / upgrade (spec 003). Used only by <see cref="PackageOperationQueue"/>.</summary>
 public interface IPackageInstaller
 {
-    /// <summary>Agreements the user must accept before installing (003 R1.3). Empty when there are none.</summary>
-    Task<IReadOnlyList<Agreement>> GetAgreementsAsync(PackageInfo package, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// Agreements the user must accept before installing (003 R1.3): of <paramref name="version"/>, or of WinGet's default
+    /// version when null (014 R2.2). Empty when there are none.
+    /// </summary>
+    Task<IReadOnlyList<Agreement>> GetAgreementsAsync(PackageInfo package, string? version = null, CancellationToken cancellationToken = default);
 
     /// <summary>Runs the operation. Throws <see cref="OperationCanceledException"/> when cancelled.</summary>
+    /// <param name="version">The version to install or update to; null for WinGet's default (014 R2.1).</param>
     /// <param name="logPath">Where the installer should write its log, or null (009 R2).</param>
-    Task<OperationOutcome> RunAsync(OperationKind kind, PackageInfo package, bool acceptAgreements, string? logPath,
+    Task<OperationOutcome> RunAsync(OperationKind kind, PackageInfo package, bool acceptAgreements, string? version, string? logPath,
         IProgress<OperationProgress> progress, CancellationToken cancellationToken);
 }

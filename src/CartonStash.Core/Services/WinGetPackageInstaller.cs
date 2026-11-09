@@ -10,18 +10,20 @@ namespace CartonStash.Core.Services;
 /// </summary>
 public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettings settings, IRunningPrograms runningPrograms) : IPackageInstaller
 {
-    public async Task<IReadOnlyList<Agreement>> GetAgreementsAsync(PackageInfo package, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<Agreement>> GetAgreementsAsync(PackageInfo package, string? version = null, CancellationToken cancellationToken = default)
     {
         var found = await connection.FindByIdAsync(package.Id, package.Source, localFirst: false, cancellationToken);
-        var version = found.DefaultInstallVersion;
-        if (version is null)
+        // 014 R2.2: the chosen version's agreements. A version the source no longer has has none here; the run says so.
+        var info = version is null ? found.DefaultInstallVersion
+            : FindVersion(found, version) is { } id ? found.GetPackageVersionInfo(id) : null;
+        if (info is null)
         {
             return [];
         }
 
         return await Task.Run<IReadOnlyList<Agreement>>(() =>
         {
-            var agreements = version.GetCatalogPackageMetadata().Agreements;
+            var agreements = info.GetCatalogPackageMetadata().Agreements;
             var list = new List<Agreement>(agreements.Count);
             for (var i = 0; i < agreements.Count; i++)
             {
@@ -35,7 +37,7 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
         }, cancellationToken);
     }
 
-    public async Task<OperationOutcome> RunAsync(OperationKind kind, PackageInfo package, bool acceptAgreements, string? logPath,
+    public async Task<OperationOutcome> RunAsync(OperationKind kind, PackageInfo package, bool acceptAgreements, string? version, string? logPath,
         IProgress<OperationProgress> progress, CancellationToken cancellationToken)
     {
         // Re-find the package; COM objects never leave this class (A2).
@@ -47,9 +49,9 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
             var outcome = kind switch
             {
                 OperationKind.Uninstall => await UninstallAsync(found, package.Name, logPath, progress, cancellationToken),
-                _ => await InstallAsync(kind, found, package.Name, acceptAgreements, logPath, progress, cancellationToken),
+                _ => await InstallAsync(kind, found, package, acceptAgreements, version, logPath, progress, cancellationToken),
             };
-            switch (CheckAfter(kind, outcome, package))
+            switch (CheckAfter(kind, outcome, package, version))
             {
                 case CheckAfterOperation.AppInstaller:
                     connection.Invalidate();
@@ -69,18 +71,29 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
         }
     }
 
-    private async Task<OperationOutcome> InstallAsync(OperationKind kind, CatalogPackage package, string name, bool acceptAgreements, string? logPath,
-        IProgress<OperationProgress> progress, CancellationToken cancellationToken)
+    private async Task<OperationOutcome> InstallAsync(OperationKind kind, CatalogPackage package, PackageInfo info, bool acceptAgreements, string? version,
+        string? logPath, IProgress<OperationProgress> progress, CancellationToken cancellationToken)
     {
+        var name = info.Name;
         var options = new InstallOptions
         {
             PackageInstallMode = PackageInstallMode.Silent,
             PackageInstallScope = ToWinGet(settings.Current.InstallScope), // 006 R2.1
             AcceptPackageAgreements = acceptAgreements,
+            // 014 T1: Force never helped an older version go back, and it lets other warnings through.
         };
         if (logPath is not null)
         {
             options.LogOutputPath = logPath;
+        }
+        if (version is not null)
+        {
+            // 014 R2.1: looked up again now, by index (W2); the source may have changed since the pane opened.
+            if (FindVersion(package, version) is not { } id)
+            {
+                return VersionUnavailable(info.Source);
+            }
+            options.PackageVersionId = id;
         }
 
         var operation = kind == OperationKind.Upgrade
@@ -92,7 +105,7 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
         var extendedError = result.ExtendedErrorCode?.HResult ?? 0;
         var running = await RunningFilesAfterAsync(extendedError, package);
         return MapInstallResult(kind, result.Status, result.InstallerErrorCode, result.RebootRequired, settings.Current.InstallScope,
-            extendedError, name, running) with { Details = FormatDetails(result.Status.ToString(), result.InstallerErrorCode, result.ExtendedErrorCode) };
+            extendedError, name, running, goingBackTo: GoesBack(kind, info, version) ? version : null) with { Details = FormatDetails(result.Status.ToString(), result.InstallerErrorCode, result.ExtendedErrorCode) };
     }
 
     private async Task<OperationOutcome> UninstallAsync(CatalogPackage package, string name, string? logPath, IProgress<OperationProgress> progress, CancellationToken cancellationToken)
@@ -168,10 +181,48 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
     }
 
     /// <summary>Which re-read a finished operation gets: App Installer's own (004 R6.1, 013 R2.4), the version (013 R2.1), or none (R2.5).</summary>
-    internal static CheckAfterOperation CheckAfter(OperationKind kind, OperationOutcome outcome, PackageInfo package) =>
-        kind != OperationKind.Upgrade || outcome.Result != OperationResult.Succeeded ? CheckAfterOperation.None
-        : WinGetHost.IsAppInstaller(package) ? CheckAfterOperation.AppInstaller
-        : CheckAfterOperation.InstalledVersion;
+    /// A chosen version installed over an installed package gets the version check too (014 R2.5).
+    internal static CheckAfterOperation CheckAfter(OperationKind kind, OperationOutcome outcome, PackageInfo package, string? version = null) =>
+        outcome.Result != OperationResult.Succeeded ? CheckAfterOperation.None
+        : kind == OperationKind.Upgrade ? (WinGetHost.IsAppInstaller(package) ? CheckAfterOperation.AppInstaller : CheckAfterOperation.InstalledVersion)
+        : GoesBack(kind, package, version) ? CheckAfterOperation.InstalledVersion
+        : CheckAfterOperation.None;
+
+    /// <summary>
+    /// 014: an install of a chosen version over an installed package. The details pane only offers that for an older
+    /// version, or one WinGet can't compare (R1.1, R1.2); a newer one is an upgrade.
+    /// </summary>
+    internal static bool GoesBack(OperationKind kind, PackageInfo package, string? version) =>
+        kind == OperationKind.Install && version is not null && package.IsInstalled;
+
+    /// <summary>The source's ID for a version, by index (W2); null when the source doesn't list it (014 R2.1).</summary>
+    private static PackageVersionId? FindVersion(CatalogPackage package, string version)
+    {
+        var ids = package.AvailableVersions;
+        for (var i = 0; i < ids.Count; i++)
+        {
+            if (string.Equals(ids[i].Version, version, StringComparison.Ordinal))
+            {
+                return ids[i];
+            }
+        }
+        return null;
+    }
+
+    /// <summary>014 R2.1: the chosen version left the source since the pane opened. Retry would fail the same way.</summary>
+    internal static OperationOutcome VersionUnavailable(string source) =>
+        Failed($"This version is no longer available from {(string.IsNullOrEmpty(source) ? "the source" : source)}.") with { Retryable = false };
+
+    /// <summary>
+    /// 014 R3.3: an installer error while going back. T1 measured that installers refuse with their generic failure codes,
+    /// so this says "may", and keeps Retry.
+    /// </summary>
+    internal static string GoingBackFailedMessage(string packageName, string version)
+    {
+        var name = string.IsNullOrWhiteSpace(packageName) ? "The package" : packageName;
+        return $"{name} couldn't go back to {version}. Its installer may not install over a newer version. "
+            + $"To go back, uninstall {name}, then install {version}. Uninstall, then install does both.";
+    }
 
     /// <summary>The package as WinGet lists it after an update (013 R2.1).</summary>
     internal sealed record InstalledAfterUpdate(string? Version, bool UpdateAvailable);
@@ -352,9 +403,10 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
     }
 
     // Readable outcomes (003 R5.2, R5.3, R7; 004 NoApplicableUpgrade; 006 scope hint).
+    /// <param name="goingBackTo">The chosen older version when this install goes back over a newer one (014 R3.3), else null.</param>
     internal static OperationOutcome MapInstallResult(OperationKind kind, InstallResultStatus status, uint installerErrorCode, bool rebootRequired,
         InstallScope scope, int extendedError = 0, string packageName = "", IReadOnlyList<string>? runningFiles = null,
-        Func<int, string?>? describe = null)
+        Func<int, string?>? describe = null, string? goingBackTo = null)
     {
         var done = kind == OperationKind.Upgrade ? "Updated" : "Installed";
         return status switch
@@ -369,6 +421,8 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
                 Failed("The downloaded file doesn't match the package's checksum, so it wasn't installed. The publisher's site may have changed; try again later."),
             InstallResultStatus.DownloadError => Failed("The download failed. Check your internet connection and try again."),
             InstallResultStatus.InstallError when InUseMessage(kind, extendedError, packageName, runningFiles) is { } inUse => Failed(inUse),
+            InstallResultStatus.InstallError when goingBackTo is not null =>
+                Failed(GoingBackFailedMessage(packageName, goingBackTo)) with { OffersUninstallFirst = true }, // R3.5
             InstallResultStatus.InstallError when installerErrorCode == 0 && extendedError != 0 =>
                 Failed(NoExitCodeMessage(kind, extendedError, packageName, describe ?? ErrorDescriptions.Describe)),
             InstallResultStatus.InstallError => Failed($"The installer failed with error code {FormatCode(installerErrorCode)}."),

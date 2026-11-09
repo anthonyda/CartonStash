@@ -125,6 +125,7 @@ public sealed class OperationLogStore : IOperationLogStore
             .AppendLine($"Package: {package.Name} ({package.Id})")
             .AppendLine($"Installed version: {package.InstalledVersion ?? "none"}")
             .AppendLine($"Available version: {package.AvailableVersion ?? "none"}")
+            .AppendLine($"Chosen version: {operation.Version ?? "default"}") // 014 R2.1
             .AppendLine($"Source: {package.SourceText}")
             .AppendLine($"Started: {operation.StartedAt?.ToLocalTime():yyyy-MM-dd HH:mm:ss}")
             .AppendLine($"Finished: {operation.FinishedAt?.ToLocalTime():yyyy-MM-dd HH:mm:ss}")

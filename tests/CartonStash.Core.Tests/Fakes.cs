@@ -126,17 +126,27 @@ internal sealed class ScriptedInstaller : IPackageInstaller
 
     public bool AgreementsFail { get; set; }
 
-    public Task<IReadOnlyList<Agreement>> GetAgreementsAsync(PackageInfo package, CancellationToken cancellationToken = default) =>
-        AgreementsFail
+    /// <summary>The version each agreement read asked for (014 R2.2).</summary>
+    public List<string?> AgreementVersions { get; } = [];
+
+    /// <summary>The version each operation ran with (014 R2.1).</summary>
+    public List<string?> Versions { get; } = [];
+
+    public Task<IReadOnlyList<Agreement>> GetAgreementsAsync(PackageInfo package, string? version = null, CancellationToken cancellationToken = default)
+    {
+        AgreementVersions.Add(version);
+        return AgreementsFail
             ? Task.FromException<IReadOnlyList<Agreement>>(new WinGetException("Couldn't reach the source.", null))
             : Task.FromResult(AgreementsById.GetValueOrDefault(package.Id, Agreements));
+    }
 
     public List<string?> LogPaths { get; } = [];
 
-    public Task<OperationOutcome> RunAsync(OperationKind kind, PackageInfo package, bool acceptAgreements, string? logPath,
+    public Task<OperationOutcome> RunAsync(OperationKind kind, PackageInfo package, bool acceptAgreements, string? version, string? logPath,
         IProgress<OperationProgress> progress, CancellationToken cancellationToken)
     {
         Calls.Add((kind, package.Id, acceptAgreements));
+        Versions.Add(version);
         LogPaths.Add(logPath);
         if (AutoComplete is { } outcome)
         {
@@ -173,6 +183,19 @@ internal sealed class FakeDialogs : IDialogService
     {
         Confirmations.Add($"{title} | {message}");
         return Task.FromResult(Answer);
+    }
+
+    /// <summary>What the checkbox ends as when the user confirms; null keeps what the app proposed (014 R3.2).</summary>
+    public bool? OptionAnswer { get; set; }
+
+    public List<(string Title, string Message, string? Option, bool Checked)> OptionPrompts { get; } = [];
+
+    public Task<(bool Confirmed, bool OptionChecked)> ConfirmWithOptionAsync(string title, string message, string confirmText,
+        string? optionText, bool optionChecked)
+    {
+        OptionPrompts.Add((title, message, optionText, optionChecked));
+        var isChecked = optionText is not null && (OptionAnswer ?? optionChecked);
+        return Task.FromResult((Answer, Answer && isChecked));
     }
 
     public List<(string Title, string Text, string Folder)> LogsShown { get; } = [];
@@ -236,7 +259,7 @@ internal sealed class TestApp
         // The app runs the queue on the UI thread; here, run posted callbacks inline so tests are deterministic.
         SynchronizationContext.SetSynchronizationContext(new InlineSynchronizationContext());
         Queue = new PackageOperationQueue(Installer);
-        Actions = new PackageActions(Queue, Installer, Dialogs, Packages);
+        Actions = new PackageActions(Queue, Installer, Dialogs, Packages, Settings);
         Store = new InstalledPackagesStore(Packages, Queue);
         Agreements = new SourceAgreementCheck(Packages, Dialogs, Store);
     }

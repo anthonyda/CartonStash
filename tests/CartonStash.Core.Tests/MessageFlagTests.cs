@@ -190,7 +190,7 @@ public class MessageFlagTests
             PrivacyUrl = "https://example.com/y",
             ReleaseNotesUrl = "https://example.com/r",
             Tags = ["t"],
-            Versions = ["1.0"],
+            Versions = [new PackageVersion("1.0", VersionDirection.NotInstalled)],
         });
         await vm.LoadAsync(Row(app, "Full"));
 

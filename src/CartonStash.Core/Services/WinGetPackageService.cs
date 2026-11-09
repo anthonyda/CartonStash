@@ -165,7 +165,7 @@ public sealed class WinGetPackageService(CatalogConnection connection) : IPackag
                 return null;
             }
             cancellationToken.ThrowIfCancellationRequested();
-            return ToDetails(version.GetCatalogPackageMetadata(), ReadVersions(found, version));
+            return ToDetails(version.GetCatalogPackageMetadata(), ReadVersions(found, version, package.IsPrimaryMatch));
         }, cancellationToken);
     }
 
@@ -353,9 +353,10 @@ public sealed class WinGetPackageService(CatalogConnection connection) : IPackag
 
     /// <summary>
     /// Available versions newest first (005 R2.1). WinGet lists them in its own order; we only check the
-    /// direction with WinGet's comparer (P1) and never sort version strings ourselves.
+    /// direction with WinGet's comparer (P1) and never sort version strings ourselves. Each version's direction
+    /// against the installed one also comes from WinGet's comparer (014 R1.2).
     /// </summary>
-    private static List<string> ReadVersions(CatalogPackage package, PackageVersionInfo reference)
+    private static List<PackageVersion> ReadVersions(CatalogPackage package, PackageVersionInfo reference, bool primaryMatch)
     {
         var ids = package.AvailableVersions;
         var versions = new List<string>(ids.Count);
@@ -367,10 +368,33 @@ public sealed class WinGetPackageService(CatalogConnection connection) : IPackag
         {
             versions.Reverse();
         }
-        return versions;
+
+        var installed = package.InstalledVersion;
+        var list = new List<PackageVersion>(versions.Count);
+        foreach (var v in versions)
+        {
+            CompareResult? compared = installed is not null && primaryMatch ? installed.CompareToVersion(v) : null;
+            list.Add(new PackageVersion(v, Direction(compared, installed is not null, primaryMatch)));
+        }
+        return list;
     }
 
-    private static PackageDetails ToDetails(CatalogPackageMetadata metadata, IReadOnlyList<string> versions)
+    /// <summary>
+    /// 014 R1.2: <paramref name="installedVsVersion"/> is the installed version compared with this one. A row WinGet didn't
+    /// match itself (002 R6.4) never claims a direction.
+    /// </summary>
+    internal static VersionDirection Direction(CompareResult? installedVsVersion, bool installed, bool primaryMatch) =>
+        !installed ? VersionDirection.NotInstalled
+        : !primaryMatch ? VersionDirection.Unknown
+        : installedVsVersion switch
+        {
+            CompareResult.Equal => VersionDirection.Installed,
+            CompareResult.Greater => VersionDirection.Older,
+            CompareResult.Lesser => VersionDirection.Newer,
+            _ => VersionDirection.Unknown,
+        };
+
+    private static PackageDetails ToDetails(CatalogPackageMetadata metadata, IReadOnlyList<PackageVersion> versions)
     {
         var tags = metadata.Tags;
         var tagList = new List<string>(tags.Count);

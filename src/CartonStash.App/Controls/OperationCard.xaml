@@ -144,6 +144,18 @@
                     Content="Restart CartonStash"
                     Style="{StaticResource AccentButtonStyle}"
                     Visibility="{x:Bind Operation.CanRestartApp, Mode=OneWay}" />
+                <!-- 014 R3.5, R3.7 -->
+                <Button
+                    AutomationProperties.Name="{x:Bind Operation.UninstallThenInstallName, Mode=OneWay}"
+                    Command="{x:Bind Operation.UninstallThenInstallCommand, Mode=OneWay}"
+                    Content="{x:Bind Operation.UninstallThenInstallText, Mode=OneWay}"
+                    Visibility="{x:Bind Operation.CanUninstallThenInstall, Mode=OneWay}" />
+                <Button
+                    AutomationProperties.Name="{x:Bind Operation.InstallPreviousName, Mode=OneWay}"
+                    Command="{x:Bind Operation.InstallPreviousCommand, Mode=OneWay}"
+                    Content="{x:Bind Operation.InstallPreviousText, Mode=OneWay}"
+                    Style="{StaticResource AccentButtonStyle}"
+                    Visibility="{x:Bind Operation.CanInstallPrevious, Mode=OneWay}" />
                 <Button
                     AutomationProperties.Name="{x:Bind ui:Ui.Format('Retry {0}', Operation.Title), Mode=OneWay}"
                     Command="{x:Bind Operation.RetryCommand, Mode=OneWay}"
