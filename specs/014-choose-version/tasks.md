@@ -111,6 +111,21 @@ every commit (Q4). Manual checks run in the CartonStash-Test VM (or Windows Sand
   files and in the roadmap.
   - Verify: review.
 
+## Amendment R1.6, R1.7 (2026-11-09)
+
+- [x] **T14.** `VersionItem` gets `IsSelected`, `ShowAction`, `ActionText`, `ActionName`, kept by
+  `PackageDetailsViewModel` (R1.6, R1.4).
+  - Verify: unit tests `VersionAction_ShownOnlyOnSelectedItem_R1_6`, `VersionAction_FollowsBusyAndInstalled_R1_6`.
+- [x] **T15.** `PackageDetailsPane.xaml`: the button moves into the item template; the one under the list goes (R1.6).
+  - Verify: build; VM check in T17.
+- [x] **T16.** `DetailsBehavior` split into `Attach` and `AttachList`; `UpdatesPage` attaches the Excluded list (R1.7).
+  - Verify: build; VM check in T17.
+- [x] **T17.** VM: jq going back with the box checked, then from its Excluded row: details open (click and Enter), the
+  action shows on the selected line, going back further works, Esc returns focus to the row. PowerShell with **Show
+  all versions**: select one near the end, the button is on that line. Keyboard and Narrator names; light, dark, high
+  contrast. Changelog line.
+  - Verify: entries in the log below.
+
 ## Manual verification log
 
 | Criterion | Date | Result | Notes |
@@ -135,3 +150,9 @@ every commit (Q4). Manual checks run in the CartonStash-Test VM (or Windows Sand
 | T12, keyboard and names (R1.4, Q5) | 2026-11-09 | Pass | Focus in the list, Down → "1.8.1", Space selects, Tab → button "Update jq to 1.8.1". Dialog checkbox and card buttons are found by their accessible names. Enter on the button not pressed (UIA Invoke used for the runs) |
 | T12, themes | 2026-11-09 | Pass | Light, dark and high contrast screenshots of the list: selection and "(installed)" readable |
 | T12, not checked | 2026-11-09 | — | A Store package (msstore isn't accepted in the VM; no actions for one-version packages is a unit test), the notification text, and the Updates page's excluded list. No crashes in any run |
+| T17, button on the line (R1.6) | 2026-11-09 | Pass | jq 1.8.1, select 1.8.0: "Go back to jq 1.8.0" is inside item "1.8.0" (selected), on screen; the only version button shown |
+| T17, Show all keeps it (R1.6) | 2026-11-09 | Pass | PowerShell, select 7.6.8.0, then **Show all versions** (112): still selected, its button still on its line. Item 110 of 112 (6.0.2.0): button on that line, on screen |
+| T17, Excluded row opens details (R1.7) | 2026-11-09 | Pass | After going back to 1.8.0 with the box ticked, jq is in **Excluded**. Mouse click opens its details; Esc closes and focus returns to the jq row; Enter opens them again |
+| T17, going back further (R1.7, R3.1) | 2026-11-09 | Pass | From that pane: 1.8.0 → 1.7.1, the dialog has no box (already excluded), installed 1.7.1 ("Chosen version: 1.7.1"), still excluded. The 1.7.1 line was below the pane's fold because UIA selection doesn't scroll; a click or the arrow keys scroll it into view |
+| T17, keyboard (R1.4, R1.6) | 2026-11-09 | Pass | Down, Space → item "1.8.1"; Tab → button "Update jq to 1.8.1"; Shift+Tab → back to the item |
+| T17, themes | 2026-11-09 | Pass | Light, dark, high contrast: the selected line and its button readable. No crashes |

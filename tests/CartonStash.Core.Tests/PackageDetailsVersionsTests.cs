@@ -3,7 +3,7 @@ using CartonStash.Core.ViewModels;
 
 namespace CartonStash.Core.Tests;
 
-/// <summary>014 T8: the version list in the details pane (R1.1, R1.3 to R1.5).</summary>
+/// <summary>014 T8, T14: the version list in the details pane (R1.1, R1.3 to R1.6).</summary>
 public class PackageDetailsVersionsTests
 {
     private static readonly PackageInfo PowerToys = new("Microsoft.PowerToys", "PowerToys", "0.102.0", "0.105.0", "winget", true);
@@ -143,5 +143,45 @@ public class PackageDetailsVersionsTests
         await vm.LoadAsync(new PackageRowViewModel(PowerToys, app.Actions, RowActions.All));
 
         Assert.Null(vm.SelectedVersion);
+    }
+
+    [Fact] // R1.6
+    public async Task VersionAction_ShownOnlyOnSelectedItem_R1_6()
+    {
+        var (_, vm) = await Open(PowerToys, Versions());
+        Assert.DoesNotContain(vm.ShownVersions, v => v.ShowAction);
+
+        vm.SelectedVersion = Item(vm, "0.103.0");
+        Assert.Equal(["0.103.0"], vm.ShownVersions.Where(v => v.ShowAction).Select(v => v.Version.Version));
+
+        vm.SelectedVersion = Item(vm, "0.101.0");
+        Assert.Equal(["0.101.0"], vm.ShownVersions.Where(v => v.ShowAction).Select(v => v.Version.Version));
+        Assert.Equal("Go back to this version", Item(vm, "0.101.0").ActionText);
+        Assert.Equal("Go back to PowerToys 0.101.0", Item(vm, "0.101.0").ActionName);
+
+        // Show all keeps the same items, so the selected line keeps its button.
+        vm.ShowAllVersionsCommand.Execute(null);
+        Assert.Same(vm.SelectedVersion, Item(vm, "0.101.0"));
+        Assert.True(Item(vm, "0.101.0").ShowAction);
+    }
+
+    [Fact] // R1.6, R1.1, 003 R4.2
+    public async Task VersionAction_FollowsBusyAndInstalled_R1_6()
+    {
+        var (app, vm) = await Open(PowerToys, Versions());
+
+        vm.SelectedVersion = Item(vm, "0.102.0");
+        Assert.False(Item(vm, "0.102.0").ShowAction);
+
+        var item = Item(vm, "0.103.0");
+        vm.SelectedVersion = item;
+        Assert.True(item.RunCommand.CanExecute(null));
+        await vm.Row!.UpdateCommand.ExecuteAsync(null);
+        Assert.False(item.RunCommand.CanExecute(null));
+        app.Installer.Complete(PowerToys.Id);
+        Assert.True(item.RunCommand.CanExecute(null));
+
+        await item.RunCommand.ExecuteAsync(null);
+        Assert.Equal(["0.103.0"], app.Installer.Versions.Skip(1));
     }
 }

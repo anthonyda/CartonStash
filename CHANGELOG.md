@@ -2,6 +2,13 @@
 
 What's new in each version of CartonStash. Get it from the [Microsoft Store](https://apps.microsoft.com/detail/9MT37M7DBZRK).
 
+## 1.2.1
+
+### Fixed
+
+- **The version button is where you click.** In **Available versions**, the button to install, update to or go back to a version now shows on the line of the version you select. It used to sit under the whole list, often out of sight.
+- **Excluded packages open their details.** On the Updates page, a package in **Excluded** now opens its details when you click it, like the others, so you can choose another version for it. A package lands there after you go back to an older version.
+
 ## 1.2.0
 
 ### New

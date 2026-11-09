@@ -70,10 +70,18 @@ public sealed partial class PackageDetailsPane : UserControl
     // 014 R1.1: SelectedItem is an object, which x:Bind can't bind two-way to the view model's VersionItem.
     private void VersionList_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (ViewModel is { } vm)
+        if (ViewModel is not { } vm)
         {
-            vm.SelectedVersion = VersionList.SelectedItem as VersionItem;
+            return;
         }
+        // Show all versions replaces the list, which clears the selection: the same item is still there, so keep it
+        // selected and its button on its line (R1.6).
+        if (VersionList.SelectedItem is null && vm.SelectedVersion is { } kept && vm.ShownVersions.Contains(kept))
+        {
+            DispatcherQueue.TryEnqueue(() => VersionList.SelectedItem = kept);
+            return;
+        }
+        vm.SelectedVersion = VersionList.SelectedItem as VersionItem;
     }
 
     // 005 R1.3: default browser, no embedded web content. The view model only exposes http(s) URIs.
