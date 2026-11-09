@@ -114,7 +114,9 @@
                     AutomationProperties.HeadingLevel="Level2"
                     Style="{StaticResource BodyStrongTextBlockStyle}"
                     Text="Excluded" />
+                <!-- 014 R1.7: clicking a row opens details, as in the list above (005) -->
                 <ListView
+                    x:Name="ExcludedList"
                     MaxHeight="240"
                     AutomationProperties.Name="Excluded from update checks"
                     ItemsSource="{x:Bind ViewModel.Excluded}"

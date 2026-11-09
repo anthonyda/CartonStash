@@ -111,6 +111,21 @@ every commit (Q4). Manual checks run in the CartonStash-Test VM (or Windows Sand
   files and in the roadmap.
   - Verify: review.
 
+## Amendment R1.6, R1.7 (2026-11-09)
+
+- [x] **T14.** `VersionItem` gets `IsSelected`, `ShowAction`, `ActionText`, `ActionName`, kept by
+  `PackageDetailsViewModel` (R1.6, R1.4).
+  - Verify: unit tests `VersionAction_ShownOnlyOnSelectedItem_R1_6`, `VersionAction_FollowsBusyAndInstalled_R1_6`.
+- [x] **T15.** `PackageDetailsPane.xaml`: the button moves into the item template; the one under the list goes (R1.6).
+  - Verify: build; VM check in T17.
+- [x] **T16.** `DetailsBehavior` split into `Attach` and `AttachList`; `UpdatesPage` attaches the Excluded list (R1.7).
+  - Verify: build; VM check in T17.
+- [ ] **T17.** VM: jq going back with the box checked, then from its Excluded row: details open (click and Enter), the
+  action shows on the selected line, going back further works, Esc returns focus to the row. PowerShell with **Show
+  all versions**: select one near the end, the button is on that line. Keyboard and Narrator names; light, dark, high
+  contrast. Changelog line.
+  - Verify: entries in the log below.
+
 ## Manual verification log
 
 | Criterion | Date | Result | Notes |

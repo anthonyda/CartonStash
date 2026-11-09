@@ -18,10 +18,9 @@ internal static class DetailsBehavior
 
     private const double PaneWidth = 380;
 
-    public static void Attach(Page page, ListView list, PackageDetailsViewModel details, FrameworkElement pane)
+    /// <summary>The page's part: side by side or covering, and Esc closes the pane.</summary>
+    public static void Attach(Page page, PackageDetailsViewModel details, FrameworkElement pane)
     {
-        PackageRowViewModel? opener = null;
-
         // Measured on the page, not the window, so the navigation pane's width is accounted for.
         page.SizeChanged += (_, e) =>
         {
@@ -29,16 +28,6 @@ internal static class DetailsBehavior
             Grid.SetColumn(pane, sideBySide ? 1 : 0);
             Grid.SetColumnSpan(pane, sideBySide ? 1 : 2);
             pane.Width = sideBySide ? PaneWidth : double.NaN;
-        };
-
-        list.IsItemClickEnabled = true;
-        list.ItemClick += (_, e) =>
-        {
-            if (e.ClickedItem is PackageRowViewModel row)
-            {
-                opener = row;
-                _ = details.LoadAsync(row);
-            }
         };
 
         var escape = new KeyboardAccelerator { Key = VirtualKey.Escape };
@@ -53,9 +42,35 @@ internal static class DetailsBehavior
         page.KeyboardAccelerators.Add(escape);
         // Otherwise WinUI shows an "Esc" tooltip when hovering anything on the page.
         page.KeyboardAcceleratorPlacementMode = KeyboardAcceleratorPlacementMode.Hidden;
+    }
+
+    /// <summary>A list's part: click or Enter on a row opens the pane, and closing it focuses that row again.
+    /// A page can attach several lists (014 R1.7: the Updates page's Excluded list).</summary>
+    public static void AttachList(ListView list, PackageDetailsViewModel details)
+    {
+        PackageRowViewModel? opener = null;
+
+        list.IsItemClickEnabled = true;
+        list.ItemClick += (_, e) =>
+        {
+            if (e.ClickedItem is PackageRowViewModel row)
+            {
+                opener = row;
+                _ = details.LoadAsync(row);
+            }
+        };
 
         details.PropertyChanged += (_, e) =>
         {
+            if (e.PropertyName != nameof(PackageDetailsViewModel.Row) && e.PropertyName != nameof(PackageDetailsViewModel.IsOpen))
+            {
+                return;
+            }
+            // Another list opened the pane: this one no longer owns the focus return.
+            if (opener is not null && details.Row != opener)
+            {
+                opener = null;
+            }
             if (e.PropertyName == nameof(PackageDetailsViewModel.IsOpen) && !details.IsOpen && opener is not null)
             {
                 list.ScrollIntoView(opener);

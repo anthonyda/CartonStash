@@ -12,7 +12,8 @@ public sealed partial class SearchPage : Page
     {
         ViewModel = App.Services.GetRequiredService<SearchViewModel>();
         InitializeComponent();
-        DetailsBehavior.Attach(this, ResultsList, ViewModel.Details, DetailsPane);
+        DetailsBehavior.Attach(this, ViewModel.Details, DetailsPane);
+        DetailsBehavior.AttachList(ResultsList, ViewModel.Details);
     }
 
     public SearchViewModel ViewModel { get; }
