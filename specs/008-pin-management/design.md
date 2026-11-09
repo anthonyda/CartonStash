@@ -1,6 +1,6 @@
 # 008 – Pin management: Design
 
-**Status:** Draft, updated 2026-10-30, **needs review**
+**Status:** Draft, updated 2026-11-09 for 010 (exclusions, background checks) and 014 (choose version), **needs review**
 **Requirements:** [requirements.md](requirements.md)
 
 ## Overview
@@ -45,13 +45,15 @@ Reason: pins are a core WinGet feature users rely on with "update all", and WinG
 | Core/Services | `InstalledPackagesStore` | Loads installed rows, pins and the explicit list in parallel; joins on (Id, Source) to `IsPrimaryMatch` rows only (R7.1); pin failure → `PinStatusAvailable = false` (R1.4); explicit-list failure → nothing marked (R6.3) | changed |
 | Core/ViewModels | `PinActionsViewModel` | Pin / Block / Range / Unpin commands per row, enablement, confirmation for replace, range prefill (R2.x, R3.1) | new |
 | Core/ViewModels | `InstalledViewModel` | `ShowPinnedOnly` + `PinnedCount`, in `ApplyFilter()` with the 002 R8 filters (R1.3) | changed |
-| Core/ViewModels | `UpdatesViewModel` | Excludes Pin/Block and explicit-only packages from Update all, skipped count in confirmation, Update disabled for Block (R4.x, R6.x) | changed |
+| Core/ViewModels | `UpdatesViewModel` | Excludes Pin/Block and explicit-only packages from Update all, the badge and the title, lists them with the 010 exclusions, skipped count in confirmation, Update disabled for Block (R4.x, R6.x) | changed |
+| Core/Services | Background check runner (010) | Applies the same rule before counting (R4.5) | changed |
+| Core/ViewModels | Version list (014) | Disables version actions a pin forbids, only if T2 says COM doesn't enforce them (R4.7) | changed, conditional |
 | Core/ViewModels | `SettingsViewModel` | Remove all pins (R3.2) | changed |
 | App | `PinBadge` control, Pin `MenuFlyout`, range `ContentDialog` | View only | new |
 
 ## WinGet CLI usage
 
-Every call adds `--disable-interactivity --accept-source-agreements` so nothing can prompt and hang. *Decided 2026-10-30:* keep `--accept-source-agreements`, even though 006 R3.3 otherwise leaves accepting to the user. **Reopen before 008 resumes:** this flag records acceptance in WinGet for the user, and 006 amendment R3.4 now leaves `msstore` out until the user accepts in the app.
+Every call adds `--disable-interactivity --accept-source-agreements` so nothing can prompt and hang. *Decided 2026-10-30:* keep `--accept-source-agreements`, even though 006 R3.3 otherwise leaves accepting to the user. **Reopen before 008 resumes:** this flag records acceptance in WinGet for the user, and 006 amendment R3.4 now leaves `msstore` out until the user accepts in the app. *Proposed 2026-11-09 (open question in requirements):* drop the flag; pass `--source <name>` once per source that has no agreements or was accepted in the app (006 R3.8), the same set the background check refreshes (010).
 
 | Action | Command |
 |--------|---------|
@@ -134,6 +136,37 @@ second table under "The following packages have an upgrade available, but requir
   - Same question for Block and for Pin with Update all: if COM ignores pins, R4.1/R4.2 are enforced by the
     app alone (already the design).
 
+## Interaction with 010 (exclusions, background checks)
+
+Added 2026-11-09. Today `UpdatesViewModel` splits rows into `Updates` and `Excluded` by `row.IsExcluded`
+(`ExcludedPackageIds` in the settings), and Update all, the badge and the title use `Updates` only.
+
+- One rule decides "not in Update all": `IsExcluded || Pin is { Type: Pinning or Blocking } || RequiresExplicitUpgrade`.
+  The `Excluded` section takes all of them (R4.6); each row's badges show every reason (Excluded, Pinned, Blocked,
+  Manual update only). A Gated row stays in `Updates`.
+- The badge, the title and Update all's confirmation count from that same rule (R4.4). Skipped count in the
+  confirmation counts each package once: "Update 5 packages? 3 will be skipped (excluded, pinned or manual only)."
+- Removing an exclusion in Settings (010 R5.4) doesn't move a pinned row back into `Updates`; unpinning does, after
+  `ReloadPinsAsync`.
+- **Background check (R4.5):** the runner (010 design, `GetInstalledAsync` then the history entry) also calls
+  `IPinService.ListAsync` and the explicit list, with the same 30 s timeout, and applies the rule above before counting.
+  On any CLI failure it counts as today and writes no "Pin status unavailable" anywhere (no window to show it in). The
+  runner runs packaged at sign-in (010 R3.14); starting the App Execution Alias from there is checked in T1.
+- 010's "exclusion never stops WinGet from updating it" stays true; pins are the WinGet-side setting, exclusions the
+  app-side one. Settings' excluded list (010 R5.4) and Remove all pins (R3.2) stay separate.
+
+## Interaction with 014 (choose version)
+
+Added 2026-11-09. 014 installs a chosen version through COM, also to go back to an older one, and offers to exclude
+the package afterwards (014 R3.2).
+
+- T2 also checks whether a COM install of a specific version honours Block and Gate.
+- If it does: WinGet's refusal shows through the existing result mapping, nothing more to do.
+- If it doesn't (R4.7): the version list disables **Update to / Go back to / Install this version** on a Blocked
+  package, and on a Gated package for versions outside the range (same prefix rule as R4.3), tooltip
+  "Blocked by a pin. Unpin to change the version." / "Outside the pin range *range*".
+- 014 R3.2 keeps using the exclusion, not a pin (014 out of scope: no pin writes there).
+
 ## UI
 
 ```
@@ -169,6 +202,9 @@ Git        Git.Git     2.56.0   winget   📌 Pinned         [⋯]
 | Command lines, exit-code mapping, timeout, cancellation | `WinGetCliPinServiceTests` with a fake `IProcessRunner` |
 | R6.x, parsing | `ExplicitUpgradeParserTests` on captured output (dev PC output incl. Miniconda, no updates, both tables, French, garbage) |
 | R1.3, R4.1, R4.2, R6.2, R7.1 | `InstalledViewModelTests`, `UpdatesViewModelTests`, store join tests |
+| R4.4, R4.6 | `UpdatesViewModelTests`: excluded + pinned + manual-only rows in one section, counted once; badge and title match Update all |
+| R4.5 | Background check runner tests with a fake `IPinService`: pins left out of the count; CLI failure → counted as today |
+| R4.7 | Version list view model tests (014) with Blocked and Gated packages, if T2 says COM doesn't enforce them |
 | Real pin add / list / remove round trip | Integration test (Windows only), cleans up its pin |
 | R1.2, R2.6, R3.2, R5.3, accessibility | Manual on the user's PC |
 
