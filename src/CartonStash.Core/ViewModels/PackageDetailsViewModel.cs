@@ -84,7 +84,7 @@ public sealed partial class PackageDetailsViewModel(IPackageService packages, IR
     [NotifyPropertyChangedFor(nameof(HasError))]
     public partial string? ErrorMessage { get; private set; }
 
-    /// <summary>The version picked in the list; its action is the one button under it (014 R1.1).</summary>
+    /// <summary>The version picked in the list; its action shows on its line (014 R1.1, R1.6).</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowVersionAction), nameof(CanRunVersion), nameof(VersionActionText), nameof(VersionActionName))]
     [NotifyCanExecuteChangedFor(nameof(RunVersionCommand))]
@@ -105,10 +105,27 @@ public sealed partial class PackageDetailsViewModel(IPackageService packages, IR
     public bool ShowVersionsText => HasVersions && !OffersVersionActions;
 
     /// <summary>The newest 10, or all of them (014 R1.3), with the installed one marked.</summary>
-    public IReadOnlyList<VersionItem> ShownVersions => Details is { } d
-        ? [.. d.Versions.Take(ShowingAllVersions ? d.Versions.Count : VersionsShown)
-            .Select(v => new VersionItem(v, VersionLabel(v, Row?.Package.InstalledVersion)))]
-        : [];
+    public IReadOnlyList<VersionItem> ShownVersions => [.. _versionItems.Take(ShowingAllVersions ? _versionItems.Count : VersionsShown)];
+
+    // Built once per Details, so Show all keeps the same items and the selection (014 R1.6).
+    private IReadOnlyList<VersionItem> _versionItems = [];
+
+    partial void OnDetailsChanged(PackageDetails? value) =>
+        _versionItems = value is { } d
+            ? [.. d.Versions.Select(v => new VersionItem(v, VersionLabel(v, Row?.Package.InstalledVersion), Row?.Name ?? "", RunVersionCommand))]
+            : [];
+
+    partial void OnSelectedVersionChanged(VersionItem? oldValue, VersionItem? newValue)
+    {
+        if (oldValue is not null)
+        {
+            oldValue.IsSelected = false;
+        }
+        if (newValue is not null)
+        {
+            newValue.IsSelected = true;
+        }
+    }
 
     public bool HasMoreVersions => OffersVersionActions && !ShowingAllVersions && Details is { Versions.Count: > VersionsShown };
 
@@ -118,21 +135,10 @@ public sealed partial class PackageDetailsViewModel(IPackageService packages, IR
     /// <summary>Not while the package is queued or being changed (014 R1.5, 003 R4.2).</summary>
     public bool CanRunVersion => ShowVersionAction && Row?.IsBusy == false;
 
-    public string VersionActionText => SelectedVersion?.Version.Direction switch
-    {
-        VersionDirection.NotInstalled => "Install",
-        VersionDirection.Newer => "Update to this version",
-        VersionDirection.Older => "Go back to this version",
-        _ => "Install this version",
-    };
+    public string VersionActionText => SelectedVersion?.ActionText ?? "";
 
     /// <summary>The button's accessible name, with the package and the version (014 R1.4).</summary>
-    public string VersionActionName => SelectedVersion is not { } item ? "" : (item.Version.Direction, Row?.Name ?? "", item.Version.Version) switch
-    {
-        (VersionDirection.Newer, var name, var v) => $"Update {name} to {v}",
-        (VersionDirection.Older, var name, var v) => $"Go back to {name} {v}",
-        (_, var name, var v) => $"Install {name} {v}",
-    };
+    public string VersionActionName => SelectedVersion?.ActionName ?? "";
 
     [RelayCommand]
     private void ShowAllVersions() => ShowingAllVersions = true;
