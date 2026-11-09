@@ -1,6 +1,6 @@
 # 014 – Install a chosen version: Requirements
 
-**Status:** Done (2026-11-09). Approved 2026-11-08, with the proposed answers to Q1, Q2 and Q4; Q3 and Q5 decided after T1 (amendments R2.5, R3.3 to R3.7)
+**Status:** Done (2026-11-09). Approved 2026-11-08, with the proposed answers to Q1, Q2 and Q4; Q3 and Q5 decided after T1 (amendments R2.5, R3.3 to R3.7). **Amendment R1.6, R1.7 (2026-11-09): Approved 2026-11-09, with the proposed answer to Q6**
 **Depends on:** 003 (operation queue, agreements, results), 004 (updates), 005 (details pane, R2.1 version list),
 010 (R5 exclusions from update checks)
 **Replaces:** 005's out-of-scope line "Installing a specific (older) version. The version list is information only in v1."
@@ -39,6 +39,8 @@ reason to look at it is a bad update: the user wants the version that worked, an
 | R1.3 | US1   | The list shall show the newest 10 versions, with **Show all versions** to see the rest. The installed version stays marked (005 R2.1). |
 | R1.4 | –     | Every version action shall be keyboard reachable and have an accessible name with the package and the version, for example "Go back to PowerToys 0.101.0" (constitution Q5). |
 | R1.5 | US1   | The actions shall not be offered for a package whose source lists only one version (for example the Microsoft Store source), for an installed package WinGet doesn't manage, or while the package is queued or being changed (003 R4.2). The list itself stays. |
+| R1.6 | US1, US2 | The version action shall be visible next to the selected version, wherever that version is in the list, without scrolling past the rest of the list. *(Added 2026-11-09, amendment: the button sat under the list, out of view below 10 versions or after **Show all versions**.)* |
+| R1.7 | US2   | A package in the Updates page's **Excluded** list (010 R5.5) shall open the details pane when clicked or on Enter, like any row there (005 R1.1), so its versions can be acted on. *(Added 2026-11-09, amendment: going back with R3.2's box checked moves the package to that list, which didn't open details.)* |
 
 ### R2. Running it
 
@@ -61,6 +63,25 @@ reason to look at it is a bad update: the user wants the version that worked, an
 | R3.5 | US2   | When going back fails (R3.3), the result shall offer **Uninstall, then install {version}**. When the user presses it, the app shall ask for confirmation naming the package, the installed version and the chosen one, and saying that the program's settings and data may be lost. If the user confirms, the app shall uninstall the package and then, only if the uninstall succeeds, install the chosen version. The R3.2 choice carries over. *(Added 2026-11-08, Q5.)* |
 | R3.6 | US2   | If that uninstall fails, then the app shall install nothing, and the result shall say why, as for any uninstall (003 R5.2). *(Added 2026-11-08, Q5.)* |
 | R3.7 | US2   | If the install fails after the uninstall succeeded, then the result shall say that the package is no longer installed, and offer **Install {previous version}**, the version that was installed before. *(Added 2026-11-08, Q5. T1: Windows Terminal ends this way.)* |
+
+## Amendment R1.6, R1.7 (2026-11-09, from use)
+
+Two problems found after release, in the details pane and on the Updates page:
+
+1. **The action is out of sight.** The one button sits under the list (design, UI). With 10 versions it's usually
+   below the fold of the pane, and after **Show all versions** it's under 100 or more. The user selects a version and
+   sees nothing happen. R1.6.
+2. **Excluded packages can't be opened.** The Updates page's **Excluded** list has no selection and no click, so its
+   packages never open the details pane. A package lands there after going back with R3.2's box checked, which is
+   exactly when the user may want another version (go back further, or update to a middle one). R1.7.
+
+The Installed page already opens excluded packages, so R1.7 only changes the Updates page. Settings' excluded list
+(010 R5.4) stays a list of IDs with **Remove**: it has no rows to open.
+
+- **Q6. Where the action goes (R1.6).** *Proposed: inside the selected item, right-aligned on its line* ("1.8.1 ·
+  [Update to this version]"). It's where the user just clicked, and stays one tab stop (Tab from the selected item
+  goes to its button), so R1.4 and the "80 tab stops" reason in the design still hold. The alternative is the button
+  above the list, under the heading: simpler, but off screen again once the user scrolls into a long list.
 
 ## Out of scope
 

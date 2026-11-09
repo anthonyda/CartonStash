@@ -1,6 +1,6 @@
 # 014 – Install a chosen version: Design
 
-**Status:** Done (2026-11-09). Approved 2026-11-08
+**Status:** Done (2026-11-09). Approved 2026-11-08. **Amendment R1.6, R1.7 (2026-11-09): Approved 2026-11-09, with the proposed answer to Q6**
 **Requirements:** [requirements.md](requirements.md)
 
 ## Overview
@@ -208,6 +208,34 @@ One list and one button, rather than a button per version, so a package with 80 
 
 `CanRunVersion` (a plain bool, see the x:Bind gotcha) is false while the row is busy, so the button follows 003 R4.2.
 
+## Amendment: action on the selected version, excluded rows open details (R1.6, R1.7)
+
+**R1.6, the action in the item.** `VersionItem` gains what its line needs, so the template binds plain values (the
+x:Bind gotcha):
+
+| Member | Meaning |
+|--------|---------|
+| `IsSelected` (bool, observable) | Set by `PackageDetailsViewModel` when `SelectedVersion` changes; only one item has it |
+| `ShowAction` (bool, observable) | `IsSelected` and the pane's `ShowVersionAction` |
+| `ActionText`, `ActionName` | Today's `VersionActionText` and `VersionActionName` for this item (R1.1, R1.4) |
+
+The item template becomes a two-column `Grid`: the label, then the `Button` (right-aligned, `Visibility` from
+`ShowAction`, `Command` the pane's `RunVersionCommand`, so `CanRunVersion` and 003 R4.2 still disable it). The button
+under the list goes. **Show all versions** stays under the list, since it belongs at the end.
+
+- The button is compact (`Padding="8,2"`) so a selected line doesn't grow taller than the others by much.
+- Keyboard: arrow keys move in the list as today; Tab from the selected item reaches its button, Shift+Tab goes back.
+  Narrator reads the item ("1.8.1"), then the button ("Update jq to 1.8.1").
+- `ShowVersionAction` and `CanRunVersion` stay on the view model, used by the items and the tests.
+
+**R1.7, excluded rows open details.** `DetailsBehavior.Attach(page, list, details, pane)` does two things today: the
+page's layout and Esc, and one list's click and focus return. It splits into `Attach(page, details, pane)` and
+`AttachList(list, details)`, so `UpdatesPage` attaches both `UpdatesList` and the new `ExcludedList`. Focus goes back
+to whichever row opened the pane. The Excluded list keeps `SelectionMode="None"` (it has no checkboxes: Update
+selected and Update all leave it out, 010 R5.9) and gets item click from `AttachList`, as the other lists do.
+
+No Core change for R1.7: excluded rows are already `PackageRowViewModel`s with their `PackageActions`.
+
 ## Testing
 
 | Requirement | Test |
@@ -225,6 +253,8 @@ One list and one button, rather than a button per version, so a package with 80 
 | R3.6 | A failed or cancelled uninstall queues no install (unit) |
 | R3.7 | `AfterUninstallOutcome` wording; `CanInstallPrevious` only after an `AfterUninstall` failure; it queues the previous version without flags (unit) |
 | All | VM: the T1 packages, through the app: install an old version, update to a middle one, go back, Retry after a refusal, exclusion appears in Settings; keyboard and Narrator names; light, dark, high contrast |
+| R1.6 | `PackageDetailsViewModel`: only the selected item has `ShowAction`; it follows the selection, busy, and the installed version; `ActionText`/`ActionName` per direction (unit). VM: the button shows on the selected line in a 10-item list and after Show all |
+| R1.7 | VM: click and Enter on an Excluded row open its details; Esc returns focus to that row; going back from there works |
 | Live | Integration test: `GetDetailsAsync` on an installed package returns directions consistent with `IsUpdateAvailable` |
 
 ## Risks
