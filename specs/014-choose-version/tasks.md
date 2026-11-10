@@ -149,7 +149,7 @@ Approved 2026-11-10: Q7 with a notice in the confirmation, Q8 as proposed.
 - [x] **T21.** `IPackageService.ReadInstalledAsync`, which also sets the new `PackageInfo.InstalledScope`; `PackageRowViewModel.Refresh` and the refresh after a success;
   `PackageDetailsViewModel` reloads when `Row.Package` changes (R2.6).
   - Verify: `PackageRowRefreshTests` (`*_R2_6`), `PackageDetailsVersionsTests` reload case; `dotnet test`.
-- [ ] **T22.** `PackageActions.InstallVersionAsync` reads the installed version first (R2.7), and the going-back
+- [x] **T22.** `PackageActions.InstallVersionAsync` reads the installed version first (R2.7), and the going-back
   confirmation adds `ScopeNotice` (R3.8, Q7).
   - Verify: `PackageActionsVersionTests` (`*_R2_7`): differs → no dialog, nothing queued, row refreshed; same or
     null → as today. `ScopeNoticeTests` (`*_R3_8`): "Let WinGet decide" → none; a setting matching the installed

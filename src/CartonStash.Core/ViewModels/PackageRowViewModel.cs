@@ -157,7 +157,7 @@ public sealed partial class PackageRowViewModel : ObservableObject
     private void Restart() => _actions.Queue.RequestRestart();
 
     /// <summary>A version chosen in the details pane, with the row's actions (014 R1.1).</summary>
-    public Task InstallVersionAsync(PackageVersion version) => _actions.InstallVersionAsync(Package, version);
+    public Task InstallVersionAsync(PackageVersion version) => _actions.InstallVersionAsync(Package, version, Refresh); // R2.7: Refresh when the list is stale
 
     [RelayCommand]
     private void Exclude() => _exclusions?.Update(s => s.WithExcluded(Id));
