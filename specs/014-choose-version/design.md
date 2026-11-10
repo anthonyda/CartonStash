@@ -1,6 +1,6 @@
 # 014 – Install a chosen version: Design
 
-**Status:** Done (2026-11-09). Approved 2026-11-08. **Amendment R1.6, R1.7 (2026-11-09): Done**, approved with the proposed answer to Q6. **Amendment R2.6, R2.7, R3.8, R3.9 (2026-11-10): Approved** 2026-11-10, with Q7's notice added
+**Status:** Done (2026-11-09). Approved 2026-11-08. **Amendment R1.6, R1.7 (2026-11-09): Done**, approved with the proposed answer to Q6. **Amendment R2.6, R2.7, R3.8, R3.9 (2026-11-10): Approved** 2026-11-10, with Q7's notice added. **R3.8's scope source changed after T18 (Windows Installer first): waiting for review**
 **Requirements:** [requirements.md](requirements.md)
 
 ## Overview
@@ -248,35 +248,56 @@ products in the same context (per-user or per-machine), so 3.12 didn't see 3.13.
 
 ### R3.8, the installed scope
 
-`WinGetPackageInstaller.InstallAsync` already has the `CatalogPackage`, found with `localFirst: true` for anything
-but a first install. When going back (`GoesBack(kind, info, version)`), it reads
-`package.InstalledVersion.GetMetadata(PackageVersionMetadataField.InstalledScope)` and sets
-`PackageInstallScope` from a pure function:
+**Measured in T18 (2026-11-10, VM, WinGet 1.29.380, the T1 tool).** Pandoc 3.13 installed with `--scope machine`,
+then with `--scope user`, a clean checkpoint each time:
+
+| | All users | Current user |
+|---|---|---|
+| Location | `C:\Program Files\Pandoc\` | `C:\Users\tester\AppData\Local\Pandoc\` |
+| WinGet `InstalledScope` | `System` | **`System`** (wrong) |
+| Uninstall entry | HKLM | HKLM |
+| Windows Installer, `MsiGetProductInfoEx` | (not read, see T24) | `UserUnmanaged` only (1605 for the others) |
+| Going back to 3.12 with the matching scope | Ok, exit 0: MSI sets `PREVIOUSVERSIONSINSTALLED` to 3.13's code and replaces it. One entry: 3.12 | Same, per-user |
+
+So WinGet's scope can't be trusted for this MSI: it seems to come from the uninstall entry's hive, and this
+installer writes its entry under HKLM either way. Read as a per-user install, the first finding also explains itself:
+WinGet took 3.10 for an all-users install, so the update ran the all-users installer, and uninstallPrevious removed
+the per-user 3.10. With the right scope, Pandoc goes back directly; it doesn't refuse as T1's MSIs did.
+
+**Where the scope comes from.** `WinGetPackageInstaller.InstallAsync` already has the `CatalogPackage`, found with
+`localFirst: true` for anything but a first install. When going back (`GoesBack(kind, info, version)`):
+
+1. **MSI products: Windows Installer.** For each product code of the installed version
+   (`InstalledVersion.ProductCodes`, by index, W2), a new `IInstallContext` (`Core/Services`, P/Invoke to
+   `msi.dll`) calls `MsiGetProductInfoEx(code, null, context, "InstallLocation")` for the machine context, then the
+   per-user ones. The first context Windows Installer has the product in wins: machine → `System`, user (managed or
+   unmanaged) → `User`. This is Windows' own record, not a guess (P1).
+2. **Anything else, or no MSI answer: WinGet's `InstalledScope`** (`User` → `User`, `Machine` → `System`).
+3. **Neither:** the setting (006 R2.1).
 
 ```csharp
-// 014 R3.8: going back asks for the installed scope; otherwise, and when WinGet doesn't know it, the setting (006 R2.1).
-internal static PackageInstallScope ScopeFor(bool goingBack, string? installedScope, InstallScope setting) =>
+// 014 R3.8: going back asks for the installed scope; otherwise, and when nothing knows it, the setting (006 R2.1).
+internal static PackageInstallScope ScopeFor(bool goingBack, InstallScope? msiContext, string? winGetScope, InstallScope setting) =>
     !goingBack ? ToWinGet(setting)
-    : string.Equals(installedScope, "User", StringComparison.OrdinalIgnoreCase) ? PackageInstallScope.User
-    : string.Equals(installedScope, "Machine", StringComparison.OrdinalIgnoreCase) ? PackageInstallScope.System
+    : msiContext is { } c and not InstallScope.Any ? ToWinGet(c)
+    : string.Equals(winGetScope, "User", StringComparison.OrdinalIgnoreCase) ? PackageInstallScope.User
+    : string.Equals(winGetScope, "Machine", StringComparison.OrdinalIgnoreCase) ? PackageInstallScope.System
     : ToWinGet(setting);
 ```
 
-The metadata's strings (`User`, `Machine`, `Unknown` or empty) are T18's first thing to confirm, with Pandoc
-installed both ways. A read that throws counts as unknown.
+A read that throws, at either step, counts as unknown. The same read gives `PackageInfo.InstalledScope` for the
+notice below. `IInstallContext` has a fake in the tests; the pure part is `ScopeFor` and the context mapping.
 
-Expected with Pandoc: going back asks for `System`, WinGet runs the `ALLUSERS=1` MSI, and it refuses with
-"A newer version is already installed" as in T1. The R3.3 message and **Uninstall, then install** follow. The
-uninstall then install chain (R3.5) keeps the same scope for its install: `PreviousVersion` gains a sibling,
-`PreviousScope`, read before the uninstall, because after it WinGet no longer knows the scope. **Install {previous
-version}** (R3.7) uses it too.
+The uninstall then install chain (R3.5) keeps the same scope for its install: `PreviousVersion` gains a sibling,
+`PreviousScope`, read before the uninstall, because after it nothing knows the scope. **Install {previous version}**
+(R3.7) uses it too.
 
 The log adds `Scope: {user|machine|setting}` after "Chosen version", so a run says which installer was asked for.
 
 **The notice (Q7).** The confirmation is shown by `PackageActions` before anything is queued, so the installed scope
 has to reach it as a plain value (A2). `PackageInfo` gains `InstalledScope` (`InstallScope?`: `User`, `System`, or
-null when WinGet doesn't say), set by `ReadInstalledAsync` (R2.7's read, below) from the same metadata through the
-same string mapping. A pure function adds one sentence to R3.1's message:
+null when WinGet doesn't say), set by `ReadInstalledAsync` (R2.7's read, below) through the same steps as `ScopeFor`
+(Windows Installer, then WinGet). A pure function adds one sentence to R3.1's message:
 
 ```csharp
 // 014 R3.8, Q7: only when Settings names a scope and the installed one is the other.
@@ -338,6 +359,7 @@ today. With R2.6 in place this is rare: it covers changes made outside the app s
 | Layer | Type | Change |
 |-------|------|--------|
 | Core/Services | `WinGetPackageInstaller` | `ScopeFor`; counts before and after when going back; `AfterGoingBack` |
+| Core/Services | `IInstallContext`, `MsiInstallContext` | Windows Installer's context for a product code (`msi.dll`, R3.8) |
 | Core/Services | `CatalogConnection` | `CountInstalledAsync(id)` |
 | Core/Services | `IPackageService`, `WinGetPackageService` | `ReadInstalledAsync(PackageInfo)` |
 | Core/Models | `OperationOptions` | `PreviousScope` for the R3.5 chain and R3.7 |
@@ -370,7 +392,7 @@ today. With R2.6 in place this is rare: it covers changes made outside the app s
 | R1.6 | `PackageDetailsViewModel`: only the selected item has `ShowAction`; it follows the selection, busy, and the installed version; `ActionText`/`ActionName` per direction (unit). VM: the button shows on the selected line in a 10-item list and after Show all |
 | R1.7 | VM: click and Enter on an Excluded row open its details; Esc returns focus to that row; going back from there works |
 | Live | Integration test: `GetDetailsAsync` on an installed package returns directions consistent with `IsUpdateAvailable` |
-| R3.8 | `ScopeFor`: going back with `User`, `Machine`, `Unknown`, empty, null; not going back → the setting, for each setting (unit). `ScopeNotice`: each setting against each installed scope and null; the confirmation carries it (unit). VM: Pandoc 3.13 for all users, go back to 3.12 → the all-users installer runs and refuses; Uninstall, then install → 3.12 for all users, one entry |
+| R3.8 | `ScopeFor`: an MSI context wins over WinGet's scope; WinGet's `User`, `Machine`, `Unknown`, empty, null without one; not going back → the setting, for each setting (unit). `MsiInstallContext` against a real product: integration. `ScopeNotice`: each setting against each installed scope and null; the confirmation carries it (unit). VM: Pandoc 3.13 for all users, then for the current user: go back to 3.12 → the matching installer runs, one entry left (T18 measured this with the tool) |
 | R3.9 | `AfterGoingBack`: more entries after → warning text and `SucceededUnconfirmed`; same count, fewer, or a null count → unchanged (unit). `PackageActions`: no exclusion after the warning (unit) |
 | R2.6 | `PackageRowViewModel`: after a success, `Refresh` with the read package updates the badge and texts; a null read leaves the row; a failure reads nothing (unit, fake service). `PackageDetailsViewModel` reloads when `Row.Package` changes (unit). VM: update Pandoc from Search, the row and the pane show 3.13 |
 | R2.7 | `PackageActions`: installed version read differs → no dialog, nothing queued, the row refreshed; same → as today; null → as today (unit) |

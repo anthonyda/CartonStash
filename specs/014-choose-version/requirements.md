@@ -99,9 +99,11 @@ version: one for the current user (`Scope: user`, `ALLUSERS=2`) and one for all 
    `%LOCALAPPDATA%\Pandoc`). Windows Installer keeps per-user and all-users products apart, so the 3.12 MSI didn't
    see 3.13: no "newer version is installed" refusal (T1's MSI result), just a second product. WinGet said Ok, the
    app said "Installed successfully" and added the exclusion. The Installed page then shows Pandoc 3.12 and Pandoc
-   3.13; Search and Updates show one row, since they show one row per WinGet ID. R3.8 asks for the installed scope,
-   so this MSI refuses as T1's did, and R3.3 and R3.5 (uninstall, then install) take over. R3.9 says so when it
-   still happens, for installers R3.8 can't steer.
+   3.13; Search and Updates show one row, since they show one row per WinGet ID. R3.8 asks for the installed scope.
+   *T18 (2026-11-10): with the matching scope, Pandoc's MSI finds 3.13 and replaces it, so going back works directly,
+   one entry left. T18 also found that WinGet reports this MSI as installed for all users even when it's installed for
+   the current user, so the design asks Windows Installer instead.* R3.9 says so when a second copy still happens,
+   for installers R3.8 can't steer.
 2. **The app went on with the old version.** After the update, the Search row and its details pane still showed
    "Installed 3.10", and the going-back operation carried 3.10 as the installed version: in the confirmation, in the
    log, and in R2.5's check, which compares with the version from before. Search rows keep the package as the search
