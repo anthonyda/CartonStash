@@ -154,7 +154,7 @@ Approved 2026-11-10: Q7 with a notice in the confirmation, Q8 as proposed.
   - Verify: `PackageActionsVersionTests` (`*_R2_7`): differs → no dialog, nothing queued, row refreshed; same or
     null → as today. `ScopeNoticeTests` (`*_R3_8`): "Let WinGet decide" → none; a setting matching the installed
     scope → none; the other scope → the sentence; unknown scope → none. The dialog message carries it.
-- [ ] **T23.** Integration test: `ReadInstalledAsync` on a package installed on the runner returns its installed
+- [x] **T23.** Integration test: `ReadInstalledAsync` on a package installed on the runner returns its installed
   version; `CountInstalledAsync` returns at least 1 for it. Tagged `Category=Integration` (R2.6, R3.9).
   - Verify: `dotnet test --filter Category=Integration`.
 - [ ] **T24.** VM, on a build from this branch, the Pandoc run from the amendment: 3.10 → update to 3.13 from Search
