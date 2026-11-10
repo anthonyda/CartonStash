@@ -37,6 +37,16 @@ public enum OperationResult
 /// <summary>A progress report from the installer service. <paramref name="Percent"/> is 0–100, or null when unknown.</summary>
 public readonly record struct OperationProgress(OperationPhase Phase, double? Percent = null);
 
+/// <summary>How WinGet ran the installer or uninstaller (003 R8.5).</summary>
+public enum OperationMode
+{
+    /// <summary>WinGet's Silent mode (msiexec <c>/quiet</c>): no window, no consent prompt from Windows Installer.</summary>
+    Silent,
+
+    /// <summary>WinGet's Default mode (msiexec <c>/passive</c>), for a package installed for all users by Windows Installer (R8.1).</summary>
+    DefaultForAllUsersMsi,
+}
+
 /// <summary>What the Activity card shows as its state (009 R1.3).</summary>
 public enum OperationState
 {
@@ -109,6 +119,9 @@ public sealed record OperationOutcome(OperationResult Result, string Message, st
 
     /// <summary>True when <see cref="Scope"/> is how the package is installed, false when it's the setting (014 R3.8).</summary>
     public bool ScopeFromInstalled { get; init; }
+
+    /// <summary>How WinGet ran it (003 R8.5).</summary>
+    public OperationMode Mode { get; init; }
 }
 
 /// <summary>
@@ -183,6 +196,9 @@ public sealed partial class PackageOperation : ObservableObject
     public InstallScope Scope { get; internal set; }
 
     public bool ScopeFromInstalled { get; internal set; }
+
+    /// <summary>From the outcome: how WinGet ran it (003 R8.5).</summary>
+    public OperationMode Mode { get; internal set; }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(StatusText), nameof(IsIndeterminate), nameof(ProgressValue))]

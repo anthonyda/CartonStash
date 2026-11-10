@@ -91,12 +91,16 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
         var name = info.Name;
         // 014 R3.8: going back asks for the scope the package is installed with; anything else uses the setting (006 R2.1).
         var goingBack = GoesBack(kind, info, version);
+        var installed = package.InstalledVersion;
+        // One read of Windows Installer's context serves both 014 R3.8 and 003 R8.1.
+        var msiContext = installed is null ? null : await Task.Run(() => InstalledScopes.MsiContextOf(installed, _installContext), cancellationToken);
         var (scope, fromInstalled) = goingBack && explicitScope is null
-            ? await Task.Run(() => ScopeFor(null, true, InstalledScopes.MsiContextOf(package.InstalledVersion, _installContext), InstalledScopes.WinGetScopeOf(package.InstalledVersion), settings.Current.InstallScope), cancellationToken)
+            ? await Task.Run(() => ScopeFor(null, true, msiContext, InstalledScopes.WinGetScopeOf(installed), settings.Current.InstallScope), cancellationToken)
             : ScopeFor(explicitScope, goingBack, null, null, settings.Current.InstallScope);
+        var mode = ModeFor(kind, installed is not null, msiContext);
         var options = new InstallOptions
         {
-            PackageInstallMode = PackageInstallMode.Silent,
+            PackageInstallMode = mode == OperationMode.DefaultForAllUsersMsi ? PackageInstallMode.Default : PackageInstallMode.Silent, // 003 R8.1
             PackageInstallScope = ToWinGet(scope),
             AcceptPackageAgreements = acceptAgreements,
             // 014 T1: Force never helped an older version go back, and it lets other warnings through.
@@ -110,7 +114,7 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
             // 014 R2.1: looked up again now, by index (W2); the source may have changed since the pane opened.
             if (FindVersion(package, version) is not { } id)
             {
-                return VersionUnavailable(info.Source) with { Scope = scope, ScopeFromInstalled = fromInstalled };
+                return VersionUnavailable(info.Source) with { Scope = scope, ScopeFromInstalled = fromInstalled, Mode = mode };
             }
             options.PackageVersionId = id;
         }
@@ -125,7 +129,7 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
         var running = await RunningFilesAfterAsync(extendedError, package);
         return MapInstallResult(kind, result.Status, result.InstallerErrorCode, result.RebootRequired, settings.Current.InstallScope,
             extendedError, name, running, goingBackTo: goingBack ? version : null)
-            with { Details = FormatDetails(result.Status.ToString(), result.InstallerErrorCode, result.ExtendedErrorCode), Scope = scope, ScopeFromInstalled = fromInstalled };
+            with { Details = FormatDetails(result.Status.ToString(), result.InstallerErrorCode, result.ExtendedErrorCode), Scope = scope, ScopeFromInstalled = fromInstalled, Mode = mode };
     }
 
     /// <summary>R3.9: the installed version's MSI product codes that Windows Installer has (W2: by index). Empty for anything else.</summary>
@@ -239,9 +243,25 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
     /// <summary>WinGet's <c>InstalledScope</c> metadata: "User" or "Machine"; anything else is unknown.</summary>
     internal static InstallScope? FromWinGetScope(string? value) => InstalledScopes.FromWinGetScope(value);
 
+    /// <summary>
+    /// 003 R8.1, R8.2: WinGet's Default mode (msiexec <c>/passive</c>) when the installed version is an MSI product that
+    /// Windows Installer has for all users: with <c>/quiet</c>, removing it fails with 1730 (admin needed) and no prompt.
+    /// Updates (Pandoc's uninstallPrevious starts with that removal), uninstalls and going back. Everything else Silent.
+    /// </summary>
+    internal static OperationMode ModeFor(OperationKind kind, bool installed, InstallScope? msiContext) =>
+        installed && msiContext == InstallScope.System && kind is OperationKind.Upgrade or OperationKind.Uninstall or OperationKind.Install
+            ? OperationMode.DefaultForAllUsersMsi
+            : OperationMode.Silent;
+
     private async Task<OperationOutcome> UninstallAsync(CatalogPackage package, string name, string? logPath, IProgress<OperationProgress> progress, CancellationToken cancellationToken)
     {
-        var options = new UninstallOptions { PackageUninstallMode = PackageUninstallMode.Silent };
+        var installed = package.InstalledVersion;
+        var msiContext = installed is null ? null : await Task.Run(() => InstalledScopes.MsiContextOf(installed, _installContext), cancellationToken);
+        var mode = ModeFor(OperationKind.Uninstall, installed is not null, msiContext);
+        var options = new UninstallOptions
+        {
+            PackageUninstallMode = mode == OperationMode.DefaultForAllUsersMsi ? PackageUninstallMode.Default : PackageUninstallMode.Silent, // 003 R8.1
+        };
         if (logPath is not null)
         {
             options.LogOutputPath = logPath;
@@ -253,7 +273,7 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
         var extendedError = result.ExtendedErrorCode?.HResult ?? 0;
         var running = await RunningFilesAfterAsync(extendedError, package);
         return MapUninstallResult(result.Status, result.UninstallerErrorCode, result.RebootRequired, extendedError, name, running)
-            with { Details = FormatDetails(result.Status.ToString(), result.UninstallerErrorCode, result.ExtendedErrorCode) };
+            with { Details = FormatDetails(result.Status.ToString(), result.UninstallerErrorCode, result.ExtendedErrorCode), Mode = mode };
     }
 
     /// <summary>

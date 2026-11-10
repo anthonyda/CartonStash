@@ -211,6 +211,7 @@ public sealed class PackageOperationQueue(IPackageInstaller installer, IOperatio
         operation.OffersUninstallFirst = outcome.OffersUninstallFirst;
         operation.Scope = outcome.Scope;
         operation.ScopeFromInstalled = outcome.ScopeFromInstalled;
+        operation.Mode = outcome.Mode;
         operation.Result = outcome.Result;
         operation.Message = outcome.Message;
         operation.Details = outcome.Details;

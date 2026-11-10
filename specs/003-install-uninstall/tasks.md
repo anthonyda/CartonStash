@@ -56,12 +56,13 @@
 
 ## Amendment R8: all-users MSI packages (2026-11-10)
 
-Starts once design.md's amendment R8 section is approved.
+Design approved 2026-11-10.
 
-- [ ] **T15.** `UsesDefaultMode` and `ModeFor` in `WinGetPackageInstaller`; `PackageInstallMode.Default` /
+- [x] **T15.** `UsesDefaultMode` and `ModeFor` in `WinGetPackageInstaller`; `PackageInstallMode.Default` /
   `PackageUninstallMode.Default` when it applies, from 014's `InstalledScopes.MsiContextOf`; `OperationOutcome.Mode`;
   the log's "Mode" line (R8.1, R8.2, R8.5).
-  - Verify: `AllUsersMsiModeTests` (`*_R8_1`, `*_R8_2`); `OperationLogStoreTests` for the line.
+  - Verify: `AllUsersMsiModeTests` (`*_R8_1`, `*_R8_2`, `*_R8_5`, the log line included). *Done 2026-11-10: one Windows
+    Installer read serves 014 R3.8 and R8.1. 785 tests pass.*
 - [ ] **T16.** `OperationProgress.MayAskPermission`, reported before WinGet starts; `PackageOperation.MayAskPermission`
   and `PermissionText`; the card's caption line (R8.3).
   - Verify: `AllUsersMsiModeTests` (`*_R8_3`); `dotnet build`; the card in T18.

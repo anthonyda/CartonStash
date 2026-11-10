@@ -170,7 +170,7 @@ Nothing is read and no process is enumerated on success or on any other failure 
 - **A portable program locked by something else (antivirus, Explorer preview):** no running file found, so R7.3 gives
   today's message. That is honest, if not more helpful.
 
-## Amendment R8: all-users MSI packages (draft, waiting for review, 2026-11-10)
+## Amendment R8: all-users MSI packages (approved 2026-11-10)
 
 **Requirements:** amendment R8 in [requirements.md](requirements.md), approved 2026-11-10 with Q8 and Q9 as proposed.
 
