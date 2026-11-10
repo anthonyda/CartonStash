@@ -146,7 +146,7 @@ Approved 2026-11-10: Q7 with a notice in the confirmation, Q8 as proposed.
   (R3.9).
   - Verify: `AfterGoingBackTests` (`*_R3_9`): more entries → the warning, `SucceededUnconfirmed`; same, fewer, null →
     unchanged. `PackageActionsVersionTests`: no exclusion after the warning.
-- [ ] **T21.** `IPackageService.ReadInstalledAsync`, which also sets the new `PackageInfo.InstalledScope`; `PackageRowViewModel.Refresh` and the refresh after a success;
+- [x] **T21.** `IPackageService.ReadInstalledAsync`, which also sets the new `PackageInfo.InstalledScope`; `PackageRowViewModel.Refresh` and the refresh after a success;
   `PackageDetailsViewModel` reloads when `Row.Package` changes (R2.6).
   - Verify: `PackageRowRefreshTests` (`*_R2_6`), `PackageDetailsVersionsTests` reload case; `dotnet test`.
 - [ ] **T22.** `PackageActions.InstallVersionAsync` reads the installed version first (R2.7), and the going-back

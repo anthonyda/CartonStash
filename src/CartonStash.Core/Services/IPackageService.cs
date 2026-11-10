@@ -21,6 +21,12 @@ public interface IPackageService
     Task<PackageDetails?> GetDetailsAsync(PackageInfo package, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// The package as WinGet lists it now, with how it's installed (014 R2.6, R2.7). Keeps <paramref name="package"/>'s
+    /// installed entry ID. Null when it can't be read: the caller keeps what it has (013 R2.3).
+    /// </summary>
+    Task<PackageInfo?> ReadInstalledAsync(PackageInfo package, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// The package's icon URL from WinGet, or null (005 R5). Works for packages from the latest search or installed list;
     /// results are cached for the session.
     /// </summary>

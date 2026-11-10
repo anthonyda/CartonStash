@@ -166,7 +166,17 @@ public sealed partial class PackageDetailsViewModel(IPackageService packages, IR
             OnPropertyChanged(nameof(CanRunVersion));
             RunVersionCommand.NotifyCanExecuteChanged();
         }
+        // 014 R2.6: the row now holds what WinGet lists after an operation (Refresh raises every property at once), so
+        // the versions' actions are read again against the new installed version.
+        if (string.IsNullOrEmpty(e.PropertyName) && IsOpen && sender is PackageRowViewModel row && row == Row
+            && !string.Equals(row.Package.InstalledVersion, _loadedFor?.InstalledVersion, StringComparison.Ordinal))
+        {
+            _ = LoadAsync(row);
+        }
     }
+
+    // The package the details were loaded for: a refresh that changes nothing doesn't reload (014 R2.6).
+    private PackageInfo? _loadedFor;
 
 
     public bool IsLoading => State == DetailsState.Loading;
@@ -255,6 +265,7 @@ public sealed partial class PackageDetailsViewModel(IPackageService packages, IR
         _currentLoad = load;
 
         Row = row;
+        _loadedFor = row.Package;
         IsOpen = true;
         Details = null;
         ErrorMessage = null;

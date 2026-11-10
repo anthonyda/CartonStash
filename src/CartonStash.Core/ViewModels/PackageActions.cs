@@ -179,6 +179,9 @@ public sealed class PackageActions(PackageOperationQueue queue, IPackageInstalle
     }
 
     /// <summary>The package's icon, for rows (005 R5). Never throws: no icon is fine.</summary>
+    /// <summary>The package as WinGet lists it now (014 R2.6, R2.7); null when it can't be read.</summary>
+    public Task<PackageInfo?> ReadInstalledAsync(PackageInfo package) => packages.ReadInstalledAsync(package);
+
     public async Task<Uri?> GetIconAsync(PackageInfo package)
     {
         if (!package.IsManaged)

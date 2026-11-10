@@ -90,7 +90,7 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
         // 014 R3.8: going back asks for the scope the package is installed with; anything else uses the setting (006 R2.1).
         var goingBack = GoesBack(kind, info, version);
         var (scope, fromInstalled) = goingBack && explicitScope is null
-            ? await Task.Run(() => ScopeFor(null, true, MsiContextOf(package.InstalledVersion), WinGetScopeOf(package.InstalledVersion), settings.Current.InstallScope), cancellationToken)
+            ? await Task.Run(() => ScopeFor(null, true, InstalledScopes.MsiContextOf(package.InstalledVersion, _installContext), InstalledScopes.WinGetScopeOf(package.InstalledVersion), settings.Current.InstallScope), cancellationToken)
             : ScopeFor(explicitScope, goingBack, null, null, settings.Current.InstallScope);
         var options = new InstallOptions
         {
@@ -174,48 +174,8 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
         : FromWinGetScope(winGetScope) is { } fromWinGet ? (fromWinGet, true)
         : (setting, false);
 
-    /// <summary>WinGet's <c>InstalledScope</c> metadata: "User" or "Machine"; anything else (Unknown, empty) is unknown.</summary>
-    internal static InstallScope? FromWinGetScope(string? value) =>
-        string.Equals(value, "User", StringComparison.OrdinalIgnoreCase) ? InstallScope.User
-        : string.Equals(value, "Machine", StringComparison.OrdinalIgnoreCase) ? InstallScope.System
-        : null;
-
-    /// <summary>Windows Installer's context for the first of the version's product codes it has (W2: by index). Null for anything else.</summary>
-    private InstallScope? MsiContextOf(PackageVersionInfo? installed)
-    {
-        try
-        {
-            var codes = installed?.ProductCodes;
-            if (codes is null)
-            {
-                return null;
-            }
-            for (var i = 0; i < codes.Count; i++)
-            {
-                if (_installContext.ContextOf(codes[i]) is { } context)
-                {
-                    return context;
-                }
-            }
-            return null;
-        }
-        catch (Exception)
-        {
-            return null; // the next source is asked (R3.8)
-        }
-    }
-
-    private static string? WinGetScopeOf(PackageVersionInfo? installed)
-    {
-        try
-        {
-            return installed?.GetMetadata(PackageVersionMetadataField.InstalledScope);
-        }
-        catch (Exception)
-        {
-            return null;
-        }
-    }
+    /// <summary>WinGet's <c>InstalledScope</c> metadata: "User" or "Machine"; anything else is unknown.</summary>
+    internal static InstallScope? FromWinGetScope(string? value) => InstalledScopes.FromWinGetScope(value);
 
     private async Task<OperationOutcome> UninstallAsync(CatalogPackage package, string name, string? logPath, IProgress<OperationProgress> progress, CancellationToken cancellationToken)
     {

@@ -14,8 +14,35 @@ namespace CartonStash.Core.Services;
 /// the host .exe must sit next to Microsoft.Management.Deployment.winmd, and WinGet collections
 /// must be read by index — <c>foreach</c>/LINQ needs IIterable, which the server doesn't marshal.
 /// </remarks>
-public sealed class WinGetPackageService(CatalogConnection connection) : IPackageService
+/// <param name="installContext">Windows Installer's context of MSI products (014 R3.8); <see cref="MsiInstallContext"/> when null.</param>
+public sealed class WinGetPackageService(CatalogConnection connection, IInstallContext? installContext = null) : IPackageService
 {
+    private readonly IInstallContext _installContext = installContext ?? new MsiInstallContext();
+
+    public async Task<PackageInfo?> ReadInstalledAsync(PackageInfo package, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            // The installed catalog correlated with the sources, as the Installed page reads it. The queue's operations
+            // invalidate the cache when they finish, so this is fresh after one (002 R1.3).
+            var found = await connection.FindByIdAsync(package.Id, package.IsManaged ? package.Source : null, localFirst: true, cancellationToken);
+            return await Task.Run(() => ToPackageInfo(found) with
+            {
+                InstalledId = package.InstalledId,
+                IsPrimaryMatch = package.IsPrimaryMatch,
+                InstalledScope = found.InstalledVersion is null ? null : InstalledScopes.Read(found.InstalledVersion, _installContext),
+            }, cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
+
     // 005 R5: version info of packages from the latest lists, so icons can be read later without searching again.
     // COM objects stay in this class (A2).
     private readonly ConcurrentDictionary<string, PackageVersionInfo> _versions = new(StringComparer.OrdinalIgnoreCase);

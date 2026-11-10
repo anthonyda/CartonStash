@@ -38,6 +38,12 @@ public sealed record PackageInfo(
     /// <summary>Installed vs available, decided by WinGet (002 R7.1). Unknown for unmanaged or uncomparable versions.</summary>
     public VersionStatus VersionStatus { get; init; }
 
+    /// <summary>
+    /// How it's installed (014 R3.8, Q7): <see cref="InstallScope.User"/> or <see cref="InstallScope.System"/>; null when
+    /// unknown or not read. Only <c>ReadInstalledAsync</c> sets it.
+    /// </summary>
+    public InstallScope? InstalledScope { get; init; }
+
     /// <summary>Identity of the row: several installed programs can share one WinGet ID (002 R6.5).</summary>
     public string Key => InstalledId ?? Id;
 
