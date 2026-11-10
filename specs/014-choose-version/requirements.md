@@ -1,6 +1,6 @@
 # 014 – Install a chosen version: Requirements
 
-**Status:** Done (2026-11-09). Approved 2026-11-08, with the proposed answers to Q1, Q2 and Q4; Q3 and Q5 decided after T1 (amendments R2.5, R3.3 to R3.7). **Amendment R1.6, R1.7 (2026-11-09): Done**, approved with the proposed answer to Q6
+**Status:** Done (2026-11-09). Approved 2026-11-08, with the proposed answers to Q1, Q2 and Q4; Q3 and Q5 decided after T1 (amendments R2.5, R3.3 to R3.7). **Amendment R1.6, R1.7 (2026-11-09): Done**, approved with the proposed answer to Q6. **Amendment R2.6, R2.7, R3.8, R3.9 (2026-11-10): Approved** 2026-11-10, Q7 with a notice to the user, Q8 as proposed
 **Depends on:** 003 (operation queue, agreements, results), 004 (updates), 005 (details pane, R2.1 version list),
 010 (R5 exclusions from update checks)
 **Replaces:** 005's out-of-scope line "Installing a specific (older) version. The version list is information only in v1."
@@ -51,6 +51,8 @@ reason to look at it is a bad update: the user wants the version that worked, an
 | R2.3 | US1   | **Retry** shall install the same chosen version again, reusing the acceptance the user gave (004 R7.3). |
 | R2.4 | –     | The row's Install and Update buttons, **Update selected** and **Update all** shall keep installing WinGet's default version, unchanged. |
 | R2.5 | US1   | When the operation succeeds, the app shall refresh the installed data (002 R1.3) and show the version WinGet reports afterwards. If WinGet still lists the version that was installed before, then the result shall say so and shall not say the operation succeeded. *(Amended 2026-11-08 during design: was "if that isn't the chosen version". 013 found that installers often list a different version than the manifest's, so that test would warn after good installs.)* |
+| R2.6 | US1, US2 | When an operation on a package succeeds, the Search page's row for it and an open details pane for it shall show the installed state WinGet reports afterwards: the installed version, the update badge, and each version's action (R1.1). *(Added 2026-11-10, amendment: after updating Pandoc 3.10 to 3.13 from Search, the row and the pane still said "Installed 3.10".)* |
+| R2.7 | US2   | When the user chooses a version action on an installed package, the app shall read the installed version from WinGet again before asking anything. If it differs from the version the pane shows, then the app shall queue nothing and refresh the row and the pane as in R2.6, so the user chooses again from the right list. If it can't be read, then the app shall go on with the version it shows. *(Added 2026-11-10, amendment: the going-back log said "Installed version: 3.10" while 3.13 was installed. Whether a version is older or newer depends on the installed one, so the app doesn't go on with a list made for another version.)* |
 
 ### R3. Going back to an older version
 
@@ -63,6 +65,8 @@ reason to look at it is a bad update: the user wants the version that worked, an
 | R3.5 | US2   | When going back fails (R3.3), the result shall offer **Uninstall, then install {version}**. When the user presses it, the app shall ask for confirmation naming the package, the installed version and the chosen one, and saying that the program's settings and data may be lost. If the user confirms, the app shall uninstall the package and then, only if the uninstall succeeds, install the chosen version. The R3.2 choice carries over. *(Added 2026-11-08, Q5.)* |
 | R3.6 | US2   | If that uninstall fails, then the app shall install nothing, and the result shall say why, as for any uninstall (003 R5.2). *(Added 2026-11-08, Q5.)* |
 | R3.7 | US2   | If the install fails after the uninstall succeeded, then the result shall say that the package is no longer installed, and offer **Install {previous version}**, the version that was installed before. *(Added 2026-11-08, Q5. T1: Windows Terminal ends this way.)* |
+| R3.8 | US2   | When going back (or installing a version WinGet can't compare, R1.2) over an installed package, the app shall ask WinGet for the installer with the scope the package is installed with (for the current user or for all users), whatever the install scope setting (006 R2.1). Only if WinGet doesn't know that scope shall the setting apply. When the setting names a scope ("Current user" or "All users") and the package is installed with the other one, R3.1's confirmation shall say that {version} will be installed {for all users / for the current user}, as {name} is now, not as the setting says. *(Added 2026-11-10, amendment, Q7: going back to Pandoc 3.12 picked the per-user MSI while 3.13 was installed for all users, so Windows Installer added 3.12 next to it.)* |
+| R3.9 | US2   | If going back succeeds and WinGet then lists more installed entries for the package than before, then the result shall be a warning, not a success. It shall say that {version} was installed next to {installed version}, not over it, that both are now installed, and that uninstalling {installed version} from the Installed page leaves only {version}. R3.2's exclusion shall not be added. *(Added 2026-11-10, amendment, Q8.)* |
 
 ## Amendment R1.6, R1.7 (2026-11-09, from use)
 
@@ -83,10 +87,46 @@ The Installed page already opens excluded packages, so R1.7 only changes the Upd
   goes to its button), so R1.4 and the "80 tab stops" reason in the design still hold. The alternative is the button
   above the list, under the heading: simpler, but off screen again once the user scrolls into a long list.
 
+## Amendment R2.6, R2.7, R3.8, R3.9 (2026-11-10, from use)
+
+Found in the test VM with Pandoc (`JohnMacFarlane.Pandoc`), a WiX MSI whose manifests list two installers per
+version: one for the current user (`Scope: user`, `ALLUSERS=2`) and one for all users (`Scope: machine`,
+`ALLUSERS=1`).
+
+1. **Going back installed a second copy.** Pandoc 3.10 updated to 3.13 from the Search page: WinGet ran the
+   all-users installer (UAC prompt, `C:\Program Files\Pandoc`). Going back to 3.12 then called `InstallPackageAsync`
+   with the scope setting, "Let WinGet decide". WinGet picked the per-user installer (`ALLUSERS=2`, no UAC,
+   `%LOCALAPPDATA%\Pandoc`). Windows Installer keeps per-user and all-users products apart, so the 3.12 MSI didn't
+   see 3.13: no "newer version is installed" refusal (T1's MSI result), just a second product. WinGet said Ok, the
+   app said "Installed successfully" and added the exclusion. The Installed page then shows Pandoc 3.12 and Pandoc
+   3.13; Search and Updates show one row, since they show one row per WinGet ID. R3.8 asks for the installed scope,
+   so this MSI refuses as T1's did, and R3.3 and R3.5 (uninstall, then install) take over. R3.9 says so when it
+   still happens, for installers R3.8 can't steer.
+2. **The app went on with the old version.** After the update, the Search row and its details pane still showed
+   "Installed 3.10", and the going-back operation carried 3.10 as the installed version: in the confirmation, in the
+   log, and in R2.5's check, which compares with the version from before. Search rows keep the package as the search
+   found it; only the Installed and Updates pages reload after an operation (002 R1.3). R2.6 and R2.7.
+
+- **Q7. The scope when the setting names one (R3.8).** If the user chose "Current user" or "All users" in Settings
+  and the package is installed with the other scope, which wins for going back? *Proposed: the installed scope.*
+  Going back replaces what is installed; with the other scope it can only add a second copy, which is what R3.8 is
+  there to stop. The setting keeps its meaning for new installs and updates (006 R2.1). The alternative is the
+  setting, and R3.9's warning when it goes wrong.
+  **Decided 2026-11-10: the installed scope, and the user is told.** R3.8's last sentence: the confirmation says so
+  when it overrides a scope chosen in Settings.
+- **Q8. After a second copy (R3.9).** *Proposed: a warning with what to do, and no button.* Which entry to remove is
+  the user's choice, and the Installed page already uninstalls one entry (002 R6.5). The alternative is an
+  **Uninstall {installed version}** button on the card, which would need its own confirmation (P2).
+  **Decided 2026-11-10: as proposed.**
+
+Not in this amendment, seen in the same runs: an update whose UAC prompt nobody answers shows "Updating…" with no
+hint about the prompt, and WinGet has by then uninstalled the old version (Pandoc's `UpgradeBehavior:
+uninstallPrevious`). That's WinGet's behaviour for any update, not 014's.
+
 ## Out of scope
 
 - Choosing a version from a row, from the Updates page or for **Update all**. They keep using the latest (R2.4).
-- Several versions of one package side by side.
+- Several versions of one package side by side. *(R3.8 and R3.9 are about not creating them by accident.)*
 - Release notes for the chosen version. The pane keeps showing the latest version's notes (012).
 - Pins (008). R3.2 uses the existing exclusions instead, which work today and need no WinGet command line.
 - Typing a version that isn't in the list, or a version range.

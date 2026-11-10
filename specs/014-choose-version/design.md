@@ -1,6 +1,6 @@
 # 014 – Install a chosen version: Design
 
-**Status:** Done (2026-11-09). Approved 2026-11-08. **Amendment R1.6, R1.7 (2026-11-09): Done**, approved with the proposed answer to Q6
+**Status:** Done (2026-11-09). Approved 2026-11-08. **Amendment R1.6, R1.7 (2026-11-09): Done**, approved with the proposed answer to Q6. **Amendment R2.6, R2.7, R3.8, R3.9 (2026-11-10): Approved** 2026-11-10, with Q7's notice added
 **Requirements:** [requirements.md](requirements.md)
 
 ## Overview
@@ -236,6 +236,120 @@ selected and Update all leave it out, 010 R5.9) and gets item click from `Attach
 
 No Core change for R1.7: excluded rows are already `PackageRowViewModel`s with their `PackageActions`.
 
+## Amendment: installed scope, second copies, fresh installed state (R2.6, R2.7, R3.8, R3.9)
+
+**What happened (VM, 2026-11-10, WinGet 1.29, Pandoc).** The upgrade from 3.10 ran the `Scope: machine` installer:
+UAC, `C:\Program Files\Pandoc`, and WinGet uninstalled 3.10 first (`UpgradeBehavior: uninstallPrevious`). Going
+back to 3.12 with `InstallPackageAsync` and `PackageInstallScope.Any` ran the `Scope: user` one. WinGet's log has
+`Installer args: /quiet /norestart /log … ALLUSERS=2` and "2 matches were found for the package". The MSI log
+installed into `C:\Users\tester\AppData\Local\Pandoc\`. Windows Installer's upgrade table only finds related
+products in the same context (per-user or per-machine), so 3.12 didn't see 3.13. Uninstall entries afterwards:
+`{34C3EAA3-…}` Pandoc 3.13 and `{671ADF5A-…}` Pandoc 3.12.
+
+### R3.8, the installed scope
+
+`WinGetPackageInstaller.InstallAsync` already has the `CatalogPackage`, found with `localFirst: true` for anything
+but a first install. When going back (`GoesBack(kind, info, version)`), it reads
+`package.InstalledVersion.GetMetadata(PackageVersionMetadataField.InstalledScope)` and sets
+`PackageInstallScope` from a pure function:
+
+```csharp
+// 014 R3.8: going back asks for the installed scope; otherwise, and when WinGet doesn't know it, the setting (006 R2.1).
+internal static PackageInstallScope ScopeFor(bool goingBack, string? installedScope, InstallScope setting) =>
+    !goingBack ? ToWinGet(setting)
+    : string.Equals(installedScope, "User", StringComparison.OrdinalIgnoreCase) ? PackageInstallScope.User
+    : string.Equals(installedScope, "Machine", StringComparison.OrdinalIgnoreCase) ? PackageInstallScope.System
+    : ToWinGet(setting);
+```
+
+The metadata's strings (`User`, `Machine`, `Unknown` or empty) are T18's first thing to confirm, with Pandoc
+installed both ways. A read that throws counts as unknown.
+
+Expected with Pandoc: going back asks for `System`, WinGet runs the `ALLUSERS=1` MSI, and it refuses with
+"A newer version is already installed" as in T1. The R3.3 message and **Uninstall, then install** follow. The
+uninstall then install chain (R3.5) keeps the same scope for its install: `PreviousVersion` gains a sibling,
+`PreviousScope`, read before the uninstall, because after it WinGet no longer knows the scope. **Install {previous
+version}** (R3.7) uses it too.
+
+The log adds `Scope: {user|machine|setting}` after "Chosen version", so a run says which installer was asked for.
+
+**The notice (Q7).** The confirmation is shown by `PackageActions` before anything is queued, so the installed scope
+has to reach it as a plain value (A2). `PackageInfo` gains `InstalledScope` (`InstallScope?`: `User`, `System`, or
+null when WinGet doesn't say), set by `ReadInstalledAsync` (R2.7's read, below) from the same metadata through the
+same string mapping. A pure function adds one sentence to R3.1's message:
+
+```csharp
+// 014 R3.8, Q7: only when Settings names a scope and the installed one is the other.
+internal static string? ScopeNotice(string name, string version, InstallScope setting, InstallScope? installed) =>
+    setting == InstallScope.Any || installed is null || installed == setting ? null
+    : installed == InstallScope.System
+        ? $"{name} is installed for all users, so {version} will be installed for all users too, not for the current user as set in Settings."
+        : $"{name} is installed for the current user, so {version} will be installed for the current user too, not for all users as set in Settings.";
+```
+
+It goes after the existing message, before the box. With "Let WinGet decide" nothing is added: no choice of the
+user's is being overridden. If R2.7's read fails, there's no notice, and the installer still reads the scope itself
+when it runs (it may then use it without having said so; the log's "Scope" line records it).
+
+### R3.9, a second copy
+
+Before the install, when going back, the installer counts the installed entries for the package ID:
+`CatalogConnection.CountInstalledAsync(id)` searches `GetInstalledOnlyAsync()` with an exact ID filter and returns
+the matches' `Count` (by index, W2). It counts again after a success. A pure function decides:
+
+```csharp
+internal static OperationOutcome AfterGoingBack(OperationOutcome outcome, int? before, int? after, string name, string version, string? installed)
+```
+
+- `after > before` → `SucceededUnconfirmed` (no exclusion, R3.2 already skips it) with: "{name} {version} was
+  installed next to {installed}, not over it. Both are now installed. To keep only {version}, uninstall {name}
+  {installed} from the Installed page."
+- Either count null (couldn't read), or not more → the outcome unchanged; 013's `AfterUpdate` runs as today (R2.5).
+
+`SucceededUnconfirmed` is the closest existing result: the card is amber and says what WinGet did, and the
+notification follows it. No new result kind.
+
+### R2.6, rows and the pane after an operation
+
+`PackageRowViewModel.Package` becomes settable from inside the class, with `Refresh(PackageInfo)` raising every
+property that reads it (badge, texts, `Show*`). The row already watches its operation's `Result`; when it becomes a
+success (`IsSuccess`), the row asks `PackageActions.ReadInstalledAsync(Package)` and refreshes itself with what comes
+back. The call is a new `IPackageService.ReadInstalledAsync(PackageInfo)`: `FindByIdAsync(id, source, localFirst:
+true)` after `Invalidate`, mapped as a search row is, or null when it fails (the row stays as it is: a failed read is
+never an error of its own, 013 R2.3).
+
+- The Search page's rows are the ones this fixes. Installed and Updates rows refresh too, and are then replaced by
+  the store's reload (002 R1.3); the extra read is one `FindByIdAsync`.
+- `PackageDetailsViewModel` watches `Row.Package`. When it changes, it reloads its details (`LoadAsync(Row)`), so
+  the version actions are recomputed against the new installed version. The selection and **Show all versions**
+  reset, as when another package opens.
+- An open pane on the Installed or Updates page whose row was replaced by the store's reload keeps the old row
+  object, which refreshed itself first, so it shows the same state.
+
+### R2.7, check before going on
+
+`PackageActions.InstallVersionAsync` starts, for an installed package, with `ReadInstalledAsync(package)`. If the
+installed version it returns differs (ordinal) from `package.InstalledVersion`, it calls the row's `Refresh` (through
+the row, which owns it; the pane passes the row) and returns without asking or queuing. A null read goes on as
+today. With R2.6 in place this is rare: it covers changes made outside the app since the pane loaded.
+
+### Components (amendment)
+
+| Layer | Type | Change |
+|-------|------|--------|
+| Core/Services | `WinGetPackageInstaller` | `ScopeFor`; counts before and after when going back; `AfterGoingBack` |
+| Core/Services | `CatalogConnection` | `CountInstalledAsync(id)` |
+| Core/Services | `IPackageService`, `WinGetPackageService` | `ReadInstalledAsync(PackageInfo)` |
+| Core/Models | `OperationOptions` | `PreviousScope` for the R3.5 chain and R3.7 |
+| Core/Models | `PackageInfo` | `InstalledScope`, set by `ReadInstalledAsync` (Q7's notice) |
+| Core/ViewModels | `PackageActions` | `ScopeNotice` in the going-back confirmation |
+| Core/Services | `OperationLogStore` | The "Scope" line |
+| Core/ViewModels | `PackageRowViewModel` | `Refresh(PackageInfo)`, refresh after a success |
+| Core/ViewModels | `PackageDetailsViewModel` | Reload when `Row.Package` changes |
+| Core/ViewModels | `PackageActions` | `ReadInstalledAsync`; R2.7's check in `InstallVersionAsync` |
+
+`IPackageInstaller.RunAsync` keeps its signature: the scope comes from the found package, not from the caller.
+
 ## Testing
 
 | Requirement | Test |
@@ -256,6 +370,10 @@ No Core change for R1.7: excluded rows are already `PackageRowViewModel`s with t
 | R1.6 | `PackageDetailsViewModel`: only the selected item has `ShowAction`; it follows the selection, busy, and the installed version; `ActionText`/`ActionName` per direction (unit). VM: the button shows on the selected line in a 10-item list and after Show all |
 | R1.7 | VM: click and Enter on an Excluded row open its details; Esc returns focus to that row; going back from there works |
 | Live | Integration test: `GetDetailsAsync` on an installed package returns directions consistent with `IsUpdateAvailable` |
+| R3.8 | `ScopeFor`: going back with `User`, `Machine`, `Unknown`, empty, null; not going back → the setting, for each setting (unit). `ScopeNotice`: each setting against each installed scope and null; the confirmation carries it (unit). VM: Pandoc 3.13 for all users, go back to 3.12 → the all-users installer runs and refuses; Uninstall, then install → 3.12 for all users, one entry |
+| R3.9 | `AfterGoingBack`: more entries after → warning text and `SucceededUnconfirmed`; same count, fewer, or a null count → unchanged (unit). `PackageActions`: no exclusion after the warning (unit) |
+| R2.6 | `PackageRowViewModel`: after a success, `Refresh` with the read package updates the badge and texts; a null read leaves the row; a failure reads nothing (unit, fake service). `PackageDetailsViewModel` reloads when `Row.Package` changes (unit). VM: update Pandoc from Search, the row and the pane show 3.13 |
+| R2.7 | `PackageActions`: installed version read differs → no dialog, nothing queued, the row refreshed; same → as today; null → as today (unit) |
 
 ## Risks
 
