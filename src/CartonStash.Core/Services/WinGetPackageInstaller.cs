@@ -119,6 +119,10 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
             options.PackageVersionId = id;
         }
 
+        if (mode == OperationMode.DefaultForAllUsersMsi)
+        {
+            progress.Report(new OperationProgress(OperationPhase.Queued) { MayAskPermission = true }); // 003 R8.3
+        }
         var operation = kind == OperationKind.Upgrade
             ? connection.Manager.UpgradePackageAsync(package, options)
             : connection.Manager.InstallPackageAsync(package, options);
@@ -265,6 +269,10 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
         if (logPath is not null)
         {
             options.LogOutputPath = logPath;
+        }
+        if (mode == OperationMode.DefaultForAllUsersMsi)
+        {
+            progress.Report(new OperationProgress(OperationPhase.Queued) { MayAskPermission = true }); // 003 R8.3
         }
         IAsyncOperationWithProgress<UninstallResult, UninstallProgress> operation = connection.Manager.UninstallPackageAsync(package, options);
         var winGetProgress = new Progress<UninstallProgress>(p => progress.Report(MapUninstallProgress(p)));

@@ -35,7 +35,11 @@ public enum OperationResult
 }
 
 /// <summary>A progress report from the installer service. <paramref name="Percent"/> is 0–100, or null when unknown.</summary>
-public readonly record struct OperationProgress(OperationPhase Phase, double? Percent = null);
+public readonly record struct OperationProgress(OperationPhase Phase, double? Percent = null)
+{
+    /// <summary>003 R8.3: reported once, before WinGet starts, when Windows may ask for permission (Default mode).</summary>
+    public bool MayAskPermission { get; init; }
+}
 
 /// <summary>How WinGet ran the installer or uninstaller (003 R8.5).</summary>
 public enum OperationMode
@@ -168,7 +172,7 @@ public sealed partial class PackageOperation : ObservableObject
     public string? Version => Options.Version;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsActive), nameof(CanCancel), nameof(StatusText), nameof(IsIndeterminate), nameof(State), nameof(HasLog))]
+    [NotifyPropertyChangedFor(nameof(IsActive), nameof(CanCancel), nameof(StatusText), nameof(IsIndeterminate), nameof(State), nameof(HasLog), nameof(ShowPermission))]
     [NotifyCanExecuteChangedFor(nameof(CancelCommand), nameof(RetryCommand), nameof(ShowLogCommand))]
     public partial OperationPhase Phase { get; internal set; }
 
@@ -219,6 +223,16 @@ public sealed partial class PackageOperation : ObservableObject
     public bool HasMessage => Message is not null;
 
     public bool IsActive => Phase != OperationPhase.Done;
+
+    /// <summary>003 R8.3: this run may bring up Windows' consent prompt, which can open behind the app.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowPermission))]
+    public partial bool MayAskPermission { get; internal set; }
+
+    /// <summary>The card's permission line, while the operation runs (R8.3). A plain bool for x:Bind.</summary>
+    public bool ShowPermission => MayAskPermission && IsActive;
+
+    public string PermissionText => "Windows may ask for permission. If nothing appears, look for the shield in the taskbar.";
 
     /// <summary>The Log button is on finished cards only (009 R2.1).</summary>
     public bool HasLog => !IsActive;

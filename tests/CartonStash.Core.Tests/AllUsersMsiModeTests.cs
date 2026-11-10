@@ -56,4 +56,49 @@ public class AllUsersMsiModeTests
         Assert.Contains(line, log);
         Assert.True(log.IndexOf("Scope:", StringComparison.Ordinal) < log.IndexOf("Mode:", StringComparison.Ordinal)); // after 014's line
     }
+
+    // --- R8.3: the card says Windows may ask
+
+    [Fact]
+    public void A_permission_notice_shows_on_the_card_while_it_runs_R8_3()
+    {
+        var app = new TestApp(); // runs the queue's progress inline, as the UI thread does
+        var (installer, queue) = (app.Installer, app.Queue);
+        var operation = queue.Enqueue(OperationKind.Upgrade, Pandoc);
+        Assert.False(operation.ShowPermission);
+
+        installer.ReportPermission(Pandoc.Id);
+
+        Assert.True(operation.ShowPermission);
+        Assert.Equal("Windows may ask for permission. If nothing appears, look for the shield in the taskbar.", operation.PermissionText);
+        Assert.Equal(OperationPhase.Queued, operation.Phase); // a notice, not a phase change
+        installer.Complete(Pandoc.Id);
+        Assert.False(operation.ShowPermission);
+    }
+
+    [Fact]
+    public void Without_the_notice_nothing_shows_R8_3()
+    {
+        var app = new TestApp(); // runs the queue's progress inline, as the UI thread does
+        var (installer, queue) = (app.Installer, app.Queue);
+        var operation = queue.Enqueue(OperationKind.Upgrade, Pandoc);
+
+        installer.Report(Pandoc.Id, OperationPhase.Running);
+
+        Assert.False(operation.ShowPermission);
+    }
+
+    [Fact]
+    public void Retry_decides_it_again_R8_3()
+    {
+        var app = new TestApp(); // runs the queue's progress inline, as the UI thread does
+        var (installer, queue) = (app.Installer, app.Queue);
+        var operation = queue.Enqueue(OperationKind.Upgrade, Pandoc);
+        installer.ReportPermission(Pandoc.Id);
+        installer.Complete(Pandoc.Id, OperationResult.Failed, "no");
+
+        operation.RetryCommand.Execute(null);
+
+        Assert.False(operation.MayAskPermission);
+    }
 }

@@ -112,6 +112,13 @@
                     Maximum="100"
                     Visibility="{x:Bind Operation.IsActive, Mode=OneWay}"
                     Value="{x:Bind Operation.ProgressValue, Mode=OneWay}" />
+                <!-- 003 R8.3: Windows' consent prompt can open behind the app -->
+                <TextBlock
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                    Style="{StaticResource CaptionTextBlockStyle}"
+                    Text="{x:Bind Operation.PermissionText}"
+                    TextWrapping="Wrap"
+                    Visibility="{x:Bind Operation.ShowPermission, Mode=OneWay}" />
                 <TextBlock
                     Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                     Style="{StaticResource CaptionTextBlockStyle}"

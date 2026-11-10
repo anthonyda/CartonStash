@@ -178,6 +178,9 @@ internal sealed class ScriptedInstaller : IPackageInstaller
 
     public void Report(string id, OperationPhase phase, double? percent = null) => _running[id].Progress.Report(new(phase, percent));
 
+    /// <summary>003 R8.3: the installer's notice that Windows may ask for permission.</summary>
+    public void ReportPermission(string id) => _running[id].Progress.Report(new(OperationPhase.Queued) { MayAskPermission = true });
+
     public void Complete(string id, OperationResult result = OperationResult.Succeeded, string message = "ok") =>
         _running[id].Done.SetResult(new OperationOutcome(result, message));
 
