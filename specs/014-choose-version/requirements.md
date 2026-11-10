@@ -1,6 +1,6 @@
 # 014 – Install a chosen version: Requirements
 
-**Status:** Done (2026-11-09). Approved 2026-11-08, with the proposed answers to Q1, Q2 and Q4; Q3 and Q5 decided after T1 (amendments R2.5, R3.3 to R3.7). **Amendment R1.6, R1.7 (2026-11-09): Done**, approved with the proposed answer to Q6. **Amendment R2.6, R2.7, R3.8, R3.9 (2026-11-10): Approved** 2026-11-10, Q7 with a notice to the user, Q8 as proposed
+**Status:** Done (2026-11-09). Approved 2026-11-08, with the proposed answers to Q1, Q2 and Q4; Q3 and Q5 decided after T1 (amendments R2.5, R3.3 to R3.7). **Amendment R1.6, R1.7 (2026-11-09): Done**, approved with the proposed answer to Q6. **Amendment R2.6, R2.7, R3.8, R3.9 (2026-11-10): Done**, approved 2026-11-10, Q7 with a notice to the user, Q8 as proposed
 **Depends on:** 003 (operation queue, agreements, results), 004 (updates), 005 (details pane, R2.1 version list),
 010 (R5 exclusions from update checks)
 **Replaces:** 005's out-of-scope line "Installing a specific (older) version. The version list is information only in v1."
