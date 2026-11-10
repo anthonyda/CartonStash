@@ -50,11 +50,19 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
             : await connection.FindByIdAsync(package.Id, package.Source, localFirst: kind != OperationKind.Install, cancellationToken);
         try
         {
+            // 014 R3.9: going back counts the installed entries before and after, to catch a second copy.
+            var goingBack = GoesBack(kind, package, version);
+            var entriesBefore = goingBack ? await CountInstalledAsync(package.Id) : null;
             var outcome = kind switch
             {
                 OperationKind.Uninstall => await UninstallAsync(found, package.Name, logPath, progress, cancellationToken),
                 _ => await InstallAsync(kind, found, package, acceptAgreements, version, scope, logPath, progress, cancellationToken),
             };
+            if (goingBack && outcome.Result == OperationResult.Succeeded)
+            {
+                connection.Invalidate();
+                outcome = AfterGoingBack(outcome, entriesBefore, await CountInstalledAsync(package.Id), package.Name, version!, package.InstalledVersion);
+            }
             switch (CheckAfter(kind, outcome, package, version))
             {
                 case CheckAfterOperation.AppInstaller:
@@ -116,6 +124,40 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
         return MapInstallResult(kind, result.Status, result.InstallerErrorCode, result.RebootRequired, settings.Current.InstallScope,
             extendedError, name, running, goingBackTo: goingBack ? version : null)
             with { Details = FormatDetails(result.Status.ToString(), result.InstallerErrorCode, result.ExtendedErrorCode), Scope = scope, ScopeFromInstalled = fromInstalled };
+    }
+
+    /// <summary>R3.9's count; null when it can't be read (a failed check is never an error of its own, 013 R2.3).</summary>
+    private async Task<int?> CountInstalledAsync(string id)
+    {
+        try
+        {
+            return await connection.CountInstalledAsync(id, CancellationToken.None);
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// 014 R3.9: going back reported Ok but left more installed entries than before: the chosen version went in next to
+    /// the installed one, not over it (seen with Pandoc's per-user and all-users MSIs). A warning, so no exclusion (R3.2).
+    /// Otherwise, or when either count is unknown, the outcome unchanged.
+    /// </summary>
+    internal static OperationOutcome AfterGoingBack(OperationOutcome outcome, int? before, int? after, string packageName, string version, string? installed)
+    {
+        if (before is not { } b || after is not { } a || a <= b || outcome.Result != OperationResult.Succeeded)
+        {
+            return outcome;
+        }
+        var name = string.IsNullOrWhiteSpace(packageName) ? "The package" : packageName;
+        var old = installed is null ? "the installed version" : installed;
+        return outcome with
+        {
+            Result = OperationResult.SucceededUnconfirmed,
+            Message = $"{name} {version} was installed next to {old}, not over it. Both are now installed. "
+                + $"To keep only {version}, uninstall {name} {old} from the Installed page.",
+        };
     }
 
     /// <summary>

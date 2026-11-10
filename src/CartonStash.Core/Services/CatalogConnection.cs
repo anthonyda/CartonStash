@@ -310,6 +310,24 @@ public sealed class CatalogConnection(ISettings settings)
         return null;
     }
 
+    /// <summary>
+    /// 014 R3.9: how many installed programs WinGet matches to the package ID, as the Installed page lists them (one row
+    /// each, 002 R6.1). By index (W2).
+    /// </summary>
+    internal async Task<int> CountInstalledAsync(string id, CancellationToken cancellationToken)
+    {
+        var matches = await FindAsync(localFirst: true, () => ById(id), cancellationToken);
+        var count = 0;
+        for (var i = 0; i < matches.Count; i++)
+        {
+            if (matches[i].CatalogPackage.InstalledVersion is not null)
+            {
+                count++;
+            }
+        }
+        return count;
+    }
+
     private static FindPackagesOptions ById(string id)
     {
         var options = new FindPackagesOptions();

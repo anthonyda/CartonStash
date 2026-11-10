@@ -142,7 +142,7 @@ Approved 2026-11-10: Q7 with a notice in the confirmation, Q8 as proposed.
     R3.5 chain and Install {previous version}; the log's "Scope" line; the real `msi.dll` on a missing product).
     *Done 2026-11-10: also `OperationOutcome.Scope` / `ScopeFromInstalled` and `RunAsync`'s explicit scope, per the
     design change made during this task. 713 unit and 22 integration tests pass.*
-- [ ] **T20.** `CatalogConnection.CountInstalledAsync`; counts before and after when going back; `AfterGoingBack`
+- [x] **T20.** `CatalogConnection.CountInstalledAsync`; counts before and after when going back; `AfterGoingBack`
   (R3.9).
   - Verify: `AfterGoingBackTests` (`*_R3_9`): more entries → the warning, `SucceededUnconfirmed`; same, fewer, null →
     unchanged. `PackageActionsVersionTests`: no exclusion after the warning.
