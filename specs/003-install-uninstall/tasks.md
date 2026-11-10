@@ -58,7 +58,7 @@
 
 Design approved 2026-11-10.
 
-- [x] **T15.** `UsesDefaultMode` and `ModeFor` in `WinGetPackageInstaller`; `PackageInstallMode.Default` /
+- [x] **T15.** `ModeFor` in `WinGetPackageInstaller`; `PackageInstallMode.Default` /
   `PackageUninstallMode.Default` when it applies, from 014's `InstalledScopes.MsiContextOf`; `OperationOutcome.Mode`;
   the log's "Mode" line (R8.1, R8.2, R8.5).
   - Verify: `AllUsersMsiModeTests` (`*_R8_1`, `*_R8_2`, `*_R8_5`, the log line included). *Done 2026-11-10: one Windows

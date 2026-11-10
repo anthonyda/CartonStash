@@ -195,8 +195,9 @@ tool); `Default` is what WinGet turns into `/passive` for MSI.
 ```csharp
 // 003 R8.1: Default mode (msiexec /passive, so Windows can ask for consent) only when the installed version is an MSI
 // product Windows Installer has for all users. Everything else stays Silent (R8.2).
-internal static bool UsesDefaultMode(OperationKind kind, bool installed, InstallScope? msiContext) =>
-    installed && msiContext == InstallScope.System && kind is OperationKind.Upgrade or OperationKind.Uninstall or OperationKind.Install;
+internal static OperationMode ModeFor(OperationKind kind, bool installed, InstallScope? msiContext) =>
+    installed && msiContext == InstallScope.System && kind is OperationKind.Upgrade or OperationKind.Uninstall or OperationKind.Install
+        ? OperationMode.DefaultForAllUsersMsi : OperationMode.Silent;
 ```
 
 - `installed` is true for an update, an uninstall, and an install over an installed package (014's going back). A
@@ -243,7 +244,7 @@ After 014's "Scope" line: `Mode: silent` or `Mode: default, for an all-users MSI
 
 | Requirement | Test |
 |-------------|------|
-| R8.1, R8.2 | `UsesDefaultMode`: each kind × installed or not × `System`, `User`, null (unit) |
+| R8.1, R8.2 | `ModeFor`: each kind × installed or not × `System`, `User`, null (unit) |
 | R8.3 | Queue: a `MayAskPermission` progress sets the operation's flag; `PermissionText` only while active; cleared on finish (unit) |
 | R8.4 | `WinGetErrorMessageTests`: `0x8A150030` with 1603 and 1730, Silent → with the hint; Default → without; another exit code → without; for install (update) and uninstall; not "the installer failed" (unit) |
 | R8.5 | `OperationLogStoreTests`: both "Mode" lines (unit) |
