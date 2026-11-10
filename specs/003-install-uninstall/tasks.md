@@ -66,7 +66,7 @@ Design approved 2026-11-10.
 - [x] **T16.** `OperationProgress.MayAskPermission`, reported before WinGet starts; `PackageOperation.MayAskPermission`
   and `PermissionText`; the card's caption line (R8.3).
   - Verify: `AllUsersMsiModeTests` (`*_R8_3`); `dotnet build`; the card in T18.
-- [ ] **T17.** The `0x8A150030` arm in `MapInstallResult` and `MapUninstallResult`, with the hint for 1603 and 1730
+- [x] **T17.** The `0x8A150030` arm in `MapInstallResult` and `MapUninstallResult`, with the hint for 1603 and 1730
   after a Silent run (R8.4).
   - Verify: `WinGetErrorMessageTests` (`*_R8_4`).
 - [ ] **T18.** VM, on a build from this branch: Pandoc 3.12 for all users → **Update** from the Updates page: one UAC

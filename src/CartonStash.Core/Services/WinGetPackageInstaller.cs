@@ -132,7 +132,7 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
         var extendedError = result.ExtendedErrorCode?.HResult ?? 0;
         var running = await RunningFilesAfterAsync(extendedError, package);
         return MapInstallResult(kind, result.Status, result.InstallerErrorCode, result.RebootRequired, settings.Current.InstallScope,
-            extendedError, name, running, goingBackTo: goingBack ? version : null)
+            extendedError, name, running, goingBackTo: goingBack ? version : null, installedVersion: info.InstalledVersion, mode: mode)
             with { Details = FormatDetails(result.Status.ToString(), result.InstallerErrorCode, result.ExtendedErrorCode), Scope = scope, ScopeFromInstalled = fromInstalled, Mode = mode };
     }
 
@@ -280,7 +280,8 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
 
         var extendedError = result.ExtendedErrorCode?.HResult ?? 0;
         var running = await RunningFilesAfterAsync(extendedError, package);
-        return MapUninstallResult(result.Status, result.UninstallerErrorCode, result.RebootRequired, extendedError, name, running)
+        return MapUninstallResult(result.Status, result.UninstallerErrorCode, result.RebootRequired, extendedError, name, running,
+                installedVersion: installed?.Version, mode: mode)
             with { Details = FormatDetails(result.Status.ToString(), result.UninstallerErrorCode, result.ExtendedErrorCode), Mode = mode };
     }
 
@@ -505,6 +506,27 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
         };
     }
 
+    /// <summary>APPINSTALLER_CLI_ERROR_EXEC_UNINSTALL_COMMAND_FAILED: WinGet's uninstall command failed (003 R8.4).</summary>
+    internal const int UninstallCommandFailed = unchecked((int)0x8A150030);
+
+    /// <summary>
+    /// 003 R8.4: WinGet couldn't uninstall the installed version, for an uninstall or at the start of an update (an
+    /// uninstallPrevious manifest). After a Silent run with 1603 or 1730 (Windows Installer: "You must be an
+    /// Administrator"), the likely cause is an all-users install the app didn't recognise, so say so, with "may".
+    /// </summary>
+    internal static string UninstallCommandFailedMessage(string packageName, string? installedVersion, uint exitCode, OperationMode mode)
+    {
+        var name = string.IsNullOrWhiteSpace(packageName) ? "the package" : packageName;
+        var what = installedVersion is null ? name : $"{name} {installedVersion}";
+        var text = $"WinGet couldn't uninstall {what} (exit code {FormatCode(exitCode)}).";
+        if (mode == OperationMode.Silent && exitCode is 1603 or 1730)
+        {
+            var subject = string.IsNullOrWhiteSpace(packageName) ? "It" : packageName;
+            text += $" {subject} may be installed for all users, which needs administrator rights. Retry, and accept Windows' prompt if it appears.";
+        }
+        return text;
+    }
+
     /// <summary>APPINSTALLER_CLI_ERROR_INSTALL_UPGRADE_NOT_SUPPORTED: the manifest denies an in-place update (013 R3.1).</summary>
     internal const int UpgradeNotSupported = unchecked((int)0x8A150114);
 
@@ -565,7 +587,7 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
     /// <param name="goingBackTo">The chosen older version when this install goes back over a newer one (014 R3.3), else null.</param>
     internal static OperationOutcome MapInstallResult(OperationKind kind, InstallResultStatus status, uint installerErrorCode, bool rebootRequired,
         InstallScope scope, int extendedError = 0, string packageName = "", IReadOnlyList<string>? runningFiles = null,
-        Func<int, string?>? describe = null, string? goingBackTo = null)
+        Func<int, string?>? describe = null, string? goingBackTo = null, string? installedVersion = null, OperationMode mode = OperationMode.Silent)
     {
         var done = kind == OperationKind.Upgrade ? "Updated" : "Installed";
         return status switch
@@ -580,6 +602,9 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
                 Failed("The downloaded file doesn't match the package's checksum, so it wasn't installed. The publisher's site may have changed; try again later."),
             InstallResultStatus.DownloadError => Failed("The download failed. Check your internet connection and try again."),
             InstallResultStatus.InstallError when InUseMessage(kind, extendedError, packageName, runningFiles) is { } inUse => Failed(inUse),
+            // 003 R8.4: WinGet's removal of the installed version failed, not the new version's installer.
+            InstallResultStatus.InstallError when extendedError == UninstallCommandFailed =>
+                Failed(UninstallCommandFailedMessage(packageName, installedVersion, installerErrorCode, mode)),
             InstallResultStatus.InstallError when goingBackTo is not null =>
                 Failed(GoingBackFailedMessage(packageName, goingBackTo)) with { OffersUninstallFirst = true }, // R3.5
             InstallResultStatus.InstallError when installerErrorCode == 0 && extendedError != 0 =>
@@ -598,13 +623,16 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
     }
 
     internal static OperationOutcome MapUninstallResult(UninstallResultStatus status, uint uninstallerErrorCode, bool rebootRequired,
-        int extendedError = 0, string packageName = "", IReadOnlyList<string>? runningFiles = null, Func<int, string?>? describe = null) => status switch
+        int extendedError = 0, string packageName = "", IReadOnlyList<string>? runningFiles = null, Func<int, string?>? describe = null,
+        string? installedVersion = null, OperationMode mode = OperationMode.Silent) => status switch
     {
         UninstallResultStatus.Ok when rebootRequired =>
             new(OperationResult.SucceededRestartRequired, "Uninstalled. Restart your PC to finish."),
         UninstallResultStatus.Ok => new(OperationResult.Succeeded, "Uninstalled successfully."),
         UninstallResultStatus.UninstallError when InUseMessage(OperationKind.Uninstall, extendedError, packageName, runningFiles) is { } inUse =>
             Failed(inUse),
+        UninstallResultStatus.UninstallError when extendedError == UninstallCommandFailed => // 003 R8.4
+            Failed(UninstallCommandFailedMessage(packageName, installedVersion, uninstallerErrorCode, mode)),
         UninstallResultStatus.UninstallError when uninstallerErrorCode == 0 && extendedError != 0 =>
             Failed(NoExitCodeMessage(OperationKind.Uninstall, extendedError, packageName, describe ?? ErrorDescriptions.Describe)),
         UninstallResultStatus.UninstallError => Failed($"The uninstaller failed with error code {FormatCode(uninstallerErrorCode)}."),
