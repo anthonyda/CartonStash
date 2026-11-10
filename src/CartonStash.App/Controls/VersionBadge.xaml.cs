@@ -25,8 +25,28 @@ public sealed partial class VersionBadge : UserControl
         set => SetValue(RowProperty, value);
     }
 
-    private static void OnRowChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) =>
-        ((VersionBadge)d).Show(e.NewValue as PackageRowViewModel);
+    private static void OnRowChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        var badge = (VersionBadge)d;
+        if (e.OldValue is PackageRowViewModel old)
+        {
+            old.PropertyChanged -= badge.OnRowPropertyChanged;
+        }
+        if (e.NewValue is PackageRowViewModel row)
+        {
+            row.PropertyChanged += badge.OnRowPropertyChanged;
+        }
+        badge.Show(e.NewValue as PackageRowViewModel);
+    }
+
+    // 014 R2.6: the same row can be refreshed after an operation (Refresh raises every property at once).
+    private void OnRowPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (string.IsNullOrEmpty(e.PropertyName) && sender == Row)
+        {
+            Show(Row);
+        }
+    }
 
     private void Show(PackageRowViewModel? row)
     {

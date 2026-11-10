@@ -53,6 +53,7 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
             // 014 R3.9: going back counts the installed entries before and after, to catch a second copy.
             var goingBack = GoesBack(kind, package, version);
             var entriesBefore = goingBack ? await CountInstalledAsync(package.Id) : null;
+            var msiBefore = goingBack ? await Task.Run(() => MsiProductsOf(found.InstalledVersion), cancellationToken) : [];
             var outcome = kind switch
             {
                 OperationKind.Uninstall => await UninstallAsync(found, package.Name, logPath, progress, cancellationToken),
@@ -61,7 +62,8 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
             if (goingBack && outcome.Result == OperationResult.Succeeded)
             {
                 connection.Invalidate();
-                outcome = AfterGoingBack(outcome, entriesBefore, await CountInstalledAsync(package.Id), package.Name, version!, package.InstalledVersion);
+                var stillInstalled = await Task.Run(() => AnyStillInstalled(msiBefore, ChosenProductCodes(found, version!)), CancellationToken.None);
+                outcome = AfterGoingBack(outcome, entriesBefore, await CountInstalledAsync(package.Id), stillInstalled, package.Name, version!, package.InstalledVersion);
             }
             switch (CheckAfter(kind, outcome, package, version))
             {
@@ -126,6 +128,64 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
             with { Details = FormatDetails(result.Status.ToString(), result.InstallerErrorCode, result.ExtendedErrorCode), Scope = scope, ScopeFromInstalled = fromInstalled };
     }
 
+    /// <summary>R3.9: the installed version's MSI product codes that Windows Installer has (W2: by index). Empty for anything else.</summary>
+    private List<string> MsiProductsOf(PackageVersionInfo? installed)
+    {
+        var found = new List<string>();
+        try
+        {
+            var codes = installed?.ProductCodes;
+            for (var i = 0; codes is not null && i < codes.Count; i++)
+            {
+                if (_installContext.ContextOf(codes[i]) is not null)
+                {
+                    found.Add(codes[i]);
+                }
+            }
+        }
+        catch (Exception)
+        {
+            // no codes: R3.9 falls back to the count
+        }
+        return found;
+    }
+
+    /// <summary>R3.9: the chosen version's own product codes, from its manifest; empty when they can't be read.</summary>
+    private static List<string> ChosenProductCodes(CatalogPackage package, string version)
+    {
+        var codes = new List<string>();
+        try
+        {
+            if (FindVersion(package, version) is { } id && package.GetPackageVersionInfo(id)?.ProductCodes is { } list)
+            {
+                for (var i = 0; i < list.Count; i++)
+                {
+                    codes.Add(list[i]);
+                }
+            }
+        }
+        catch (Exception)
+        {
+        }
+        return codes;
+    }
+
+    /// <summary>R3.9: one of the old version's MSI products is still installed, and the chosen version isn't that same product.</summary>
+    private bool AnyStillInstalled(IReadOnlyList<string> before, IReadOnlyList<string> chosen) =>
+        StillInstalled(before, chosen, code => _installContext.ContextOf(code) is not null);
+
+    internal static bool StillInstalled(IReadOnlyList<string> before, IReadOnlyList<string> chosen, Func<string, bool> isInstalled)
+    {
+        try
+        {
+            return before.Any(code => !chosen.Contains(code, StringComparer.OrdinalIgnoreCase) && isInstalled(code));
+        }
+        catch (Exception)
+        {
+            return false; // never an error of its own
+        }
+    }
+
     /// <summary>R3.9's count; null when it can't be read (a failed check is never an error of its own, 013 R2.3).</summary>
     private async Task<int?> CountInstalledAsync(string id)
     {
@@ -144,9 +204,11 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
     /// the installed one, not over it (seen with Pandoc's per-user and all-users MSIs). A warning, so no exclusion (R3.2).
     /// Otherwise, or when either count is unknown, the outcome unchanged.
     /// </summary>
-    internal static OperationOutcome AfterGoingBack(OperationOutcome outcome, int? before, int? after, string packageName, string version, string? installed)
+    internal static OperationOutcome AfterGoingBack(OperationOutcome outcome, int? before, int? after, bool previousStillInstalled,
+        string packageName, string version, string? installed)
     {
-        if (before is not { } b || after is not { } a || a <= b || outcome.Result != OperationResult.Succeeded)
+        var moreEntries = before is { } b && after is { } a && a > b;
+        if (outcome.Result != OperationResult.Succeeded || !(moreEntries || previousStillInstalled))
         {
             return outcome;
         }

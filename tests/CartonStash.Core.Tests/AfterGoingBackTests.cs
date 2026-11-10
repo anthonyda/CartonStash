@@ -11,7 +11,7 @@ public class AfterGoingBackTests
     [Fact]
     public void More_entries_after_is_a_warning_R3_9()
     {
-        var outcome = WinGetPackageInstaller.AfterGoingBack(Ok, before: 1, after: 2, "Pandoc", "3.12", "3.13");
+        var outcome = WinGetPackageInstaller.AfterGoingBack(Ok, before: 1, after: 2, false, "Pandoc", "3.12", "3.13");
 
         Assert.Equal(OperationResult.SucceededUnconfirmed, outcome.Result);
         Assert.Equal("Pandoc 3.12 was installed next to 3.13, not over it. Both are now installed. "
@@ -27,7 +27,34 @@ public class AfterGoingBackTests
     [InlineData(null, null)]
     public void Otherwise_the_outcome_is_unchanged_R3_9(int? before, int? after)
     {
-        Assert.Same(Ok, WinGetPackageInstaller.AfterGoingBack(Ok, before, after, "Pandoc", "3.12", "3.13"));
+        Assert.Same(Ok, WinGetPackageInstaller.AfterGoingBack(Ok, before, after, false, "Pandoc", "3.12", "3.13"));
+    }
+
+    [Theory] // T24: the by-ID count saw one entry with both copies installed; Windows Installer still had 3.13's product
+    [InlineData(1, 1)]
+    [InlineData(null, null)]
+    public void The_old_MSI_product_still_installed_is_a_warning_R3_9(int? before, int? after)
+    {
+        var outcome = WinGetPackageInstaller.AfterGoingBack(Ok, before, after, previousStillInstalled: true, "Pandoc", "3.12", "3.13");
+
+        Assert.Equal(OperationResult.SucceededUnconfirmed, outcome.Result);
+        Assert.StartsWith("Pandoc 3.12 was installed next to 3.13, not over it.", outcome.Message);
+    }
+
+    [Fact]
+    public void Still_installed_asks_only_about_codes_the_chosen_version_doesnt_share_R3_9()
+    {
+        var asked = new List<string>();
+        bool Installed(string code) { asked.Add(code); return true; }
+
+        // A product code that stays the same across versions is replaced in place: not a second copy.
+        Assert.False(WinGetPackageInstaller.StillInstalled(["{A}"], ["{a}"], Installed));
+        Assert.Empty(asked);
+        Assert.True(WinGetPackageInstaller.StillInstalled(["{A}", "{B}"], ["{A}"], Installed));
+        Assert.Equal(["{B}"], asked);
+        Assert.False(WinGetPackageInstaller.StillInstalled(["{B}"], [], _ => false));
+        Assert.False(WinGetPackageInstaller.StillInstalled([], [], Installed));
+        Assert.False(WinGetPackageInstaller.StillInstalled(["{B}"], [], _ => throw new InvalidOperationException()));
     }
 
     [Theory] // only a plain success is checked: a failure or a restart keeps its own result
@@ -37,7 +64,7 @@ public class AfterGoingBackTests
     {
         var outcome = new OperationOutcome(result, "x");
 
-        Assert.Same(outcome, WinGetPackageInstaller.AfterGoingBack(outcome, 1, 2, "Pandoc", "3.12", "3.13"));
+        Assert.Same(outcome, WinGetPackageInstaller.AfterGoingBack(outcome, 1, 2, false, "Pandoc", "3.12", "3.13"));
     }
 
     [Fact] // R3.2: the exclusion is added only on a real success, not on this warning
@@ -48,7 +75,7 @@ public class AfterGoingBackTests
         var pandoc = Pkg.Installed("JohnMacFarlane.Pandoc", "Pandoc");
 
         await app.Actions.InstallVersionAsync(pandoc, new("3.12", VersionDirection.Older));
-        app.Installer.Complete(pandoc.Id, WinGetPackageInstaller.AfterGoingBack(Ok, 1, 2, "Pandoc", "3.12", "3.13"));
+        app.Installer.Complete(pandoc.Id, WinGetPackageInstaller.AfterGoingBack(Ok, 1, 2, false, "Pandoc", "3.12", "3.13"));
 
         Assert.False(app.Settings.Current.IsExcluded(pandoc.Id));
     }

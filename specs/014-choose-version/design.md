@@ -332,10 +332,21 @@ Before the install, when going back, the installer counts the installed entries 
 the matches' `Count` (by index, W2). It counts again after a success. A pure function decides:
 
 ```csharp
-internal static OperationOutcome AfterGoingBack(OperationOutcome outcome, int? before, int? after, string name, string version, string? installed)
+internal static OperationOutcome AfterGoingBack(OperationOutcome outcome, int? before, int? after, bool previousStillInstalled,
+    string name, string version, string? installed)
 ```
 
-- `after > before` → `SucceededUnconfirmed` (no exclusion, R3.2 already skips it) with: "{name} {version} was
+**Changed 2026-11-10 after T24's first run:** with Pandoc 3.12 per-user and 3.13 all-users both installed (two
+uninstall entries, two folders, `winget list` shows both), WinGet's search by ID on the local-first catalog still
+returned one match, so the count alone misses exactly this case. The installed-only catalog doesn't link them by
+code either: 3.12's product code isn't in 3.13's manifest. Windows Installer knows, though. So for MSI products,
+before the install, the installer keeps the installed version's product codes that Windows Installer has
+(`IInstallContext`, as for R3.8). After a success, it drops the codes the chosen version's manifest also lists (a
+product code that stays the same across versions is replaced in place), and asks Windows Installer about the rest:
+any still installed means the old version wasn't replaced (`previousStillInstalled`). Non-MSI packages have no
+codes and keep the count.
+
+- `previousStillInstalled`, or `after > before` → `SucceededUnconfirmed` (no exclusion, R3.2 already skips it) with: "{name} {version} was
   installed next to {installed}, not over it. Both are now installed. To keep only {version}, uninstall {name}
   {installed} from the Installed page."
 - Either count null (couldn't read), or not more → the outcome unchanged; 013's `AfterUpdate` runs as today (R2.5).
