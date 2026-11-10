@@ -69,11 +69,12 @@ Design approved 2026-11-10.
 - [x] **T17.** The `0x8A150030` arm in `MapInstallResult` and `MapUninstallResult`, with the hint for 1603 and 1730
   after a Silent run (R8.4).
   - Verify: `WinGetErrorMessageTests` (`*_R8_4`).
-- [ ] **T18.** VM, on a build from this branch: Pandoc 3.12 for all users → **Update** from the Updates page: one UAC
+- [x] **T18.** VM, on a build from this branch: Pandoc 3.12 for all users → **Update** from the Updates page: one UAC
   prompt (the maintainer answers), the card's line while it runs, "Updated", one entry, log "Mode: default…". Then
   **Uninstall** it: one prompt, uninstalled. jq and a per-user Pandoc: no prompt, "Mode: silent". PowerShell (wix)
   for all users, updated: what `/passive` shows. Changelog line.
-  - Verify: entries in the log below.
+  - Verify: entries in the log below. *Done 2026-11-11, except the card's line (R8.3), which the script couldn't
+    see; see the log.*
 - [ ] **T19.** Mark amendment R8 `Done` here, in requirements.md, design.md and the README roadmap.
 
 ## Manual verification log
@@ -95,3 +96,10 @@ Design approved 2026-11-10.
 | R7.2, R7.4, R7.5 (T13) | 2026-11-06 | Pass | Test VM from `clean`, Store test build 1.1.13. Claude Code 2.1.309 installed with the `winget` command, `claude.exe` running from its package folder in a console. **Update** failed after 6 s: "Claude Code is running (claude.exe), so it couldn't be updated. Close it, then press Retry." in the notification, row and log; the log kept `InstallError`, exit code 2316632067, `0x8A150052`; `claude` was still running. Closed it, **Retry Update Claude Code** in Activity: "Updated successfully.", `winget list` shows 2.1.317 |
 | R7.2, R7.4, R7.5 (T13) | 2026-11-06 | Pass | Same run, `claude` 2.1.317 started again. **Uninstall** (confirmed) failed after 1 s: "Claude Code is running (claude.exe), so it couldn't be uninstalled. Close it, then press Retry."; log `UninstallError`, `0x8A150057`; `claude` still running. Closed it, Retry: "Uninstalled successfully.", `winget list` no longer finds it |
 | R7.1 (live) | – | Not run | Covered by `WinGetErrorMessageTests.In_use_*`; needs an installer whose manifest maps its exit code to an in-use code |
+| R8 measurement | 2026-11-10 | Fail (found) | Test VM, Pandoc 3.12 for all users, the app's Update on the Updates page: "The installer failed with error code 1603." WinGet ran `msiexec /x{671ADF5A…} /quiet /norestart` (uninstallPrevious) and Windows Installer logged 1730 "You must be an Administrator". The `winget` CLI failed the same way. Through the COM API: uninstall Silent → 1603, `0x8A150030`; Interactive → Windows Installer's dialog, then UAC, removed; Default → `/passive`, one UAC prompt, removed; update in Default → `/passive`, one prompt, 3.12 removed and 3.13 installed. The COM API has no SilentWithProgress mode |
+| R8.1, R8.5, update (T18) | 2026-11-11 | Pass | Build of this branch. Pandoc 3.12 for all users, **Update Pandoc 3.12** on the Updates page: one UAC prompt (answered by the maintainer), "Updated successfully.", one entry (3.13 in Program Files); log "Mode: default, for an all-users MSI (Windows may ask for permission)" |
+| R8.1, all-users MSI with its own window (T18) | 2026-11-11 | Pass | PowerShell 7.6.8.0 (wix) for all users, **Update PowerShell 7-x64**: one UAC prompt; `/passive` showed only Windows Installer's "Please wait while Windows configures PowerShell 7-x64" window, nothing to answer; updated to 7.6.9.0, Default mode in the log |
+| R8.1, uninstall (T18) | 2026-11-11 | Pass | **Uninstall Pandoc** on the Installed page, confirmed: one UAC prompt, "Uninstalled successfully.", `winget list` no longer finds it; Default mode in the log |
+| R8.2 (T18) | 2026-11-11 | Pass | jq (portable) updated from the Updates page: no prompt, no permission line, "Mode: silent" |
+| R8.3 (T18) | 2026-11-11 | Not confirmed | Twice the script didn't find the card's line: once with the Activity pane closed (the line is only on the card), once with it open, where UI Automation stalled for ~13 s while Windows' consent screen was up and the update had finished by then. The flag, its visibility while active and its reset are unit tested |
+| R8.4 | – | Unit tests only | Default mode now avoids the failure for all-users MSIs; the message is for a package the check misses. `WinGetErrorMessageTests.*_R8_4` |
