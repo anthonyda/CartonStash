@@ -54,6 +54,27 @@
     in the scheduled task, and both operations simply succeeded. Started from its package folder in a `cmd` window, it passed.
 - [x] **T14.** Mark amendment R7 `Done` here, in requirements.md, design.md and the README roadmap.
 
+## Amendment R8: all-users MSI packages (2026-11-10)
+
+Starts once design.md's amendment R8 section is approved.
+
+- [ ] **T15.** `UsesDefaultMode` and `ModeFor` in `WinGetPackageInstaller`; `PackageInstallMode.Default` /
+  `PackageUninstallMode.Default` when it applies, from 014's `InstalledScopes.MsiContextOf`; `OperationOutcome.Mode`;
+  the log's "Mode" line (R8.1, R8.2, R8.5).
+  - Verify: `AllUsersMsiModeTests` (`*_R8_1`, `*_R8_2`); `OperationLogStoreTests` for the line.
+- [ ] **T16.** `OperationProgress.MayAskPermission`, reported before WinGet starts; `PackageOperation.MayAskPermission`
+  and `PermissionText`; the card's caption line (R8.3).
+  - Verify: `AllUsersMsiModeTests` (`*_R8_3`); `dotnet build`; the card in T18.
+- [ ] **T17.** The `0x8A150030` arm in `MapInstallResult` and `MapUninstallResult`, with the hint for 1603 and 1730
+  after a Silent run (R8.4).
+  - Verify: `WinGetErrorMessageTests` (`*_R8_4`).
+- [ ] **T18.** VM, on a build from this branch: Pandoc 3.12 for all users → **Update** from the Updates page: one UAC
+  prompt (the maintainer answers), the card's line while it runs, "Updated", one entry, log "Mode: default…". Then
+  **Uninstall** it: one prompt, uninstalled. jq and a per-user Pandoc: no prompt, "Mode: silent". PowerShell (wix)
+  for all users, updated: what `/passive` shows. Changelog line.
+  - Verify: entries in the log below.
+- [ ] **T19.** Mark amendment R8 `Done` here, in requirements.md, design.md and the README roadmap.
+
 ## Manual verification log
 
 | Criterion | Date | Result | Notes |

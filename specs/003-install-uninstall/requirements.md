@@ -1,6 +1,6 @@
 # 003 – Install / uninstall with progress: Requirements
 
-**Status:** Done (2026-10-30). Amendment R7 (say when a program is running): done 2026-11-06. **Amendment R8 (all-users MSI packages): Draft**, Q8 and Q9 open
+**Status:** Done (2026-10-30). Amendment R7 (say when a program is running): done 2026-11-06. **Amendment R8 (all-users MSI packages): Approved** 2026-11-10, with the proposed answers to Q8 and Q9
 **Depends on:** 001, 002
 
 ## Problem
@@ -69,7 +69,7 @@ reasons. WinGet does have codes that do say it, for installers whose manifest ma
 - **To check in design:** whether WinGet reports a portable package's install folder (`InstalledLocation` metadata), and
   whether the packaged app can see the paths of the user's other processes.
 
-## Amendment R8: all-users MSI packages (draft, 2026-11-10)
+## Amendment R8: all-users MSI packages (approved 2026-11-10)
 
 **Why.** R6.1 isn't met for MSI packages installed for all users. In the test VM (2026-11-10, WinGet 1.29.380, tester
 is an administrator with UAC on, the app at Medium integrity), with Pandoc 3.12 installed for all users:
@@ -109,9 +109,11 @@ small progress window, and Windows' UAC prompt. That's also what `winget` does w
   show its own progress window, and some, such as Inno and NSIS, may show more than a progress bar); or Silent
   first, then a **Retry with permission** button after a `0x8A150030` failure (one failure every time, before it
   works).
+  **Decided 2026-11-10: only all-users MSIs.**
 - **Q9. Saying that a prompt may come (R8.3).** *Proposed: on the Activity card while it runs,* since the prompt is
   Windows' own and can open behind the app. The alternative is a line in Update all's confirmation, which only
   covers one of the three ways in.
+  **Decided 2026-11-10: on the Activity card.**
 - **To check in design:** whether Default mode for an MSI ever shows more than a progress bar (some MSIs have their
   own dialogs in `/passive`); whether the app can tell an update starts with an uninstall (`UpgradeBehavior`) or
   should apply R8.1 to every update of an all-users MSI. The measurements above say the latter works for Pandoc.
