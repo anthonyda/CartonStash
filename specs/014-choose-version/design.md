@@ -1,6 +1,6 @@
 # 014 – Install a chosen version: Design
 
-**Status:** Done (2026-11-09). Approved 2026-11-08. **Amendment R1.6, R1.7 (2026-11-09): Done**, approved with the proposed answer to Q6. **Amendment R2.6, R2.7, R3.8, R3.9 (2026-11-10): Approved** 2026-11-10, with Q7's notice added. **R3.8's scope source changed after T18 (Windows Installer first): waiting for review**
+**Status:** Done (2026-11-09). Approved 2026-11-08. **Amendment R1.6, R1.7 (2026-11-09): Done**, approved with the proposed answer to Q6. **Amendment R2.6, R2.7, R3.8, R3.9 (2026-11-10): Approved** 2026-11-10, with Q7's notice added. R3.8's scope source changed after T18 (Windows Installer first), approved 2026-11-10
 **Requirements:** [requirements.md](requirements.md)
 
 ## Overview
@@ -276,23 +276,36 @@ the per-user 3.10. With the right scope, Pandoc goes back directly; it doesn't r
 3. **Neither:** the setting (006 R2.1).
 
 ```csharp
-// 014 R3.8: going back asks for the installed scope; otherwise, and when nothing knows it, the setting (006 R2.1).
-internal static PackageInstallScope ScopeFor(bool goingBack, InstallScope? msiContext, string? winGetScope, InstallScope setting) =>
-    !goingBack ? ToWinGet(setting)
-    : msiContext is { } c and not InstallScope.Any ? ToWinGet(c)
-    : string.Equals(winGetScope, "User", StringComparison.OrdinalIgnoreCase) ? PackageInstallScope.User
-    : string.Equals(winGetScope, "Machine", StringComparison.OrdinalIgnoreCase) ? PackageInstallScope.System
-    : ToWinGet(setting);
+// 014 R3.8: an explicit scope (the R3.5 chain), else going back asks for the installed scope; else the setting (006 R2.1).
+internal static (InstallScope Scope, bool FromInstalled) ScopeFor(InstallScope? explicitScope, bool goingBack,
+    InstallScope? msiContext, string? winGetScope, InstallScope setting) =>
+    explicitScope is InstallScope.User or InstallScope.System ? (explicitScope.Value, true)
+    : !goingBack ? (setting, false)
+    : msiContext is InstallScope.User or InstallScope.System ? (msiContext.Value, true)
+    : FromWinGetScope(winGetScope) is { } w ? (w, true) // "User" → User, "Machine" → System, anything else → null
+    : (setting, false);
 ```
+
+`InstallAsync` then sets `PackageInstallScope = ToWinGet(scope)`.
 
 A read that throws, at either step, counts as unknown. The same read gives `PackageInfo.InstalledScope` for the
 notice below. `IInstallContext` has a fake in the tests; the pure part is `ScopeFor` and the context mapping.
 
-The uninstall then install chain (R3.5) keeps the same scope for its install: `PreviousVersion` gains a sibling,
-`PreviousScope`, read before the uninstall, because after it nothing knows the scope. **Install {previous version}**
-(R3.7) uses it too.
+The uninstall then install chain (R3.5) keeps the same scope for its install, because after the uninstall nothing
+knows it. *(Changed 2026-11-10 during T19: the scope can't be read before the uninstall from `PackageActions`, which
+has no COM objects, A2.)* So the installer reports the scope it asked for:
 
-The log adds `Scope: {user|machine|setting}` after "Chosen version", so a run says which installer was asked for.
+- `OperationOutcome` gains `Scope` (`InstallScope`) and `ScopeFromInstalled` (bool: true when it came from Windows
+  Installer or WinGet, false when it's the setting). `Finish` copies both onto the `PackageOperation`.
+- When the failed going-back operation offers **Uninstall, then install**, `PackageActions` puts its `Scope` in the
+  uninstall's options as `PreviousScope` when `ScopeFromInstalled`, and the chained install and **Install {previous
+  version}** carry it on.
+- `IPackageInstaller.RunAsync` gains `InstallScope? scope = null`: an explicit scope, which `ScopeFor` takes before
+  anything else. The queue passes `operation.Options.PreviousScope` for an `AfterUninstall` install and for
+  **Install {previous version}**, null otherwise.
+
+The log adds `Scope: …` after "Chosen version": "for all users, as installed", "for the current user, as
+installed", or "from Settings ({setting})". A run says which installer was asked for.
 
 **The notice (Q7).** The confirmation is shown by `PackageActions` before anything is queued, so the installed scope
 has to reach it as a plain value (A2). `PackageInfo` gains `InstalledScope` (`InstallScope?`: `User`, `System`, or
@@ -370,7 +383,7 @@ today. With R2.6 in place this is rare: it covers changes made outside the app s
 | Core/ViewModels | `PackageDetailsViewModel` | Reload when `Row.Package` changes |
 | Core/ViewModels | `PackageActions` | `ReadInstalledAsync`; R2.7's check in `InstallVersionAsync` |
 
-`IPackageInstaller.RunAsync` keeps its signature: the scope comes from the found package, not from the caller.
+`IPackageInstaller.RunAsync` gains an optional explicit scope, only for the R3.5 chain and R3.7 (see above). `OperationOutcome` and `PackageOperation` gain `Scope` and `ScopeFromInstalled`.
 
 ## Testing
 

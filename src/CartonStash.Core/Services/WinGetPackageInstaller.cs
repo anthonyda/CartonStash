@@ -8,8 +8,12 @@ namespace CartonStash.Core.Services;
 /// <see cref="IPackageInstaller"/> on the WinGet COM API (specs 003, 004). WinGet starts the installer, and the
 /// installer asks for UAC itself when it needs to; the app never elevates (003 R6.1, constitution A5).
 /// </summary>
-public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettings settings, IRunningPrograms runningPrograms) : IPackageInstaller
+/// <param name="installContext">Windows Installer's context of MSI products (014 R3.8); <see cref="MsiInstallContext"/> when null.</param>
+public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettings settings, IRunningPrograms runningPrograms,
+    IInstallContext? installContext = null) : IPackageInstaller
 {
+    private readonly IInstallContext _installContext = installContext ?? new MsiInstallContext();
+
     public async Task<IReadOnlyList<Agreement>> GetAgreementsAsync(PackageInfo package, string? version = null, CancellationToken cancellationToken = default)
     {
         var found = await connection.FindByIdAsync(package.Id, package.Source, localFirst: false, cancellationToken);
@@ -38,7 +42,7 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
     }
 
     public async Task<OperationOutcome> RunAsync(OperationKind kind, PackageInfo package, bool acceptAgreements, string? version, string? logPath,
-        IProgress<OperationProgress> progress, CancellationToken cancellationToken)
+        IProgress<OperationProgress> progress, CancellationToken cancellationToken, InstallScope? scope = null)
     {
         // Re-find the package; COM objects never leave this class (A2).
         var found = UninstallsInstalledEntry(kind, package)
@@ -49,7 +53,7 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
             var outcome = kind switch
             {
                 OperationKind.Uninstall => await UninstallAsync(found, package.Name, logPath, progress, cancellationToken),
-                _ => await InstallAsync(kind, found, package, acceptAgreements, version, logPath, progress, cancellationToken),
+                _ => await InstallAsync(kind, found, package, acceptAgreements, version, scope, logPath, progress, cancellationToken),
             };
             switch (CheckAfter(kind, outcome, package, version))
             {
@@ -72,13 +76,18 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
     }
 
     private async Task<OperationOutcome> InstallAsync(OperationKind kind, CatalogPackage package, PackageInfo info, bool acceptAgreements, string? version,
-        string? logPath, IProgress<OperationProgress> progress, CancellationToken cancellationToken)
+        InstallScope? explicitScope, string? logPath, IProgress<OperationProgress> progress, CancellationToken cancellationToken)
     {
         var name = info.Name;
+        // 014 R3.8: going back asks for the scope the package is installed with; anything else uses the setting (006 R2.1).
+        var goingBack = GoesBack(kind, info, version);
+        var (scope, fromInstalled) = goingBack && explicitScope is null
+            ? await Task.Run(() => ScopeFor(null, true, MsiContextOf(package.InstalledVersion), WinGetScopeOf(package.InstalledVersion), settings.Current.InstallScope), cancellationToken)
+            : ScopeFor(explicitScope, goingBack, null, null, settings.Current.InstallScope);
         var options = new InstallOptions
         {
             PackageInstallMode = PackageInstallMode.Silent,
-            PackageInstallScope = ToWinGet(settings.Current.InstallScope), // 006 R2.1
+            PackageInstallScope = ToWinGet(scope),
             AcceptPackageAgreements = acceptAgreements,
             // 014 T1: Force never helped an older version go back, and it lets other warnings through.
         };
@@ -91,7 +100,7 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
             // 014 R2.1: looked up again now, by index (W2); the source may have changed since the pane opened.
             if (FindVersion(package, version) is not { } id)
             {
-                return VersionUnavailable(info.Source);
+                return VersionUnavailable(info.Source) with { Scope = scope, ScopeFromInstalled = fromInstalled };
             }
             options.PackageVersionId = id;
         }
@@ -105,7 +114,65 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
         var extendedError = result.ExtendedErrorCode?.HResult ?? 0;
         var running = await RunningFilesAfterAsync(extendedError, package);
         return MapInstallResult(kind, result.Status, result.InstallerErrorCode, result.RebootRequired, settings.Current.InstallScope,
-            extendedError, name, running, goingBackTo: GoesBack(kind, info, version) ? version : null) with { Details = FormatDetails(result.Status.ToString(), result.InstallerErrorCode, result.ExtendedErrorCode) };
+            extendedError, name, running, goingBackTo: goingBack ? version : null)
+            with { Details = FormatDetails(result.Status.ToString(), result.InstallerErrorCode, result.ExtendedErrorCode), Scope = scope, ScopeFromInstalled = fromInstalled };
+    }
+
+    /// <summary>
+    /// 014 R3.8: the scope to ask WinGet for, and whether it's how the package is installed. An explicit scope (carried
+    /// across the R3.5 uninstall) comes first; then, only when going back, Windows Installer's context of the product,
+    /// then WinGet's <c>InstalledScope</c>; then the setting. T18: WinGet's scope is wrong for some MSIs, so Windows
+    /// Installer comes before it.
+    /// </summary>
+    internal static (InstallScope Scope, bool FromInstalled) ScopeFor(InstallScope? explicitScope, bool goingBack,
+        InstallScope? msiContext, string? winGetScope, InstallScope setting) =>
+        explicitScope is InstallScope.User or InstallScope.System ? (explicitScope.Value, true)
+        : !goingBack ? (setting, false)
+        : msiContext is InstallScope.User or InstallScope.System ? (msiContext.Value, true)
+        : FromWinGetScope(winGetScope) is { } fromWinGet ? (fromWinGet, true)
+        : (setting, false);
+
+    /// <summary>WinGet's <c>InstalledScope</c> metadata: "User" or "Machine"; anything else (Unknown, empty) is unknown.</summary>
+    internal static InstallScope? FromWinGetScope(string? value) =>
+        string.Equals(value, "User", StringComparison.OrdinalIgnoreCase) ? InstallScope.User
+        : string.Equals(value, "Machine", StringComparison.OrdinalIgnoreCase) ? InstallScope.System
+        : null;
+
+    /// <summary>Windows Installer's context for the first of the version's product codes it has (W2: by index). Null for anything else.</summary>
+    private InstallScope? MsiContextOf(PackageVersionInfo? installed)
+    {
+        try
+        {
+            var codes = installed?.ProductCodes;
+            if (codes is null)
+            {
+                return null;
+            }
+            for (var i = 0; i < codes.Count; i++)
+            {
+                if (_installContext.ContextOf(codes[i]) is { } context)
+                {
+                    return context;
+                }
+            }
+            return null;
+        }
+        catch (Exception)
+        {
+            return null; // the next source is asked (R3.8)
+        }
+    }
+
+    private static string? WinGetScopeOf(PackageVersionInfo? installed)
+    {
+        try
+        {
+            return installed?.GetMetadata(PackageVersionMetadataField.InstalledScope);
+        }
+        catch (Exception)
+        {
+            return null;
+        }
     }
 
     private async Task<OperationOutcome> UninstallAsync(CatalogPackage package, string name, string? logPath, IProgress<OperationProgress> progress, CancellationToken cancellationToken)

@@ -77,6 +77,7 @@ public sealed class PackageActions(PackageOperationQueue queue, IPackageInstalle
                             ThenInstall = operation.Version,
                             PreviousVersion = operation.Options.PreviousVersion ?? operation.Package.InstalledVersion,
                             ExcludeOnSuccess = operation.Options.ExcludeOnSuccess, // R3.5: the R3.2 choice carries over
+                            PreviousScope = ScopeToKeep(operation), // R3.8: the install after the uninstall keeps it
                         });
                     }
                     break;
@@ -84,7 +85,8 @@ public sealed class PackageActions(PackageOperationQueue queue, IPackageInstalle
                     var previous = operation.Options.PreviousVersion!;
                     if (await AskAgreementsAsync(installer, dialogs, operation.Package, previous) is { } accepted)
                     {
-                        queue.Enqueue(OperationKind.Install, operation.Package, accepted, new OperationOptions { Version = previous });
+                        queue.Enqueue(OperationKind.Install, operation.Package, accepted,
+                            new OperationOptions { Version = previous, PreviousScope = operation.Options.PreviousScope }); // R3.8
                     }
                     break;
             }
@@ -101,11 +103,19 @@ public sealed class PackageActions(PackageOperationQueue queue, IPackageInstalle
                     AfterUninstall = true,
                     PreviousVersion = operation.Options.PreviousVersion,
                     ExcludeOnSuccess = operation.Options.ExcludeOnSuccess,
+                    PreviousScope = operation.Options.PreviousScope,
                 });
             }
         };
         return true;
     }
+
+    /// <summary>
+    /// 014 R3.8: the scope the failed going-back run asked for, when it was the installed one. A scope from the setting
+    /// isn't kept: the install after the uninstall then follows the setting, as any install does.
+    /// </summary>
+    internal static InstallScope? ScopeToKeep(PackageOperation operation) =>
+        operation.ScopeFromInstalled && operation.Scope is InstallScope.User or InstallScope.System ? operation.Scope : null;
 
     /// <summary>The R3.5 confirmation: names the package and both versions, and says what may be lost.</summary>
     internal static (string Title, string Message, string ConfirmText) UninstallFirstQuestion(PackageOperation operation)

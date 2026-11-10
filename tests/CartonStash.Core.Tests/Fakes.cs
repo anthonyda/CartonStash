@@ -142,11 +142,15 @@ internal sealed class ScriptedInstaller : IPackageInstaller
 
     public List<string?> LogPaths { get; } = [];
 
+    /// <summary>The explicit scope each operation ran with (014 R3.8).</summary>
+    public List<InstallScope?> Scopes { get; } = [];
+
     public Task<OperationOutcome> RunAsync(OperationKind kind, PackageInfo package, bool acceptAgreements, string? version, string? logPath,
-        IProgress<OperationProgress> progress, CancellationToken cancellationToken)
+        IProgress<OperationProgress> progress, CancellationToken cancellationToken, InstallScope? scope = null)
     {
         Calls.Add((kind, package.Id, acceptAgreements));
         Versions.Add(version);
+        Scopes.Add(scope);
         LogPaths.Add(logPath);
         if (AutoComplete is { } outcome)
         {

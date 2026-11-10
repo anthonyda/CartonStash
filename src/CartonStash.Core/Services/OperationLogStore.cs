@@ -116,6 +116,17 @@ public sealed class OperationLogStore : IOperationLogStore
     /// The summary, the installer's log or a note that there is none, then WinGet's record or why it's missing
     /// (R2.2, R2.3, R2.8, R2.9). WinGet's part stays last: the dialog keeps the end of a very long log.
     /// </summary>
+    /// <summary>014 R3.8: which installer was asked for. Uninstalls ask for none.</summary>
+    internal static string ScopeText(PackageOperation operation) => operation.Kind == OperationKind.Uninstall ? "none (uninstall)"
+        : (operation.Scope, operation.ScopeFromInstalled) switch
+        {
+            (InstallScope.System, true) => "for all users, as installed",
+            (InstallScope.User, true) => "for the current user, as installed",
+            (InstallScope.System, false) => "from Settings (all users)",
+            (InstallScope.User, false) => "from Settings (current user)",
+            _ => "from Settings (let WinGet decide)",
+        };
+
     internal static string Compose(PackageOperation operation, string? installerLog, WinGetRecord? record = null)
     {
         var package = operation.Package;
@@ -126,6 +137,7 @@ public sealed class OperationLogStore : IOperationLogStore
             .AppendLine($"Installed version: {package.InstalledVersion ?? "none"}")
             .AppendLine($"Available version: {package.AvailableVersion ?? "none"}")
             .AppendLine($"Chosen version: {operation.Version ?? "default"}") // 014 R2.1
+            .AppendLine($"Scope: {ScopeText(operation)}") // 014 R3.8
             .AppendLine($"Source: {package.SourceText}")
             .AppendLine($"Started: {operation.StartedAt?.ToLocalTime():yyyy-MM-dd HH:mm:ss}")
             .AppendLine($"Finished: {operation.FinishedAt?.ToLocalTime():yyyy-MM-dd HH:mm:ss}")

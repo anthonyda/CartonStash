@@ -1,6 +1,6 @@
 # 014 – Install a chosen version: Tasks
 
-**Status:** Done (2026-11-09). Amendment T18 to T24: T18 done; the design change from it is waiting for review
+**Status:** Done (2026-11-09). Amendment T18 to T24: T18, T19 done
 **Design:** [design.md](design.md)
 
 Tick a task only when its verification passes. Keep tasks small enough for one commit, and keep the build green at
@@ -135,11 +135,13 @@ Approved 2026-11-10: Q7 with a notice in the confirmation, Q8 as proposed.
   with `PackageInstallScope.System` over the all-users 3.13: record status, exit code and the uninstall entries.
   Update design.md if the strings or the refusal differ from what it expects (R3.8).
   - Verify: entries in the log below.
-- [ ] **T19.** `IInstallContext` / `MsiInstallContext` (`MsiGetProductInfoEx`); `ScopeFor` in `WinGetPackageInstaller`, used when going back; `PreviousScope` on `OperationOptions`,
+- [x] **T19.** `IInstallContext` / `MsiInstallContext` (`MsiGetProductInfoEx`); `ScopeFor` in `WinGetPackageInstaller`, used when going back; `PreviousScope` on `OperationOptions`,
   set before the R3.5 uninstall and used by the chained install and by **Install {previous version}**; the log's
   "Scope" line (R3.8).
-  - Verify: `GoingBackScopeTests` (`ScopeFor_*_R3_8`, an MSI context wins over WinGet's); `UninstallThenInstallTests` pass the scope through;
-    `OperationLogStoreTests` for the line.
+  - Verify: `GoingBackScopeTests` (`ScopeFor_*_R3_8`, an MSI context wins over WinGet's; the scope through the
+    R3.5 chain and Install {previous version}; the log's "Scope" line; the real `msi.dll` on a missing product).
+    *Done 2026-11-10: also `OperationOutcome.Scope` / `ScopeFromInstalled` and `RunAsync`'s explicit scope, per the
+    design change made during this task. 713 unit and 22 integration tests pass.*
 - [ ] **T20.** `CatalogConnection.CountInstalledAsync`; counts before and after when going back; `AfterGoingBack`
   (R3.9).
   - Verify: `AfterGoingBackTests` (`*_R3_9`): more entries → the warning, `SucceededUnconfirmed`; same, fewer, null →
