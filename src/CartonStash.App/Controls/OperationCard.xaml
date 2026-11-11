@@ -116,7 +116,7 @@
                 <TextBlock
                     Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                     Style="{StaticResource CaptionTextBlockStyle}"
-                    Text="{x:Bind Operation.PermissionText}"
+                    Text="{x:Bind Operation.PermissionText, Mode=OneWay}"
                     TextWrapping="Wrap"
                     Visibility="{x:Bind Operation.ShowPermission, Mode=OneWay}" />
                 <TextBlock
