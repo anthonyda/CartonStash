@@ -32,6 +32,7 @@ public class GoingBackScopeTests
     [InlineData("User", InstallScope.User)]
     [InlineData("user", InstallScope.User)]
     [InlineData("Machine", InstallScope.System)]
+    [InlineData("System", InstallScope.System)] // what WinGet 1.29 returns (T18, 015 T9)
     public void ScopeFor_without_an_MSI_context_uses_WinGets_scope_R3_8(string winGet, InstallScope expected)
     {
         Assert.Equal((expected, ScopeSource.Installed), WinGetPackageInstaller.ScopeFor(null, keepsInstalled: true, null, winGet, InstallScope.Any));

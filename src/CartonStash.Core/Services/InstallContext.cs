@@ -77,10 +77,14 @@ internal static class InstalledScopes
     internal static InstallScope? Read(PackageVersionInfo? installed, IInstallContext context) =>
         MsiContextOf(installed, context) ?? FromWinGetScope(WinGetScopeOf(installed));
 
-    /// <summary>WinGet's <c>InstalledScope</c> metadata: "User" or "Machine"; anything else (Unknown, empty) is unknown.</summary>
+    /// <summary>
+    /// WinGet's <c>InstalledScope</c> metadata: "User", or "System" (what WinGet 1.29 returns, T18's log; "Machine" is
+    /// accepted too, the manifest's word). Anything else (Unknown, empty) is unknown.
+    /// </summary>
     internal static InstallScope? FromWinGetScope(string? value) =>
         string.Equals(value, "User", StringComparison.OrdinalIgnoreCase) ? InstallScope.User
-        : string.Equals(value, "Machine", StringComparison.OrdinalIgnoreCase) ? InstallScope.System
+        : string.Equals(value, "System", StringComparison.OrdinalIgnoreCase) || string.Equals(value, "Machine", StringComparison.OrdinalIgnoreCase)
+            ? InstallScope.System
         : null;
 
     /// <summary>Windows Installer's context for the first of the version's product codes it has (W2: by index).</summary>
