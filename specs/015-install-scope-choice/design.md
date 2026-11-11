@@ -84,8 +84,8 @@ version offers both scopes. When it's true and Install would show, the view show
 
 - Primary part: **Install**, as today (the setting, R1.1). Accessible name "Install {name}".
 - Flyout: **Install for all users** and **Install for the current user**, accessible names "Install {name} for all
-  users" and "Install {name} for the current user" (R1.6). "For all users" has a second line in the menu item: "Windows
-  may ask for permission" (R1.4).
+  users" and "Install {name} for the current user" (R1.6). "For all users" reads "Install for all users (Windows may ask
+  for permission)" (R1.4). *Changed in T7: a `MenuFlyoutItem` has one line of text.*
 - The version line (014 R1.6) does the same for an `Install` action whose version offers both scopes.
 
 Keyboard: the split button's own behaviour (Enter is Install, Alt+Down opens the menu).

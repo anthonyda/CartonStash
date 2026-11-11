@@ -16,6 +16,12 @@ public static class Ui
 
     public static bool Not(bool value) => !value;
 
+    /// <summary>Visible when both are true (015 R1.1: Install shows and the scopes are offered).</summary>
+    public static Visibility VisibleIfBoth(bool first, bool second) => first && second ? Visibility.Visible : Visibility.Collapsed;
+
+    /// <summary>Visible when the first is true and the second false.</summary>
+    public static Visibility VisibleIfNot(bool first, bool second) => first && !second ? Visibility.Visible : Visibility.Collapsed;
+
     public static string Format(string format, string? value) => string.Format(format, value);
 
     public static string Choose(bool condition, string whenTrue, string whenFalse) => condition ? whenTrue : whenFalse;

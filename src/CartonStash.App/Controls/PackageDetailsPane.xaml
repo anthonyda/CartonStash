@@ -57,7 +57,12 @@
         <ScrollViewer Grid.Row="1" Padding="20,0,20,20">
             <StackPanel Spacing="16">
                 <!-- R3.1: same actions and progress as the row -->
-                <controls:PackageActionsView HorizontalAlignment="Left" Row="{x:Bind ViewModel.Row, Mode=OneWay}" />
+                <controls:PackageActionsView
+                    HorizontalAlignment="Left"
+                    InstallForAllUsersCommand="{x:Bind ViewModel.InstallForAllUsersCommand}"
+                    InstallForCurrentUserCommand="{x:Bind ViewModel.InstallForCurrentUserCommand}"
+                    OffersScopeChoice="{x:Bind ViewModel.OffersScopeChoice, Mode=OneWay}"
+                    Row="{x:Bind ViewModel.Row, Mode=OneWay}" />
 
                 <ProgressBar
                     AutomationProperties.Name="Loading details"
@@ -84,6 +89,12 @@
                         Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                         Text="{x:Bind ViewModel.Row.VersionStatusText, Mode=OneWay}"
                         TextWrapping="Wrap" />
+                    <!-- 015 R2.1, R2.2 -->
+                    <TextBlock
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Text="{x:Bind ViewModel.InstalledScopeText, Mode=OneWay}"
+                        TextWrapping="Wrap"
+                        Visibility="{x:Bind ViewModel.HasInstalledScope, Mode=OneWay}" />
                 </StackPanel>
 
                 <!-- R1.2 -->
@@ -244,7 +255,29 @@
                                             AutomationProperties.Name="{x:Bind ActionName}"
                                             Command="{x:Bind RunCommand}"
                                             Content="{x:Bind ActionText}"
-                                            Visibility="{x:Bind ShowAction, Mode=OneWay}" />
+                                            Visibility="{x:Bind ShowPlainAction, Mode=OneWay}" />
+                                        <!-- 015 R1.3: a version that has both scopes -->
+                                        <SplitButton
+                                            Grid.Column="1"
+                                            Padding="8,2"
+                                            VerticalAlignment="Center"
+                                            AutomationProperties.Name="{x:Bind ActionName}"
+                                            Command="{x:Bind RunCommand}"
+                                            Content="{x:Bind ActionText}"
+                                            Visibility="{x:Bind ShowScopeChoice, Mode=OneWay}">
+                                            <SplitButton.Flyout>
+                                                <MenuFlyout Placement="Bottom">
+                                                    <MenuFlyoutItem
+                                                        AutomationProperties.Name="{x:Bind ForAllUsersName}"
+                                                        Command="{x:Bind RunForAllUsersCommand}"
+                                                        Text="Install for all users (Windows may ask for permission)" />
+                                                    <MenuFlyoutItem
+                                                        AutomationProperties.Name="{x:Bind ForCurrentUserName}"
+                                                        Command="{x:Bind RunForCurrentUserCommand}"
+                                                        Text="Install for the current user" />
+                                                </MenuFlyout>
+                                            </SplitButton.Flyout>
+                                        </SplitButton>
                                     </Grid>
                                 </DataTemplate>
                             </ListView.ItemTemplate>

@@ -36,7 +36,7 @@ every commit (Q4). Manual checks run in the CartonStash-Test VM, never on the ho
 
 ## App
 
-- [ ] **T7.** `PackageActionsView.OffersScopeChoice` and the `SplitButton`; the pane's "Installed for …" line; the
+- [x] **T7.** `PackageActionsView.OffersScopeChoice` and the `SplitButton`; the pane's "Installed for …" line; the
   version line's split button. Theme resources only (R1.1, R1.3, R1.6, R2.1).
   - Verify: `dotnet build`; the pane in T9.
 
