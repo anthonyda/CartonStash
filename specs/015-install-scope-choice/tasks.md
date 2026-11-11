@@ -26,7 +26,7 @@ every commit (Q4). Manual checks run in the CartonStash-Test VM, never on the ho
   wording (R1.4, R1.5).
   - Verify: `ChosenScopeTests` (`*_R1_5`). *Done 2026-11-11: R1.4's `MayAskPermission` for a chosen `System` is in
     the COM path, which the fake installer doesn't run; checked in T9 instead.*
-- [ ] **T5.** `OffersScopeChoice` (the rule), `PackageDetails.OffersScopeChoice` and `InstalledScope` from
+- [x] **T5.** `OffersScopeChoice` (the rule), `PackageDetails.OffersScopeChoice` and `InstalledScope` from
   `GetDetailsAsync`; `IPackageService.OffersScopeChoiceAsync` for a version (R1.2, R1.3, R2.1).
   - Verify: `ScopeChoiceRuleTests` (`*_R1_2`) with the measured answers as fakes.
 - [ ] **T6.** `PackageDetailsViewModel`: `OffersScopeChoice`, `InstalledScopeText`/`HasInstalledScope`, install per scope

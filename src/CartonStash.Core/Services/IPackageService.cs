@@ -27,6 +27,12 @@ public interface IPackageService
     Task<PackageInfo?> ReadInstalledAsync(PackageInfo package, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// 015 R1.2, R1.3: WinGet has a per-user and an all-users installer for that version of the package. False when it
+    /// has one scope, none, or the read fails.
+    /// </summary>
+    Task<bool> OffersScopeChoiceAsync(PackageInfo package, string version, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// The package's icon URL from WinGet, or null (005 R5). Works for packages from the latest search or installed list;
     /// results are cached for the session.
     /// </summary>
