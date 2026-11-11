@@ -46,13 +46,21 @@ It talks to WinGet directly through its official API, so what you see is exactly
   refresh, and copyable diagnostic info.
 - **Accessible**: keyboard navigation, screen reader names, light, dark and high-contrast themes.
 
-| Installed apps, filtered by status | Available updates |
+| Installed apps, filtered by status | Available updates, and the packages you excluded |
 |---|---|
-| ![Installed programs with color-coded version badges and status filter chips](docs/images/installed.png) | ![The Updates page with an available update and Update all](docs/images/updates.png) |
+| ![Installed programs with color-coded version badges and status filter chips](docs/images/installed.png) | ![The Updates page with nine updates, Update all, an Exclude button on each row and Notepad++ in the Excluded list](docs/images/updates.png) |
+
+| Release notes and every available version | Install for all users or just for you |
+|---|---|
+| ![The jq details pane on the Updates page, with formatted release notes and version 1.8.2 selected in Available versions, showing Update to this version](docs/images/details.png) | ![The Pandoc Install split button open, offering Install for all users and Install for the current user](docs/images/install-scope.png) |
 
 | Activity pane, pinned beside the page | Operation log |
 |---|---|
-| ![The Activity pane pinned next to the Installed page, with finished and failed operations](docs/images/activity.png) | ![The log of a failed install, with WinGet's result and Copy and Open folder buttons](docs/images/log.png) |
+| ![The Activity pane pinned next to the Installed page, with three finished installs and updates](docs/images/activity.png) | ![The log of the jq update, with WinGet's result, the scope used, and Copy and Open folder buttons](docs/images/log.png) |
+
+| Settings | Dark theme, going back to an older version |
+|---|---|
+| ![Settings with theme, start page, default install scope and background update checks every 24 hours](docs/images/settings.png) | ![7-Zip details in the dark theme, with an older version selected and Go back to this version](docs/images/dark.png) |
 
 ## Download and install
 
