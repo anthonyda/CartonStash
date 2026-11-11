@@ -1,6 +1,6 @@
 # 015 – Choose the install scope per install: Tasks
 
-**Status:** Draft (2026-11-11), starts once design.md is approved
+**Status:** In progress (design approved 2026-11-11)
 **Design:** [design.md](design.md)
 
 Tick a task only when its verification passes. Keep tasks small enough for one commit, and keep the build green at
@@ -14,9 +14,10 @@ every commit (Q4). Manual checks run in the CartonStash-Test VM, never on the ho
 
 ## Core
 
-- [ ] **T2.** `ScopeFromInstalled` becomes `ScopeSource` (`Setting`, `Installed`, `Chosen`) on `OperationOutcome` and
+- [x] **T2.** `ScopeFromInstalled` becomes `ScopeSource` (`Setting`, `Installed`, `Chosen`) on `OperationOutcome` and
   `PackageOperation`; the log's "Scope" line reads it. No behaviour change. *(014 R3.8, prepares R1.5)*
   - Verify: the existing `GoingBackScopeTests` and `UninstallThenInstallTests` pass, renamed where they read it.
+    *Done 2026-11-11: the log also has the "chosen" wording ready for T4. 796 tests pass.*
 - [ ] **T3.** `ScopeFor` with the chosen scope, the carried one and `keepsInstalled` (going back or an update);
   `UpdatedScopeNote` and the success message (R3.1, R3.2).
   - Verify: `UpdateScopeTests` (`*_R3_1`, `*_R3_2`); `GoingBackScopeTests` still pass.

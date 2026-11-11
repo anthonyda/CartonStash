@@ -41,6 +41,19 @@ public readonly record struct OperationProgress(OperationPhase Phase, double? Pe
     public bool MayAskPermission { get; init; }
 }
 
+/// <summary>Where the scope an operation asked WinGet for came from (014 R3.8, 015 R1.5).</summary>
+public enum ScopeSource
+{
+    /// <summary>The install scope setting (006 R2.1); <see cref="InstallScope.Any"/> lets WinGet decide.</summary>
+    Setting,
+
+    /// <summary>How the package is installed: Windows Installer, then WinGet (014 R3.8).</summary>
+    Installed,
+
+    /// <summary>The user chose it for this install (015 R1.5).</summary>
+    Chosen,
+}
+
 /// <summary>How WinGet ran the installer or uninstaller (003 R8.5).</summary>
 public enum OperationMode
 {
@@ -121,8 +134,8 @@ public sealed record OperationOutcome(OperationResult Result, string Message, st
     /// <summary>The scope the installer asked WinGet for (014 R3.8); <see cref="InstallScope.Any"/> lets WinGet decide.</summary>
     public InstallScope Scope { get; init; }
 
-    /// <summary>True when <see cref="Scope"/> is how the package is installed, false when it's the setting (014 R3.8).</summary>
-    public bool ScopeFromInstalled { get; init; }
+    /// <summary>Where <see cref="Scope"/> came from (014 R3.8, 015 R1.5).</summary>
+    public ScopeSource ScopeSource { get; init; }
 
     /// <summary>How WinGet ran it (003 R8.5).</summary>
     public OperationMode Mode { get; init; }
@@ -199,7 +212,7 @@ public sealed partial class PackageOperation : ObservableObject
     /// <summary>From the outcome: the scope asked for, and whether it's the installed one (014 R3.8).</summary>
     public InstallScope Scope { get; internal set; }
 
-    public bool ScopeFromInstalled { get; internal set; }
+    public ScopeSource ScopeSource { get; internal set; }
 
     /// <summary>From the outcome: how WinGet ran it (003 R8.5).</summary>
     public OperationMode Mode { get; internal set; }

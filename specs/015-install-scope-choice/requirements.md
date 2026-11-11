@@ -1,6 +1,6 @@
 # 015 – Choose the install scope per install: Requirements
 
-**Status:** Approved (2026-11-10), with the proposed answers to Q1, Q2 and Q3
+**Status:** Approved (2026-11-10), with the proposed answers to Q1, Q2 and Q3. Design approved 2026-11-11; in progress
 **Depends on:** 003 (install and its queue), 004 (updates), 005 (details pane), 006 (R2 install scope setting),
 014 (version list; amendment R3.8, which reads how a package is installed)
 

@@ -94,7 +94,7 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
         var installed = package.InstalledVersion;
         // One read of Windows Installer's context serves both 014 R3.8 and 003 R8.1.
         var msiContext = installed is null ? null : await Task.Run(() => InstalledScopes.MsiContextOf(installed, _installContext), cancellationToken);
-        var (scope, fromInstalled) = goingBack && explicitScope is null
+        var (scope, scopeSource) = goingBack && explicitScope is null
             ? await Task.Run(() => ScopeFor(null, true, msiContext, InstalledScopes.WinGetScopeOf(installed), settings.Current.InstallScope), cancellationToken)
             : ScopeFor(explicitScope, goingBack, null, null, settings.Current.InstallScope);
         var mode = ModeFor(kind, installed is not null, msiContext);
@@ -114,7 +114,7 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
             // 014 R2.1: looked up again now, by index (W2); the source may have changed since the pane opened.
             if (FindVersion(package, version) is not { } id)
             {
-                return VersionUnavailable(info.Source) with { Scope = scope, ScopeFromInstalled = fromInstalled, Mode = mode };
+                return VersionUnavailable(info.Source) with { Scope = scope, ScopeSource = scopeSource, Mode = mode };
             }
             options.PackageVersionId = id;
         }
@@ -133,7 +133,7 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
         var running = await RunningFilesAfterAsync(extendedError, package);
         return MapInstallResult(kind, result.Status, result.InstallerErrorCode, result.RebootRequired, settings.Current.InstallScope,
             extendedError, name, running, goingBackTo: goingBack ? version : null, installedVersion: info.InstalledVersion, mode: mode)
-            with { Details = FormatDetails(result.Status.ToString(), result.InstallerErrorCode, result.ExtendedErrorCode), Scope = scope, ScopeFromInstalled = fromInstalled, Mode = mode };
+            with { Details = FormatDetails(result.Status.ToString(), result.InstallerErrorCode, result.ExtendedErrorCode), Scope = scope, ScopeSource = scopeSource, Mode = mode };
     }
 
     /// <summary>R3.9: the installed version's MSI product codes that Windows Installer has (W2: by index). Empty for anything else.</summary>
@@ -236,13 +236,13 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
     /// then WinGet's <c>InstalledScope</c>; then the setting. T18: WinGet's scope is wrong for some MSIs, so Windows
     /// Installer comes before it.
     /// </summary>
-    internal static (InstallScope Scope, bool FromInstalled) ScopeFor(InstallScope? explicitScope, bool goingBack,
+    internal static (InstallScope Scope, ScopeSource Source) ScopeFor(InstallScope? explicitScope, bool goingBack,
         InstallScope? msiContext, string? winGetScope, InstallScope setting) =>
-        explicitScope is InstallScope.User or InstallScope.System ? (explicitScope.Value, true)
-        : !goingBack ? (setting, false)
-        : msiContext is InstallScope.User or InstallScope.System ? (msiContext.Value, true)
-        : FromWinGetScope(winGetScope) is { } fromWinGet ? (fromWinGet, true)
-        : (setting, false);
+        explicitScope is InstallScope.User or InstallScope.System ? (explicitScope.Value, ScopeSource.Installed)
+        : !goingBack ? (setting, ScopeSource.Setting)
+        : msiContext is InstallScope.User or InstallScope.System ? (msiContext.Value, ScopeSource.Installed)
+        : FromWinGetScope(winGetScope) is { } fromWinGet ? (fromWinGet, ScopeSource.Installed)
+        : (setting, ScopeSource.Setting);
 
     /// <summary>WinGet's <c>InstalledScope</c> metadata: "User" or "Machine"; anything else is unknown.</summary>
     internal static InstallScope? FromWinGetScope(string? value) => InstalledScopes.FromWinGetScope(value);

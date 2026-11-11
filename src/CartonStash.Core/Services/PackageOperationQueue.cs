@@ -217,7 +217,7 @@ public sealed class PackageOperationQueue(IPackageInstaller installer, IOperatio
         operation.Retryable = outcome.Retryable; // before Result, which notifies CanRetry
         operation.OffersUninstallFirst = outcome.OffersUninstallFirst;
         operation.Scope = outcome.Scope;
-        operation.ScopeFromInstalled = outcome.ScopeFromInstalled;
+        operation.ScopeSource = outcome.ScopeSource;
         operation.Mode = outcome.Mode;
         operation.Result = outcome.Result;
         operation.Message = outcome.Message;

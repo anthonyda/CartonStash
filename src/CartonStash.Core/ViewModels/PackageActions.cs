@@ -115,7 +115,7 @@ public sealed class PackageActions(PackageOperationQueue queue, IPackageInstalle
     /// isn't kept: the install after the uninstall then follows the setting, as any install does.
     /// </summary>
     internal static InstallScope? ScopeToKeep(PackageOperation operation) =>
-        operation.ScopeFromInstalled && operation.Scope is InstallScope.User or InstallScope.System ? operation.Scope : null;
+        operation.ScopeSource == ScopeSource.Installed && operation.Scope is InstallScope.User or InstallScope.System ? operation.Scope : null;
 
     /// <summary>The R3.5 confirmation: names the package and both versions, and says what may be lost.</summary>
     internal static (string Title, string Message, string ConfirmText) UninstallFirstQuestion(PackageOperation operation)

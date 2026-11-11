@@ -123,12 +123,14 @@ public sealed class OperationLogStore : IOperationLogStore
 
     /// <summary>014 R3.8: which installer was asked for. Uninstalls ask for none.</summary>
     internal static string ScopeText(PackageOperation operation) => operation.Kind == OperationKind.Uninstall ? "none (uninstall)"
-        : (operation.Scope, operation.ScopeFromInstalled) switch
+        : (operation.Scope, operation.ScopeSource) switch
         {
-            (InstallScope.System, true) => "for all users, as installed",
-            (InstallScope.User, true) => "for the current user, as installed",
-            (InstallScope.System, false) => "from Settings (all users)",
-            (InstallScope.User, false) => "from Settings (current user)",
+            (InstallScope.System, ScopeSource.Installed) => "for all users, as installed",
+            (InstallScope.User, ScopeSource.Installed) => "for the current user, as installed",
+            (InstallScope.System, ScopeSource.Chosen) => "for all users, chosen",
+            (InstallScope.User, ScopeSource.Chosen) => "for the current user, chosen",
+            (InstallScope.System, _) => "from Settings (all users)",
+            (InstallScope.User, _) => "from Settings (current user)",
             _ => "from Settings (let WinGet decide)",
         };
 
