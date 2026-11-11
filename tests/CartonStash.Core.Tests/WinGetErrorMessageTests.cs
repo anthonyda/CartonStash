@@ -402,4 +402,72 @@ public class WinGetErrorMessageTests
         Assert.DoesNotContain("in place", outcome.Message);
         Assert.True(outcome.Retryable);
     }
+
+    // --- 003 R8.4: WinGet couldn't uninstall the installed version (0x8A150030)
+
+    private const int UninstallCommandFailed = unchecked((int)0x8A150030);
+
+    [Theory] // the VM: Pandoc's update from the Updates page said "The installer failed with error code 1603."
+    [InlineData(1603u)]
+    [InlineData(1730u)]
+    public void An_update_whose_uninstall_failed_says_so_with_the_admin_hint_R8_4(uint code)
+    {
+        var outcome = WinGetPackageInstaller.MapInstallResult(OperationKind.Upgrade, InstallResultStatus.InstallError, code, false, InstallScope.Any,
+            UninstallCommandFailed, "Pandoc", installedVersion: "3.12");
+
+        Assert.Equal($"WinGet couldn't uninstall Pandoc 3.12 (exit code {code}). Pandoc may be installed for all users, which needs "
+            + "administrator rights. Retry, and accept Windows' prompt if it appears.", outcome.Message);
+        Assert.DoesNotContain("installer failed", outcome.Message);
+        Assert.True(outcome.Retryable);
+    }
+
+    [Fact]
+    public void An_uninstall_that_failed_says_so_too_R8_4()
+    {
+        var outcome = WinGetPackageInstaller.MapUninstallResult(UninstallResultStatus.UninstallError, 1603, false, UninstallCommandFailed, "Pandoc",
+            installedVersion: "3.12");
+
+        Assert.StartsWith("WinGet couldn't uninstall Pandoc 3.12 (exit code 1603). Pandoc may be installed for all users", outcome.Message);
+        Assert.True(outcome.Retryable);
+    }
+
+    [Fact] // the prompt was offered already: no hint
+    public void After_a_Default_mode_run_there_is_no_hint_R8_4()
+    {
+        var update = WinGetPackageInstaller.MapInstallResult(OperationKind.Upgrade, InstallResultStatus.InstallError, 1603, false, InstallScope.Any,
+            UninstallCommandFailed, "Pandoc", installedVersion: "3.12", mode: OperationMode.DefaultForAllUsersMsi);
+        var uninstall = WinGetPackageInstaller.MapUninstallResult(UninstallResultStatus.UninstallError, 1730, false, UninstallCommandFailed, "Pandoc",
+            installedVersion: "3.12", mode: OperationMode.DefaultForAllUsersMsi);
+
+        Assert.Equal("WinGet couldn't uninstall Pandoc 3.12 (exit code 1603).", update.Message);
+        Assert.Equal("WinGet couldn't uninstall Pandoc 3.12 (exit code 1730).", uninstall.Message);
+    }
+
+    [Theory] // another exit code: what happened, without guessing the cause (P1)
+    [InlineData(1605u, "WinGet couldn't uninstall Pandoc 3.12 (exit code 1605).")]
+    [InlineData(2147942405u, "WinGet couldn't uninstall Pandoc 3.12 (exit code 0x80070005).")]
+    public void Other_exit_codes_get_no_hint_R8_4(uint code, string message)
+    {
+        var outcome = WinGetPackageInstaller.MapInstallResult(OperationKind.Upgrade, InstallResultStatus.InstallError, code, false, InstallScope.Any,
+            UninstallCommandFailed, "Pandoc", installedVersion: "3.12");
+
+        Assert.Equal(message, outcome.Message);
+    }
+
+    [Fact] // no installed version known: the name alone
+    public void Without_a_version_the_name_alone_R8_4()
+    {
+        var outcome = WinGetPackageInstaller.MapUninstallResult(UninstallResultStatus.UninstallError, 1605, false, UninstallCommandFailed, "Pandoc");
+
+        Assert.Equal("WinGet couldn't uninstall Pandoc (exit code 1605).", outcome.Message);
+    }
+
+    [Fact] // 003 R7 still wins: the program is running
+    public void In_use_still_comes_first_R8_4()
+    {
+        var outcome = WinGetPackageInstaller.MapInstallResult(OperationKind.Upgrade, InstallResultStatus.InstallError, 1603, false, InstallScope.Any,
+            unchecked((int)0x8A150101), "Pandoc", installedVersion: "3.12");
+
+        Assert.StartsWith("Pandoc is running", outcome.Message);
+    }
 }

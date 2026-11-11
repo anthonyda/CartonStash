@@ -169,3 +169,92 @@ Nothing is read and no process is enumerated on success or on any other failure 
   throws for elevated processes and for 32/64-bit mismatches.
 - **A portable program locked by something else (antivirus, Explorer preview):** no running file found, so R7.3 gives
   today's message. That is honest, if not more helpful.
+
+## Amendment R8: all-users MSI packages (approved 2026-11-10, done 2026-11-11)
+
+**Requirements:** amendment R8 in [requirements.md](requirements.md), approved 2026-11-10 with Q8 and Q9 as proposed.
+
+### Components
+
+| Layer | Type | Change |
+|-------|------|--------|
+| Core/Services | `WinGetPackageInstaller` | `ModeFor`; Default mode for an all-users MSI; the `0x8A150030` arm in both result maps; reports the mode |
+| Core/Services | `InstalledScopes` (014) | reused: `MsiContextOf(installed, context)` is the R8.1 check |
+| Core/Models | `OperationProgress` | `MayAskPermission` (bool), reported once before WinGet starts |
+| Core/Models | `PackageOperation` | `MayAskPermission`, set from progress; `PermissionText` for the card (R8.3); `Mode` from the outcome |
+| Core/Models | `OperationOutcome` | `Mode` (`OperationMode.Silent` or `.DefaultForAllUsersMsi`) |
+| Core/Services | `OperationLogStore` | the "Mode" line (R8.5) |
+| App/Controls | `OperationCard.xaml` | one caption line bound to `PermissionText` while active (theme resource, wraps) |
+
+No new WinGet call: `InstallOptions.PackageInstallMode` and `UninstallOptions.PackageUninstallMode` take `Default`
+instead of `Silent`. The COM API has no `SilentWithProgress` for either (measured: `Enum.Parse` failed in the probe
+tool); `Default` is what WinGet turns into `/passive` for MSI.
+
+### When Default mode applies (R8.1, R8.2)
+
+```csharp
+// 003 R8.1: Default mode (msiexec /passive, so Windows can ask for consent) only when the installed version is an MSI
+// product Windows Installer has for all users. Everything else stays Silent (R8.2).
+internal static OperationMode ModeFor(OperationKind kind, bool installed, InstallScope? msiContext) =>
+    installed && msiContext == InstallScope.System && kind is OperationKind.Upgrade or OperationKind.Uninstall or OperationKind.Install
+        ? OperationMode.DefaultForAllUsersMsi : OperationMode.Silent;
+```
+
+- `installed` is true for an update, an uninstall, and an install over an installed package (014's going back). A
+  first install keeps Silent: Pandoc's all-users MSI installed silently with a UAC prompt in 014's runs, so first
+  installs aren't broken.
+- `msiContext` is 014's `InstalledScopes.MsiContextOf(found.InstalledVersion, _installContext)`, read off the UI
+  thread before the operation starts. For an uninstall, `found` is the row's installed entry (002 R6.5), so the
+  product codes are that entry's.
+- Every update of an all-users MSI gets it, not only `uninstallPrevious` ones. The manifest's upgrade behaviour isn't
+  on the COM API's `PackageVersionInfo`, and the measurement shows `/passive` works for the update itself as well.
+
+### While it runs (R8.3)
+
+Before calling WinGet, the installer reports `new OperationProgress(OperationPhase.Queued) { MayAskPermission = true }`
+when Default mode applies. The queue's progress handler sets `operation.MayAskPermission`. The card shows, under the
+status, while the operation is active and `MayAskPermission` is set:
+
+> Windows may ask for permission. If nothing appears, look for the shield in the taskbar.
+
+It disappears when the operation finishes. Narrator reads it as part of the card (no live region: the prompt itself
+takes focus).
+
+### The `0x8A150030` result (R8.4)
+
+`APPINSTALLER_CLI_ERROR_EXEC_UNINSTALL_COMMAND_FAILED` = `0x8A150030`. A new arm, after the in-use arm (R7) and before
+the generic ones, in `MapInstallResult` (for `InstallError`) and `MapUninstallResult` (for `UninstallError`):
+
+> WinGet couldn't uninstall {name} {version} (exit code {code}).
+
+plus, when the exit code is 1603 or 1730 and the operation ran Silent:
+
+> {name} may be installed for all users, which needs administrator rights. Retry, and accept Windows' prompt if it
+> appears.
+
+When the operation already ran in Default mode, the hint is left out: the prompt was offered. Retry stays (R5.2).
+`{version}` is the installed version, which is what WinGet tried to remove. Retry re-reads the MSI context, so a
+package the check missed the first time still gets Silent; the hint is for that case, honest about "may".
+
+### The log (R8.5)
+
+After 014's "Scope" line: `Mode: silent` or `Mode: default, for an all-users MSI (Windows may ask for permission)`.
+
+### Testing strategy
+
+| Requirement | Test |
+|-------------|------|
+| R8.1, R8.2 | `ModeFor`: each kind × installed or not × `System`, `User`, null (unit) |
+| R8.3 | Queue: a `MayAskPermission` progress sets the operation's flag; `PermissionText` only while active; cleared on finish (unit) |
+| R8.4 | `WinGetErrorMessageTests`: `0x8A150030` with 1603 and 1730, Silent → with the hint; Default → without; another exit code → without; for install (update) and uninstall; not "the installer failed" (unit) |
+| R8.5 | `OperationLogStoreTests`: both "Mode" lines (unit) |
+| All | VM: Pandoc 3.12 for all users → Update from the Updates page: one UAC prompt, the card's line, updated, one entry. Uninstall it: one prompt, uninstalled. jq and a per-user Pandoc: no prompt, Silent in the log. Another all-users MSI (PowerShell wix) updated with `/passive`: what it shows besides a progress bar |
+
+### Risks and alternatives considered
+
+- **An MSI with dialogs in `/passive`.** `/passive` shows only a progress bar for standard MSIs, but a package's own
+  custom actions could show more. The VM run checks PowerShell's MSI; anything else stays Windows Installer's
+  behaviour, and the user can cancel it there.
+- **The UAC prompt behind the app.** Windows may flash the shield in the taskbar instead of showing the prompt. R8.3's
+  line says where to look.
+- **Default for everything, or Silent then retry:** rejected in Q8.

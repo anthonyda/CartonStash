@@ -54,6 +54,28 @@
     in the scheduled task, and both operations simply succeeded. Started from its package folder in a `cmd` window, it passed.
 - [x] **T14.** Mark amendment R7 `Done` here, in requirements.md, design.md and the README roadmap.
 
+## Amendment R8: all-users MSI packages (2026-11-10)
+
+Design approved 2026-11-10.
+
+- [x] **T15.** `ModeFor` in `WinGetPackageInstaller`; `PackageInstallMode.Default` /
+  `PackageUninstallMode.Default` when it applies, from 014's `InstalledScopes.MsiContextOf`; `OperationOutcome.Mode`;
+  the log's "Mode" line (R8.1, R8.2, R8.5).
+  - Verify: `AllUsersMsiModeTests` (`*_R8_1`, `*_R8_2`, `*_R8_5`, the log line included). *Done 2026-11-10: one Windows
+    Installer read serves 014 R3.8 and R8.1. 785 tests pass.*
+- [x] **T16.** `OperationProgress.MayAskPermission`, reported before WinGet starts; `PackageOperation.MayAskPermission`
+  and `PermissionText`; the card's caption line (R8.3).
+  - Verify: `AllUsersMsiModeTests` (`*_R8_3`); `dotnet build`; the card in T18.
+- [x] **T17.** The `0x8A150030` arm in `MapInstallResult` and `MapUninstallResult`, with the hint for 1603 and 1730
+  after a Silent run (R8.4).
+  - Verify: `WinGetErrorMessageTests` (`*_R8_4`).
+- [x] **T18.** VM, on a build from this branch: Pandoc 3.12 for all users → **Update** from the Updates page: one UAC
+  prompt (the maintainer answers), the card's line while it runs, "Updated", one entry, log "Mode: default…". Then
+  **Uninstall** it: one prompt, uninstalled. jq and a per-user Pandoc: no prompt, "Mode: silent". PowerShell (wix)
+  for all users, updated: what `/passive` shows. Changelog line.
+  - Verify: entries in the log below. *Done 2026-11-11; the card's line needed a fix (one-way binding), see the log.*
+- [x] **T19.** Mark amendment R8 `Done` here, in requirements.md, design.md and the README roadmap.
+
 ## Manual verification log
 
 | Criterion | Date | Result | Notes |
@@ -73,3 +95,11 @@
 | R7.2, R7.4, R7.5 (T13) | 2026-11-06 | Pass | Test VM from `clean`, Store test build 1.1.13. Claude Code 2.1.309 installed with the `winget` command, `claude.exe` running from its package folder in a console. **Update** failed after 6 s: "Claude Code is running (claude.exe), so it couldn't be updated. Close it, then press Retry." in the notification, row and log; the log kept `InstallError`, exit code 2316632067, `0x8A150052`; `claude` was still running. Closed it, **Retry Update Claude Code** in Activity: "Updated successfully.", `winget list` shows 2.1.317 |
 | R7.2, R7.4, R7.5 (T13) | 2026-11-06 | Pass | Same run, `claude` 2.1.317 started again. **Uninstall** (confirmed) failed after 1 s: "Claude Code is running (claude.exe), so it couldn't be uninstalled. Close it, then press Retry."; log `UninstallError`, `0x8A150057`; `claude` still running. Closed it, Retry: "Uninstalled successfully.", `winget list` no longer finds it |
 | R7.1 (live) | – | Not run | Covered by `WinGetErrorMessageTests.In_use_*`; needs an installer whose manifest maps its exit code to an in-use code |
+| R8 measurement | 2026-11-10 | Fail (found) | Test VM, Pandoc 3.12 for all users, the app's Update on the Updates page: "The installer failed with error code 1603." WinGet ran `msiexec /x{671ADF5A…} /quiet /norestart` (uninstallPrevious) and Windows Installer logged 1730 "You must be an Administrator". The `winget` CLI failed the same way. Through the COM API: uninstall Silent → 1603, `0x8A150030`; Interactive → Windows Installer's dialog, then UAC, removed; Default → `/passive`, one UAC prompt, removed; update in Default → `/passive`, one prompt, 3.12 removed and 3.13 installed. The COM API has no SilentWithProgress mode |
+| R8.1, R8.5, update (T18) | 2026-11-11 | Pass | Build of this branch. Pandoc 3.12 for all users, **Update Pandoc 3.12** on the Updates page: one UAC prompt (answered by the maintainer), "Updated successfully.", one entry (3.13 in Program Files); log "Mode: default, for an all-users MSI (Windows may ask for permission)" |
+| R8.1, all-users MSI with its own window (T18) | 2026-11-11 | Pass | PowerShell 7.6.8.0 (wix) for all users, **Update PowerShell 7-x64**: one UAC prompt; `/passive` showed only Windows Installer's "Please wait while Windows configures PowerShell 7-x64" window, nothing to answer; updated to 7.6.9.0, Default mode in the log |
+| R8.1, uninstall (T18) | 2026-11-11 | Pass | **Uninstall Pandoc** on the Installed page, confirmed: one UAC prompt, "Uninstalled successfully.", `winget list` no longer finds it; Default mode in the log |
+| R8.2 (T18) | 2026-11-11 | Pass | jq (portable) updated from the Updates page: no prompt, no permission line, "Mode: silent" |
+| R8.3 (T18) | 2026-11-11 | Fail (found), then Pass | The script couldn't find the line through UI Automation (pane closed, then UIA stalled under the consent screen), so the host took a screenshot every second instead. With Pandoc 3.12 for all users and Activity open, the UAC prompt opened behind the app (only the shield flashed in the taskbar; the maintainer saw no prompt) and the card read "Updating…" with no line: its text was a one-time x:Bind, set before the card had its operation. Fixed (one-way). On a fresh VM with that build: the card reads "Updating…" and "Windows may ask for permission. If nothing appears, look for the shield in the taskbar.", the shield flashing |
+| R8.3, a late answer (T18) | 2026-11-11 | Pass | Same run: the prompt waited behind the app for about 30 minutes; when the maintainer clicked the shield and accepted, the update finished ("Updated successfully.") and the card's line went away |
+| R8.4 | – | Unit tests only | Default mode now avoids the failure for all-users MSIs; the message is for a package the check misses. `WinGetErrorMessageTests.*_R8_4` |

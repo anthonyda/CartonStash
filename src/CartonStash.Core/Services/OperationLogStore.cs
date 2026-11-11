@@ -116,6 +116,11 @@ public sealed class OperationLogStore : IOperationLogStore
     /// The summary, the installer's log or a note that there is none, then WinGet's record or why it's missing
     /// (R2.2, R2.3, R2.8, R2.9). WinGet's part stays last: the dialog keeps the end of a very long log.
     /// </summary>
+    /// <summary>003 R8.5: how WinGet ran the installer or uninstaller.</summary>
+    internal static string ModeText(OperationMode mode) => mode == OperationMode.DefaultForAllUsersMsi
+        ? "default, for an all-users MSI (Windows may ask for permission)"
+        : "silent";
+
     /// <summary>014 R3.8: which installer was asked for. Uninstalls ask for none.</summary>
     internal static string ScopeText(PackageOperation operation) => operation.Kind == OperationKind.Uninstall ? "none (uninstall)"
         : (operation.Scope, operation.ScopeFromInstalled) switch
@@ -138,6 +143,7 @@ public sealed class OperationLogStore : IOperationLogStore
             .AppendLine($"Available version: {package.AvailableVersion ?? "none"}")
             .AppendLine($"Chosen version: {operation.Version ?? "default"}") // 014 R2.1
             .AppendLine($"Scope: {ScopeText(operation)}") // 014 R3.8
+            .AppendLine($"Mode: {ModeText(operation.Mode)}") // 003 R8.5
             .AppendLine($"Source: {package.SourceText}")
             .AppendLine($"Started: {operation.StartedAt?.ToLocalTime():yyyy-MM-dd HH:mm:ss}")
             .AppendLine($"Finished: {operation.FinishedAt?.ToLocalTime():yyyy-MM-dd HH:mm:ss}")

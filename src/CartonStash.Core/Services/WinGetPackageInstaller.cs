@@ -91,12 +91,16 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
         var name = info.Name;
         // 014 R3.8: going back asks for the scope the package is installed with; anything else uses the setting (006 R2.1).
         var goingBack = GoesBack(kind, info, version);
+        var installed = package.InstalledVersion;
+        // One read of Windows Installer's context serves both 014 R3.8 and 003 R8.1.
+        var msiContext = installed is null ? null : await Task.Run(() => InstalledScopes.MsiContextOf(installed, _installContext), cancellationToken);
         var (scope, fromInstalled) = goingBack && explicitScope is null
-            ? await Task.Run(() => ScopeFor(null, true, InstalledScopes.MsiContextOf(package.InstalledVersion, _installContext), InstalledScopes.WinGetScopeOf(package.InstalledVersion), settings.Current.InstallScope), cancellationToken)
+            ? await Task.Run(() => ScopeFor(null, true, msiContext, InstalledScopes.WinGetScopeOf(installed), settings.Current.InstallScope), cancellationToken)
             : ScopeFor(explicitScope, goingBack, null, null, settings.Current.InstallScope);
+        var mode = ModeFor(kind, installed is not null, msiContext);
         var options = new InstallOptions
         {
-            PackageInstallMode = PackageInstallMode.Silent,
+            PackageInstallMode = mode == OperationMode.DefaultForAllUsersMsi ? PackageInstallMode.Default : PackageInstallMode.Silent, // 003 R8.1
             PackageInstallScope = ToWinGet(scope),
             AcceptPackageAgreements = acceptAgreements,
             // 014 T1: Force never helped an older version go back, and it lets other warnings through.
@@ -110,11 +114,15 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
             // 014 R2.1: looked up again now, by index (W2); the source may have changed since the pane opened.
             if (FindVersion(package, version) is not { } id)
             {
-                return VersionUnavailable(info.Source) with { Scope = scope, ScopeFromInstalled = fromInstalled };
+                return VersionUnavailable(info.Source) with { Scope = scope, ScopeFromInstalled = fromInstalled, Mode = mode };
             }
             options.PackageVersionId = id;
         }
 
+        if (mode == OperationMode.DefaultForAllUsersMsi)
+        {
+            progress.Report(new OperationProgress(OperationPhase.Queued) { MayAskPermission = true }); // 003 R8.3
+        }
         var operation = kind == OperationKind.Upgrade
             ? connection.Manager.UpgradePackageAsync(package, options)
             : connection.Manager.InstallPackageAsync(package, options);
@@ -124,8 +132,8 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
         var extendedError = result.ExtendedErrorCode?.HResult ?? 0;
         var running = await RunningFilesAfterAsync(extendedError, package);
         return MapInstallResult(kind, result.Status, result.InstallerErrorCode, result.RebootRequired, settings.Current.InstallScope,
-            extendedError, name, running, goingBackTo: goingBack ? version : null)
-            with { Details = FormatDetails(result.Status.ToString(), result.InstallerErrorCode, result.ExtendedErrorCode), Scope = scope, ScopeFromInstalled = fromInstalled };
+            extendedError, name, running, goingBackTo: goingBack ? version : null, installedVersion: info.InstalledVersion, mode: mode)
+            with { Details = FormatDetails(result.Status.ToString(), result.InstallerErrorCode, result.ExtendedErrorCode), Scope = scope, ScopeFromInstalled = fromInstalled, Mode = mode };
     }
 
     /// <summary>R3.9: the installed version's MSI product codes that Windows Installer has (W2: by index). Empty for anything else.</summary>
@@ -239,12 +247,32 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
     /// <summary>WinGet's <c>InstalledScope</c> metadata: "User" or "Machine"; anything else is unknown.</summary>
     internal static InstallScope? FromWinGetScope(string? value) => InstalledScopes.FromWinGetScope(value);
 
+    /// <summary>
+    /// 003 R8.1, R8.2: WinGet's Default mode (msiexec <c>/passive</c>) when the installed version is an MSI product that
+    /// Windows Installer has for all users: with <c>/quiet</c>, removing it fails with 1730 (admin needed) and no prompt.
+    /// Updates (Pandoc's uninstallPrevious starts with that removal), uninstalls and going back. Everything else Silent.
+    /// </summary>
+    internal static OperationMode ModeFor(OperationKind kind, bool installed, InstallScope? msiContext) =>
+        installed && msiContext == InstallScope.System && kind is OperationKind.Upgrade or OperationKind.Uninstall or OperationKind.Install
+            ? OperationMode.DefaultForAllUsersMsi
+            : OperationMode.Silent;
+
     private async Task<OperationOutcome> UninstallAsync(CatalogPackage package, string name, string? logPath, IProgress<OperationProgress> progress, CancellationToken cancellationToken)
     {
-        var options = new UninstallOptions { PackageUninstallMode = PackageUninstallMode.Silent };
+        var installed = package.InstalledVersion;
+        var msiContext = installed is null ? null : await Task.Run(() => InstalledScopes.MsiContextOf(installed, _installContext), cancellationToken);
+        var mode = ModeFor(OperationKind.Uninstall, installed is not null, msiContext);
+        var options = new UninstallOptions
+        {
+            PackageUninstallMode = mode == OperationMode.DefaultForAllUsersMsi ? PackageUninstallMode.Default : PackageUninstallMode.Silent, // 003 R8.1
+        };
         if (logPath is not null)
         {
             options.LogOutputPath = logPath;
+        }
+        if (mode == OperationMode.DefaultForAllUsersMsi)
+        {
+            progress.Report(new OperationProgress(OperationPhase.Queued) { MayAskPermission = true }); // 003 R8.3
         }
         IAsyncOperationWithProgress<UninstallResult, UninstallProgress> operation = connection.Manager.UninstallPackageAsync(package, options);
         var winGetProgress = new Progress<UninstallProgress>(p => progress.Report(MapUninstallProgress(p)));
@@ -252,8 +280,9 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
 
         var extendedError = result.ExtendedErrorCode?.HResult ?? 0;
         var running = await RunningFilesAfterAsync(extendedError, package);
-        return MapUninstallResult(result.Status, result.UninstallerErrorCode, result.RebootRequired, extendedError, name, running)
-            with { Details = FormatDetails(result.Status.ToString(), result.UninstallerErrorCode, result.ExtendedErrorCode) };
+        return MapUninstallResult(result.Status, result.UninstallerErrorCode, result.RebootRequired, extendedError, name, running,
+                installedVersion: installed?.Version, mode: mode)
+            with { Details = FormatDetails(result.Status.ToString(), result.UninstallerErrorCode, result.ExtendedErrorCode), Mode = mode };
     }
 
     /// <summary>
@@ -477,6 +506,27 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
         };
     }
 
+    /// <summary>APPINSTALLER_CLI_ERROR_EXEC_UNINSTALL_COMMAND_FAILED: WinGet's uninstall command failed (003 R8.4).</summary>
+    internal const int UninstallCommandFailed = unchecked((int)0x8A150030);
+
+    /// <summary>
+    /// 003 R8.4: WinGet couldn't uninstall the installed version, for an uninstall or at the start of an update (an
+    /// uninstallPrevious manifest). After a Silent run with 1603 or 1730 (Windows Installer: "You must be an
+    /// Administrator"), the likely cause is an all-users install the app didn't recognise, so say so, with "may".
+    /// </summary>
+    internal static string UninstallCommandFailedMessage(string packageName, string? installedVersion, uint exitCode, OperationMode mode)
+    {
+        var name = string.IsNullOrWhiteSpace(packageName) ? "the package" : packageName;
+        var what = installedVersion is null ? name : $"{name} {installedVersion}";
+        var text = $"WinGet couldn't uninstall {what} (exit code {FormatCode(exitCode)}).";
+        if (mode == OperationMode.Silent && exitCode is 1603 or 1730)
+        {
+            var subject = string.IsNullOrWhiteSpace(packageName) ? "It" : packageName;
+            text += $" {subject} may be installed for all users, which needs administrator rights. Retry, and accept Windows' prompt if it appears.";
+        }
+        return text;
+    }
+
     /// <summary>APPINSTALLER_CLI_ERROR_INSTALL_UPGRADE_NOT_SUPPORTED: the manifest denies an in-place update (013 R3.1).</summary>
     internal const int UpgradeNotSupported = unchecked((int)0x8A150114);
 
@@ -537,7 +587,7 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
     /// <param name="goingBackTo">The chosen older version when this install goes back over a newer one (014 R3.3), else null.</param>
     internal static OperationOutcome MapInstallResult(OperationKind kind, InstallResultStatus status, uint installerErrorCode, bool rebootRequired,
         InstallScope scope, int extendedError = 0, string packageName = "", IReadOnlyList<string>? runningFiles = null,
-        Func<int, string?>? describe = null, string? goingBackTo = null)
+        Func<int, string?>? describe = null, string? goingBackTo = null, string? installedVersion = null, OperationMode mode = OperationMode.Silent)
     {
         var done = kind == OperationKind.Upgrade ? "Updated" : "Installed";
         return status switch
@@ -552,6 +602,9 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
                 Failed("The downloaded file doesn't match the package's checksum, so it wasn't installed. The publisher's site may have changed; try again later."),
             InstallResultStatus.DownloadError => Failed("The download failed. Check your internet connection and try again."),
             InstallResultStatus.InstallError when InUseMessage(kind, extendedError, packageName, runningFiles) is { } inUse => Failed(inUse),
+            // 003 R8.4: WinGet's removal of the installed version failed, not the new version's installer.
+            InstallResultStatus.InstallError when extendedError == UninstallCommandFailed =>
+                Failed(UninstallCommandFailedMessage(packageName, installedVersion, installerErrorCode, mode)),
             InstallResultStatus.InstallError when goingBackTo is not null =>
                 Failed(GoingBackFailedMessage(packageName, goingBackTo)) with { OffersUninstallFirst = true }, // R3.5
             InstallResultStatus.InstallError when installerErrorCode == 0 && extendedError != 0 =>
@@ -570,13 +623,16 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
     }
 
     internal static OperationOutcome MapUninstallResult(UninstallResultStatus status, uint uninstallerErrorCode, bool rebootRequired,
-        int extendedError = 0, string packageName = "", IReadOnlyList<string>? runningFiles = null, Func<int, string?>? describe = null) => status switch
+        int extendedError = 0, string packageName = "", IReadOnlyList<string>? runningFiles = null, Func<int, string?>? describe = null,
+        string? installedVersion = null, OperationMode mode = OperationMode.Silent) => status switch
     {
         UninstallResultStatus.Ok when rebootRequired =>
             new(OperationResult.SucceededRestartRequired, "Uninstalled. Restart your PC to finish."),
         UninstallResultStatus.Ok => new(OperationResult.Succeeded, "Uninstalled successfully."),
         UninstallResultStatus.UninstallError when InUseMessage(OperationKind.Uninstall, extendedError, packageName, runningFiles) is { } inUse =>
             Failed(inUse),
+        UninstallResultStatus.UninstallError when extendedError == UninstallCommandFailed => // 003 R8.4
+            Failed(UninstallCommandFailedMessage(packageName, installedVersion, uninstallerErrorCode, mode)),
         UninstallResultStatus.UninstallError when uninstallerErrorCode == 0 && extendedError != 0 =>
             Failed(NoExitCodeMessage(OperationKind.Uninstall, extendedError, packageName, describe ?? ErrorDescriptions.Describe)),
         UninstallResultStatus.UninstallError => Failed($"The uninstaller failed with error code {FormatCode(uninstallerErrorCode)}."),

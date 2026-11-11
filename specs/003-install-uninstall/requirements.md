@@ -1,6 +1,6 @@
 # 003 – Install / uninstall with progress: Requirements
 
-**Status:** Done (2026-10-30). Amendment R7 (say when a program is running): done 2026-11-06
+**Status:** Done (2026-10-30). Amendment R7 (say when a program is running): done 2026-11-06. **Amendment R8 (all-users MSI packages): Done** 2026-11-11, approved 2026-11-10 with the proposed answers to Q8 and Q9
 **Depends on:** 001, 002
 
 ## Problem
@@ -69,10 +69,60 @@ reasons. WinGet does have codes that do say it, for installers whose manifest ma
 - **To check in design:** whether WinGet reports a portable package's install folder (`InstalledLocation` metadata), and
   whether the packaged app can see the paths of the user's other processes.
 
+## Amendment R8: all-users MSI packages (approved 2026-11-10)
+
+**Why.** R6.1 isn't met for MSI packages installed for all users. In the test VM (2026-11-10, WinGet 1.29.380, tester
+is an administrator with UAC on, the app at Medium integrity), with Pandoc 3.12 installed for all users:
+
+| Operation | Mode | msiexec arguments | UAC | Result |
+|-----------|------|-------------------|-----|--------|
+| Update to 3.13 from the Updates page (the app) | Silent | `/x{671ADF5A…} /quiet /norestart` | none | `InstallError`, 1603, `0x8A150030`; the app said "The installer failed with error code 1603." |
+| `winget upgrade` (CLI, `--silent`) | Silent | same | none | same: "Uninstall failed with exit code: 1603" |
+| Uninstall (COM, as the app does it) | Silent | `/x{…} /quiet /norestart` | none | `UninstallError`, 1603, `0x8A150030` |
+| Uninstall | Interactive | `/x{…}` | after Windows Installer's own dialog | Ok |
+| Update to 3.13 | Default | `/x{…} /passive /norestart`, then the MSI with `/passive … ALLUSERS=1` | one prompt | Ok: 3.12 removed, 3.13 installed, one entry |
+| Uninstall | Default | `/x{…} /passive /norestart` | one prompt | Ok |
+
+Windows Installer's event log says why: "Error 1730. You must be an Administrator to remove this application." With
+`/quiet`, Windows Installer can't ask for consent, so removing a product installed for all users fails. Pandoc's
+manifest has `UpgradeBehavior: uninstallPrevious`, so its updates start with that removal, and the app's
+**Uninstall** button hits it directly. `0x8A150030` is `APPINSTALLER_CLI_ERROR_EXEC_UNINSTALL_COMMAND_FAILED`:
+WinGet's uninstall command failed, not the new version's installer. In Default mode WinGet passes `/passive`: a
+small progress window, and Windows' UAC prompt. That's also what `winget` does without `--silent`.
+
+- **US7.** As a user, I want to update and uninstall a package that's installed for all users, with Windows asking
+  for my consent as for any installer, instead of a failure.
+
+| ID   | Story | Criterion |
+|------|-------|-----------|
+| R8.1 | US7   | When the app updates, uninstalls or goes back (014) on a package whose installed version is an MSI product that Windows Installer has installed for all users (014 R3.8's check), it shall run WinGet in its Default mode instead of Silent, so that Windows shows its UAC prompt and the installer's progress window. *(Q8.)* |
+| R8.2 | US7   | Every other operation shall stay Silent, as today. |
+| R8.3 | US7   | Before an operation that R8.1 applies to, nothing shall be asked beyond what the app asks today. The Activity card shall say while it runs that Windows may ask for permission ("Waiting for Windows to ask for permission…" or similar), since the UAC prompt can open behind the app. *(Q9.)* |
+| R8.4 | US7   | If an update or uninstall fails with `0x8A150030`, then the result shall say that WinGet couldn't uninstall the installed version ({version}), name the uninstaller's exit code, and, when that code is 1603 or 1730 and R8.1 didn't apply, say that the package may be installed for all users and need administrator rights. It shall not say "the installer failed". **Retry** stays. |
+| R8.5 | –     | The operation log shall record the mode the operation ran in (`Mode: silent` or `Mode: default, for an all-users MSI`), next to 014's "Scope" line. WinGet's status, exit code and extended error stay unchanged (R7.5). |
+
+### Open questions (amendment R8)
+
+- **Q8. Which operations get Default mode (R8.1)?** *Proposed: only those on an all-users MSI,* which the app can
+  tell from Windows Installer (014's `MsiInstallContext`). Everything else stays silent, so nothing changes for
+  most packages. The alternatives: Default mode for everything, as the `winget` CLI does (every installer would
+  show its own progress window, and some, such as Inno and NSIS, may show more than a progress bar); or Silent
+  first, then a **Retry with permission** button after a `0x8A150030` failure (one failure every time, before it
+  works).
+  **Decided 2026-11-10: only all-users MSIs.**
+- **Q9. Saying that a prompt may come (R8.3).** *Proposed: on the Activity card while it runs,* since the prompt is
+  Windows' own and can open behind the app. The alternative is a line in Update all's confirmation, which only
+  covers one of the three ways in.
+  **Decided 2026-11-10: on the Activity card.**
+- **To check in design:** whether Default mode for an MSI ever shows more than a progress bar (some MSIs have their
+  own dialogs in `/passive`); whether the app can tell an update starts with an uninstall (`UpgradeBehavior`) or
+  should apply R8.1 to every update of an all-users MSI. The measurements above say the latter works for Pandoc.
+
 ## Out of scope
 
 - Choosing a specific version, architecture or install location (possible later "advanced install" spec).
-- Interactive installer mode (always silent in v1).
+- Interactive installer mode (always silent in v1). *Amendment R8 uses WinGet's Default mode for all-users MSIs only;
+  Interactive mode stays out.*
 - Batch install from a list or file (possible later "import/export" spec).
 
 ## Open questions

@@ -141,6 +141,7 @@ public sealed class PackageOperationQueue(IPackageInstaller installer, IOperatio
         operation.FinishedAt = null;
         operation.LogFilePath = null;
         operation.Details = null;
+        operation.MayAskPermission = false; // Retry decides it again (003 R8.3)
         Start(operation);
     }
 
@@ -174,11 +175,17 @@ public sealed class PackageOperationQueue(IPackageInstaller installer, IOperatio
                 // Progress<T> posts back to this (UI) thread.
                 var progress = new Progress<OperationProgress>(p =>
                 {
-                    if (operation.IsActive)
+                    if (!operation.IsActive)
                     {
-                        operation.Phase = p.Phase;
-                        operation.Percent = p.Percent;
+                        return;
                     }
+                    if (p.MayAskPermission)
+                    {
+                        operation.MayAskPermission = true; // 003 R8.3: a notice, not a phase
+                        return;
+                    }
+                    operation.Phase = p.Phase;
+                    operation.Percent = p.Percent;
                 });
                 outcome = await installer.RunAsync(operation.Kind, operation.Package, operation.AcceptAgreements, operation.Version, operation.LogFilePath, progress, cancellation.Token,
                     operation.Kind == OperationKind.Uninstall ? null : operation.Options.PreviousScope); // 014 R3.8: the installs after the R3.5 uninstall
@@ -211,6 +218,7 @@ public sealed class PackageOperationQueue(IPackageInstaller installer, IOperatio
         operation.OffersUninstallFirst = outcome.OffersUninstallFirst;
         operation.Scope = outcome.Scope;
         operation.ScopeFromInstalled = outcome.ScopeFromInstalled;
+        operation.Mode = outcome.Mode;
         operation.Result = outcome.Result;
         operation.Message = outcome.Message;
         operation.Details = outcome.Details;
