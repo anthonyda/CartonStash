@@ -2,6 +2,13 @@
 
 What's new in each version of CartonStash. Get it from the [Microsoft Store](https://apps.microsoft.com/detail/9MT37M7DBZRK).
 
+## 1.2.2
+
+### Fixed
+
+- **Going back no longer installs a second copy.** Some packages, such as Pandoc, have one installer for the current user and one for all users. Going back to an older version could pick the other one, so both versions ended up installed and the app said it had worked. Going back now uses the installer that matches how the package is installed, as Windows Installer records it. If you chose a scope in Settings and the package is installed the other way, the confirmation says so. If a second copy still appears, the result says that both versions are installed and which one to uninstall.
+- **The details show the right version after an update.** After an update from the Search page, the row and the package's details kept showing the version from before, and going back used that version too. They now show what's installed.
+
 ## 1.2.1
 
 ### Fixed

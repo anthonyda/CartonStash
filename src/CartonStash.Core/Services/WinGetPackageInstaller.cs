@@ -8,8 +8,12 @@ namespace CartonStash.Core.Services;
 /// <see cref="IPackageInstaller"/> on the WinGet COM API (specs 003, 004). WinGet starts the installer, and the
 /// installer asks for UAC itself when it needs to; the app never elevates (003 R6.1, constitution A5).
 /// </summary>
-public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettings settings, IRunningPrograms runningPrograms) : IPackageInstaller
+/// <param name="installContext">Windows Installer's context of MSI products (014 R3.8); <see cref="MsiInstallContext"/> when null.</param>
+public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettings settings, IRunningPrograms runningPrograms,
+    IInstallContext? installContext = null) : IPackageInstaller
 {
+    private readonly IInstallContext _installContext = installContext ?? new MsiInstallContext();
+
     public async Task<IReadOnlyList<Agreement>> GetAgreementsAsync(PackageInfo package, string? version = null, CancellationToken cancellationToken = default)
     {
         var found = await connection.FindByIdAsync(package.Id, package.Source, localFirst: false, cancellationToken);
@@ -38,7 +42,7 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
     }
 
     public async Task<OperationOutcome> RunAsync(OperationKind kind, PackageInfo package, bool acceptAgreements, string? version, string? logPath,
-        IProgress<OperationProgress> progress, CancellationToken cancellationToken)
+        IProgress<OperationProgress> progress, CancellationToken cancellationToken, InstallScope? scope = null)
     {
         // Re-find the package; COM objects never leave this class (A2).
         var found = UninstallsInstalledEntry(kind, package)
@@ -46,11 +50,21 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
             : await connection.FindByIdAsync(package.Id, package.Source, localFirst: kind != OperationKind.Install, cancellationToken);
         try
         {
+            // 014 R3.9: going back counts the installed entries before and after, to catch a second copy.
+            var goingBack = GoesBack(kind, package, version);
+            var entriesBefore = goingBack ? await CountInstalledAsync(package.Id) : null;
+            var msiBefore = goingBack ? await Task.Run(() => MsiProductsOf(found.InstalledVersion), cancellationToken) : [];
             var outcome = kind switch
             {
                 OperationKind.Uninstall => await UninstallAsync(found, package.Name, logPath, progress, cancellationToken),
-                _ => await InstallAsync(kind, found, package, acceptAgreements, version, logPath, progress, cancellationToken),
+                _ => await InstallAsync(kind, found, package, acceptAgreements, version, scope, logPath, progress, cancellationToken),
             };
+            if (goingBack && outcome.Result == OperationResult.Succeeded)
+            {
+                connection.Invalidate();
+                var stillInstalled = await Task.Run(() => AnyStillInstalled(msiBefore, ChosenProductCodes(found, version!)), CancellationToken.None);
+                outcome = AfterGoingBack(outcome, entriesBefore, await CountInstalledAsync(package.Id), stillInstalled, package.Name, version!, package.InstalledVersion);
+            }
             switch (CheckAfter(kind, outcome, package, version))
             {
                 case CheckAfterOperation.AppInstaller:
@@ -72,13 +86,18 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
     }
 
     private async Task<OperationOutcome> InstallAsync(OperationKind kind, CatalogPackage package, PackageInfo info, bool acceptAgreements, string? version,
-        string? logPath, IProgress<OperationProgress> progress, CancellationToken cancellationToken)
+        InstallScope? explicitScope, string? logPath, IProgress<OperationProgress> progress, CancellationToken cancellationToken)
     {
         var name = info.Name;
+        // 014 R3.8: going back asks for the scope the package is installed with; anything else uses the setting (006 R2.1).
+        var goingBack = GoesBack(kind, info, version);
+        var (scope, fromInstalled) = goingBack && explicitScope is null
+            ? await Task.Run(() => ScopeFor(null, true, InstalledScopes.MsiContextOf(package.InstalledVersion, _installContext), InstalledScopes.WinGetScopeOf(package.InstalledVersion), settings.Current.InstallScope), cancellationToken)
+            : ScopeFor(explicitScope, goingBack, null, null, settings.Current.InstallScope);
         var options = new InstallOptions
         {
             PackageInstallMode = PackageInstallMode.Silent,
-            PackageInstallScope = ToWinGet(settings.Current.InstallScope), // 006 R2.1
+            PackageInstallScope = ToWinGet(scope),
             AcceptPackageAgreements = acceptAgreements,
             // 014 T1: Force never helped an older version go back, and it lets other warnings through.
         };
@@ -91,7 +110,7 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
             // 014 R2.1: looked up again now, by index (W2); the source may have changed since the pane opened.
             if (FindVersion(package, version) is not { } id)
             {
-                return VersionUnavailable(info.Source);
+                return VersionUnavailable(info.Source) with { Scope = scope, ScopeFromInstalled = fromInstalled };
             }
             options.PackageVersionId = id;
         }
@@ -105,8 +124,120 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
         var extendedError = result.ExtendedErrorCode?.HResult ?? 0;
         var running = await RunningFilesAfterAsync(extendedError, package);
         return MapInstallResult(kind, result.Status, result.InstallerErrorCode, result.RebootRequired, settings.Current.InstallScope,
-            extendedError, name, running, goingBackTo: GoesBack(kind, info, version) ? version : null) with { Details = FormatDetails(result.Status.ToString(), result.InstallerErrorCode, result.ExtendedErrorCode) };
+            extendedError, name, running, goingBackTo: goingBack ? version : null)
+            with { Details = FormatDetails(result.Status.ToString(), result.InstallerErrorCode, result.ExtendedErrorCode), Scope = scope, ScopeFromInstalled = fromInstalled };
     }
+
+    /// <summary>R3.9: the installed version's MSI product codes that Windows Installer has (W2: by index). Empty for anything else.</summary>
+    private List<string> MsiProductsOf(PackageVersionInfo? installed)
+    {
+        var found = new List<string>();
+        try
+        {
+            var codes = installed?.ProductCodes;
+            for (var i = 0; codes is not null && i < codes.Count; i++)
+            {
+                if (_installContext.ContextOf(codes[i]) is not null)
+                {
+                    found.Add(codes[i]);
+                }
+            }
+        }
+        catch (Exception)
+        {
+            // no codes: R3.9 falls back to the count
+        }
+        return found;
+    }
+
+    /// <summary>R3.9: the chosen version's own product codes, from its manifest; empty when they can't be read.</summary>
+    private static List<string> ChosenProductCodes(CatalogPackage package, string version)
+    {
+        var codes = new List<string>();
+        try
+        {
+            if (FindVersion(package, version) is { } id && package.GetPackageVersionInfo(id)?.ProductCodes is { } list)
+            {
+                for (var i = 0; i < list.Count; i++)
+                {
+                    codes.Add(list[i]);
+                }
+            }
+        }
+        catch (Exception)
+        {
+        }
+        return codes;
+    }
+
+    /// <summary>R3.9: one of the old version's MSI products is still installed, and the chosen version isn't that same product.</summary>
+    private bool AnyStillInstalled(IReadOnlyList<string> before, IReadOnlyList<string> chosen) =>
+        StillInstalled(before, chosen, code => _installContext.ContextOf(code) is not null);
+
+    internal static bool StillInstalled(IReadOnlyList<string> before, IReadOnlyList<string> chosen, Func<string, bool> isInstalled)
+    {
+        try
+        {
+            return before.Any(code => !chosen.Contains(code, StringComparer.OrdinalIgnoreCase) && isInstalled(code));
+        }
+        catch (Exception)
+        {
+            return false; // never an error of its own
+        }
+    }
+
+    /// <summary>R3.9's count; null when it can't be read (a failed check is never an error of its own, 013 R2.3).</summary>
+    private async Task<int?> CountInstalledAsync(string id)
+    {
+        try
+        {
+            return await connection.CountInstalledAsync(id, CancellationToken.None);
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// 014 R3.9: going back reported Ok but left more installed entries than before: the chosen version went in next to
+    /// the installed one, not over it (seen with Pandoc's per-user and all-users MSIs). A warning, so no exclusion (R3.2).
+    /// Otherwise, or when either count is unknown, the outcome unchanged.
+    /// </summary>
+    internal static OperationOutcome AfterGoingBack(OperationOutcome outcome, int? before, int? after, bool previousStillInstalled,
+        string packageName, string version, string? installed)
+    {
+        var moreEntries = before is { } b && after is { } a && a > b;
+        if (outcome.Result != OperationResult.Succeeded || !(moreEntries || previousStillInstalled))
+        {
+            return outcome;
+        }
+        var name = string.IsNullOrWhiteSpace(packageName) ? "The package" : packageName;
+        var old = installed is null ? "the installed version" : installed;
+        return outcome with
+        {
+            Result = OperationResult.SucceededUnconfirmed,
+            Message = $"{name} {version} was installed next to {old}, not over it. Both are now installed. "
+                + $"To keep only {version}, uninstall {name} {old} from the Installed page.",
+        };
+    }
+
+    /// <summary>
+    /// 014 R3.8: the scope to ask WinGet for, and whether it's how the package is installed. An explicit scope (carried
+    /// across the R3.5 uninstall) comes first; then, only when going back, Windows Installer's context of the product,
+    /// then WinGet's <c>InstalledScope</c>; then the setting. T18: WinGet's scope is wrong for some MSIs, so Windows
+    /// Installer comes before it.
+    /// </summary>
+    internal static (InstallScope Scope, bool FromInstalled) ScopeFor(InstallScope? explicitScope, bool goingBack,
+        InstallScope? msiContext, string? winGetScope, InstallScope setting) =>
+        explicitScope is InstallScope.User or InstallScope.System ? (explicitScope.Value, true)
+        : !goingBack ? (setting, false)
+        : msiContext is InstallScope.User or InstallScope.System ? (msiContext.Value, true)
+        : FromWinGetScope(winGetScope) is { } fromWinGet ? (fromWinGet, true)
+        : (setting, false);
+
+    /// <summary>WinGet's <c>InstalledScope</c> metadata: "User" or "Machine"; anything else is unknown.</summary>
+    internal static InstallScope? FromWinGetScope(string? value) => InstalledScopes.FromWinGetScope(value);
 
     private async Task<OperationOutcome> UninstallAsync(CatalogPackage package, string name, string? logPath, IProgress<OperationProgress> progress, CancellationToken cancellationToken)
     {

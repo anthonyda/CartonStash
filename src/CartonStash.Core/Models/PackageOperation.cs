@@ -76,6 +76,12 @@ public sealed record OperationOptions
 
     /// <summary>An install that follows the uninstall of R3.5: if it fails, the package is gone (014 R3.7).</summary>
     public bool AfterUninstall { get; init; }
+
+    /// <summary>
+    /// The scope the package was installed with before the R3.5 uninstall, for the install after it and for Install
+    /// {previous version}: once it's uninstalled, nothing knows it (014 R3.8). Null to let the installer decide.
+    /// </summary>
+    public InstallScope? PreviousScope { get; init; }
 }
 
 /// <summary>The buttons a finished card may offer after going back failed (014 R3.5, R3.7).</summary>
@@ -97,6 +103,12 @@ public sealed record OperationOutcome(OperationResult Result, string Message, st
 
     /// <summary>Going back failed at the installer: the card offers Uninstall, then install (014 R3.5).</summary>
     public bool OffersUninstallFirst { get; init; }
+
+    /// <summary>The scope the installer asked WinGet for (014 R3.8); <see cref="InstallScope.Any"/> lets WinGet decide.</summary>
+    public InstallScope Scope { get; init; }
+
+    /// <summary>True when <see cref="Scope"/> is how the package is installed, false when it's the setting (014 R3.8).</summary>
+    public bool ScopeFromInstalled { get; init; }
 }
 
 /// <summary>
@@ -166,6 +178,11 @@ public sealed partial class PackageOperation : ObservableObject
 
     /// <summary>From the outcome: going back failed at the installer (014 R3.5). Set before <see cref="Result"/>.</summary>
     public bool OffersUninstallFirst { get; internal set; }
+
+    /// <summary>From the outcome: the scope asked for, and whether it's the installed one (014 R3.8).</summary>
+    public InstallScope Scope { get; internal set; }
+
+    public bool ScopeFromInstalled { get; internal set; }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(StatusText), nameof(IsIndeterminate), nameof(ProgressValue))]

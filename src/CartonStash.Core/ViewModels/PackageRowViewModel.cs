@@ -37,7 +37,38 @@ public sealed partial class PackageRowViewModel : ObservableObject
         Operation = actions.Queue.Find(package);
     }
 
-    public PackageInfo Package { get; }
+    public PackageInfo Package { get; private set; }
+
+    /// <summary>
+    /// 014 R2.6: the package as WinGet lists it now. Every property reads <see cref="Package"/>, so all of them change
+    /// (an empty name, which x:Bind treats as "all"). The row stays the same object, so the details pane and the
+    /// page's list keep it.
+    /// </summary>
+    public void Refresh(PackageInfo package)
+    {
+        if (package == Package)
+        {
+            return;
+        }
+        Package = package;
+        OnPropertyChanged(string.Empty);
+    }
+
+    /// <summary>014 R2.6: after a success, read the package again; a failed read leaves the row as it is.</summary>
+    private async Task RefreshAfterSuccessAsync()
+    {
+        try
+        {
+            if (await _actions.ReadInstalledAsync(Package) is { } fresh)
+            {
+                Refresh(fresh);
+            }
+        }
+        catch (Exception)
+        {
+            // never an error of its own (013 R2.3)
+        }
+    }
 
     public string Id => Package.Id;
 
@@ -126,7 +157,7 @@ public sealed partial class PackageRowViewModel : ObservableObject
     private void Restart() => _actions.Queue.RequestRestart();
 
     /// <summary>A version chosen in the details pane, with the row's actions (014 R1.1).</summary>
-    public Task InstallVersionAsync(PackageVersion version) => _actions.InstallVersionAsync(Package, version);
+    public Task InstallVersionAsync(PackageVersion version) => _actions.InstallVersionAsync(Package, version, Refresh); // R2.7: Refresh when the list is stale
 
     [RelayCommand]
     private void Exclude() => _exclusions?.Update(s => s.WithExcluded(Id));
@@ -159,6 +190,10 @@ public sealed partial class PackageRowViewModel : ObservableObject
             OnPropertyChanged(nameof(ShowUninstall));
             OnPropertyChanged(nameof(ResultText));
             OnPropertyChanged(nameof(HasResult));
+        }
+        if (e.PropertyName == nameof(PackageOperation.Result) && sender is PackageOperation { IsActive: false, IsSuccess: true } op && op == Operation)
+        {
+            _ = RefreshAfterSuccessAsync();
         }
     }
 }

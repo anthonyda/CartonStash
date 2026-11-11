@@ -242,8 +242,59 @@ public class WinGetPackageServiceIntegrationTests
     }
 
     [Fact]
+    public async Task ReadInstalled_returns_the_installed_version_and_keeps_the_entry() // 014 R2.6, R2.7
+    {
+        var installed = await _service.GetInstalledAsync();
+        var git = Assert.Single(installed, p => p.Id == "Git.Git");
+
+        var fresh = await _service.ReadInstalledAsync(git);
+
+        Assert.NotNull(fresh);
+        Assert.Equal(git.InstalledVersion, fresh.InstalledVersion);
+        Assert.Equal(git.InstalledId, fresh.InstalledId);
+        Assert.Equal(git.Source, fresh.Source);
+    }
+
+    [Fact]
+    public async Task ReadInstalled_of_a_package_that_isnt_installed_is_null() // 014 R2.6: the row stays as it is
+    {
+        Assert.Null(await _service.ReadInstalledAsync(new PackageInfo("CartonStash.NoSuchPackage", "x", "1.0", "1.0", "winget")));
+    }
+
+    [Fact]
+    public async Task CountInstalled_counts_an_installed_package() // 014 R3.9
+    {
+        var connection = new CatalogConnection(new FakeSettings());
+
+        Assert.True(await connection.CountInstalledAsync("Git.Git", CancellationToken.None) >= 1);
+        Assert.Equal(0, await connection.CountInstalledAsync("CartonStash.NoSuchPackage", CancellationToken.None));
+    }
+
+    [Fact]
+    public void The_MSI_context_of_an_installed_product_is_known() // 014 R3.8: the real msi.dll
+    {
+        var code = MsiProducts.First();
+
+        Assert.NotNull(code);
+        Assert.NotNull(new MsiInstallContext().ContextOf(code));
+    }
+
+    [Fact]
     public async Task Refresh_winget_source_succeeds() // 006 R3.2 (slow)
     {
         Assert.Null(await _service.RefreshSourceAsync("winget"));
+    }
+}
+
+/// <summary>The first MSI product Windows Installer knows on this machine (every Windows has some).</summary>
+internal static class MsiProducts
+{
+    [System.Runtime.InteropServices.DllImport("msi.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
+    private static extern uint MsiEnumProducts(uint index, System.Text.StringBuilder productCode);
+
+    public static string? First()
+    {
+        var code = new System.Text.StringBuilder(39);
+        return MsiEnumProducts(0, code) == 0 ? code.ToString() : null;
     }
 }

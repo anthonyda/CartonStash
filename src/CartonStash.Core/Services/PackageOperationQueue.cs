@@ -180,7 +180,8 @@ public sealed class PackageOperationQueue(IPackageInstaller installer, IOperatio
                         operation.Percent = p.Percent;
                     }
                 });
-                outcome = await installer.RunAsync(operation.Kind, operation.Package, operation.AcceptAgreements, operation.Version, operation.LogFilePath, progress, cancellation.Token);
+                outcome = await installer.RunAsync(operation.Kind, operation.Package, operation.AcceptAgreements, operation.Version, operation.LogFilePath, progress, cancellation.Token,
+                    operation.Kind == OperationKind.Uninstall ? null : operation.Options.PreviousScope); // 014 R3.8: the installs after the R3.5 uninstall
             }
             catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
             {
@@ -208,6 +209,8 @@ public sealed class PackageOperationQueue(IPackageInstaller installer, IOperatio
         operation.Phase = OperationPhase.Done;
         operation.Retryable = outcome.Retryable; // before Result, which notifies CanRetry
         operation.OffersUninstallFirst = outcome.OffersUninstallFirst;
+        operation.Scope = outcome.Scope;
+        operation.ScopeFromInstalled = outcome.ScopeFromInstalled;
         operation.Result = outcome.Result;
         operation.Message = outcome.Message;
         operation.Details = outcome.Details;

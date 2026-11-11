@@ -155,6 +155,7 @@ public partial class App : Application
             .AddSingleton<CatalogConnection>()
             .AddSingleton<IPackageService, WinGetPackageService>()
             .AddSingleton<IPackageInstaller, WinGetPackageInstaller>()
+            .AddSingleton<IInstallContext, MsiInstallContext>() // 014 R3.8
             .AddSingleton<IRunningPrograms, RunningPrograms>() // 003 R7.2
             // GitHub release notes, only when the user asks (012 R2.2)
             .AddSingleton<IReleaseNotesService>(_ => new GitHubReleaseNotesService(AppInfo.UserAgent))

@@ -70,6 +70,17 @@ internal sealed class FakePackageService : IPackageService
     public Task<PackageDetails?> GetDetailsAsync(PackageInfo package, CancellationToken cancellationToken = default) =>
         Details(package, cancellationToken);
 
+    /// <summary>014 R2.6, R2.7: what a fresh read returns; null (the default) is a read that failed.</summary>
+    public Func<PackageInfo, PackageInfo?> ReadInstalled { get; set; } = _ => null;
+
+    public int ReadInstalledCalls { get; private set; }
+
+    public Task<PackageInfo?> ReadInstalledAsync(PackageInfo package, CancellationToken cancellationToken = default)
+    {
+        ReadInstalledCalls++;
+        return Task.FromResult(ReadInstalled(package));
+    }
+
     public Dictionary<string, string?> IconUrls { get; } = [];
 
     public List<string> IconRequests { get; } = [];
@@ -142,11 +153,15 @@ internal sealed class ScriptedInstaller : IPackageInstaller
 
     public List<string?> LogPaths { get; } = [];
 
+    /// <summary>The explicit scope each operation ran with (014 R3.8).</summary>
+    public List<InstallScope?> Scopes { get; } = [];
+
     public Task<OperationOutcome> RunAsync(OperationKind kind, PackageInfo package, bool acceptAgreements, string? version, string? logPath,
-        IProgress<OperationProgress> progress, CancellationToken cancellationToken)
+        IProgress<OperationProgress> progress, CancellationToken cancellationToken, InstallScope? scope = null)
     {
         Calls.Add((kind, package.Id, acceptAgreements));
         Versions.Add(version);
+        Scopes.Add(scope);
         LogPaths.Add(logPath);
         if (AutoComplete is { } outcome)
         {

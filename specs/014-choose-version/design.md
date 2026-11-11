@@ -1,6 +1,6 @@
 # 014 – Install a chosen version: Design
 
-**Status:** Done (2026-11-09). Approved 2026-11-08. **Amendment R1.6, R1.7 (2026-11-09): Done**, approved with the proposed answer to Q6
+**Status:** Done (2026-11-09). Approved 2026-11-08. **Amendment R1.6, R1.7 (2026-11-09): Done**, approved with the proposed answer to Q6. **Amendment R2.6, R2.7, R3.8, R3.9 (2026-11-10): Done**, approved 2026-11-10, with Q7's notice added. R3.8's scope source changed after T18 (Windows Installer first), approved 2026-11-10
 **Requirements:** [requirements.md](requirements.md)
 
 ## Overview
@@ -236,6 +236,166 @@ selected and Update all leave it out, 010 R5.9) and gets item click from `Attach
 
 No Core change for R1.7: excluded rows are already `PackageRowViewModel`s with their `PackageActions`.
 
+## Amendment: installed scope, second copies, fresh installed state (R2.6, R2.7, R3.8, R3.9)
+
+**What happened (VM, 2026-11-10, WinGet 1.29, Pandoc).** The upgrade from 3.10 ran the `Scope: machine` installer:
+UAC, `C:\Program Files\Pandoc`, and WinGet uninstalled 3.10 first (`UpgradeBehavior: uninstallPrevious`). Going
+back to 3.12 with `InstallPackageAsync` and `PackageInstallScope.Any` ran the `Scope: user` one. WinGet's log has
+`Installer args: /quiet /norestart /log … ALLUSERS=2` and "2 matches were found for the package". The MSI log
+installed into `C:\Users\tester\AppData\Local\Pandoc\`. Windows Installer's upgrade table only finds related
+products in the same context (per-user or per-machine), so 3.12 didn't see 3.13. Uninstall entries afterwards:
+`{34C3EAA3-…}` Pandoc 3.13 and `{671ADF5A-…}` Pandoc 3.12.
+
+### R3.8, the installed scope
+
+**Measured in T18 (2026-11-10, VM, WinGet 1.29.380, the T1 tool).** Pandoc 3.13 installed with `--scope machine`,
+then with `--scope user`, a clean checkpoint each time:
+
+| | All users | Current user |
+|---|---|---|
+| Location | `C:\Program Files\Pandoc\` | `C:\Users\tester\AppData\Local\Pandoc\` |
+| WinGet `InstalledScope` | `System` | **`System`** (wrong) |
+| Uninstall entry | HKLM | HKLM |
+| Windows Installer, `MsiGetProductInfoEx` | (not read, see T24) | `UserUnmanaged` only (1605 for the others) |
+| Going back to 3.12 with the matching scope | Ok, exit 0: MSI sets `PREVIOUSVERSIONSINSTALLED` to 3.13's code and replaces it. One entry: 3.12 | Same, per-user |
+
+So WinGet's scope can't be trusted for this MSI: it seems to come from the uninstall entry's hive, and this
+installer writes its entry under HKLM either way. Read as a per-user install, the first finding also explains itself:
+WinGet took 3.10 for an all-users install, so the update ran the all-users installer, and uninstallPrevious removed
+the per-user 3.10. With the right scope, Pandoc goes back directly; it doesn't refuse as T1's MSIs did.
+
+**Where the scope comes from.** `WinGetPackageInstaller.InstallAsync` already has the `CatalogPackage`, found with
+`localFirst: true` for anything but a first install. When going back (`GoesBack(kind, info, version)`):
+
+1. **MSI products: Windows Installer.** For each product code of the installed version
+   (`InstalledVersion.ProductCodes`, by index, W2), a new `IInstallContext` (`Core/Services`, P/Invoke to
+   `msi.dll`) calls `MsiGetProductInfoEx(code, null, context, "InstallLocation")` for the machine context, then the
+   per-user ones. The first context Windows Installer has the product in wins: machine → `System`, user (managed or
+   unmanaged) → `User`. This is Windows' own record, not a guess (P1).
+2. **Anything else, or no MSI answer: WinGet's `InstalledScope`** (`User` → `User`, `Machine` → `System`).
+3. **Neither:** the setting (006 R2.1).
+
+```csharp
+// 014 R3.8: an explicit scope (the R3.5 chain), else going back asks for the installed scope; else the setting (006 R2.1).
+internal static (InstallScope Scope, bool FromInstalled) ScopeFor(InstallScope? explicitScope, bool goingBack,
+    InstallScope? msiContext, string? winGetScope, InstallScope setting) =>
+    explicitScope is InstallScope.User or InstallScope.System ? (explicitScope.Value, true)
+    : !goingBack ? (setting, false)
+    : msiContext is InstallScope.User or InstallScope.System ? (msiContext.Value, true)
+    : FromWinGetScope(winGetScope) is { } w ? (w, true) // "User" → User, "Machine" → System, anything else → null
+    : (setting, false);
+```
+
+`InstallAsync` then sets `PackageInstallScope = ToWinGet(scope)`.
+
+A read that throws, at either step, counts as unknown. The same read gives `PackageInfo.InstalledScope` for the
+notice below. `IInstallContext` has a fake in the tests; the pure part is `ScopeFor` and the context mapping.
+
+The uninstall then install chain (R3.5) keeps the same scope for its install, because after the uninstall nothing
+knows it. *(Changed 2026-11-10 during T19: the scope can't be read before the uninstall from `PackageActions`, which
+has no COM objects, A2.)* So the installer reports the scope it asked for:
+
+- `OperationOutcome` gains `Scope` (`InstallScope`) and `ScopeFromInstalled` (bool: true when it came from Windows
+  Installer or WinGet, false when it's the setting). `Finish` copies both onto the `PackageOperation`.
+- When the failed going-back operation offers **Uninstall, then install**, `PackageActions` puts its `Scope` in the
+  uninstall's options as `PreviousScope` when `ScopeFromInstalled`, and the chained install and **Install {previous
+  version}** carry it on.
+- `IPackageInstaller.RunAsync` gains `InstallScope? scope = null`: an explicit scope, which `ScopeFor` takes before
+  anything else. The queue passes `operation.Options.PreviousScope` for an `AfterUninstall` install and for
+  **Install {previous version}**, null otherwise.
+
+The log adds `Scope: …` after "Chosen version": "for all users, as installed", "for the current user, as
+installed", or "from Settings ({setting})". A run says which installer was asked for.
+
+**The notice (Q7).** The confirmation is shown by `PackageActions` before anything is queued, so the installed scope
+has to reach it as a plain value (A2). `PackageInfo` gains `InstalledScope` (`InstallScope?`: `User`, `System`, or
+null when WinGet doesn't say), set by `ReadInstalledAsync` (R2.7's read, below) through the same steps as `ScopeFor`
+(Windows Installer, then WinGet). A pure function adds one sentence to R3.1's message:
+
+```csharp
+// 014 R3.8, Q7: only when Settings names a scope and the installed one is the other.
+internal static string? ScopeNotice(string name, string version, InstallScope setting, InstallScope? installed) =>
+    setting == InstallScope.Any || installed is null || installed == setting ? null
+    : installed == InstallScope.System
+        ? $"{name} is installed for all users, so {version} will be installed for all users too, not for the current user as set in Settings."
+        : $"{name} is installed for the current user, so {version} will be installed for the current user too, not for all users as set in Settings.";
+```
+
+It goes after the existing message, before the box. With "Let WinGet decide" nothing is added: no choice of the
+user's is being overridden. If R2.7's read fails, there's no notice, and the installer still reads the scope itself
+when it runs (it may then use it without having said so; the log's "Scope" line records it).
+
+### R3.9, a second copy
+
+Before the install, when going back, the installer counts the installed entries for the package ID:
+`CatalogConnection.CountInstalledAsync(id)` searches `GetInstalledOnlyAsync()` with an exact ID filter and returns
+the matches' `Count` (by index, W2). It counts again after a success. A pure function decides:
+
+```csharp
+internal static OperationOutcome AfterGoingBack(OperationOutcome outcome, int? before, int? after, bool previousStillInstalled,
+    string name, string version, string? installed)
+```
+
+**Changed 2026-11-10 after T24's first run:** with Pandoc 3.12 per-user and 3.13 all-users both installed (two
+uninstall entries, two folders, `winget list` shows both), WinGet's search by ID on the local-first catalog still
+returned one match, so the count alone misses exactly this case. The installed-only catalog doesn't link them by
+code either: 3.12's product code isn't in 3.13's manifest. Windows Installer knows, though. So for MSI products,
+before the install, the installer keeps the installed version's product codes that Windows Installer has
+(`IInstallContext`, as for R3.8). After a success, it drops the codes the chosen version's manifest also lists (a
+product code that stays the same across versions is replaced in place), and asks Windows Installer about the rest:
+any still installed means the old version wasn't replaced (`previousStillInstalled`). Non-MSI packages have no
+codes and keep the count.
+
+- `previousStillInstalled`, or `after > before` → `SucceededUnconfirmed` (no exclusion, R3.2 already skips it) with: "{name} {version} was
+  installed next to {installed}, not over it. Both are now installed. To keep only {version}, uninstall {name}
+  {installed} from the Installed page."
+- Either count null (couldn't read), or not more → the outcome unchanged; 013's `AfterUpdate` runs as today (R2.5).
+
+`SucceededUnconfirmed` is the closest existing result: the card is amber and says what WinGet did, and the
+notification follows it. No new result kind.
+
+### R2.6, rows and the pane after an operation
+
+`PackageRowViewModel.Package` becomes settable from inside the class, with `Refresh(PackageInfo)` raising every
+property that reads it (badge, texts, `Show*`). The row already watches its operation's `Result`; when it becomes a
+success (`IsSuccess`), the row asks `PackageActions.ReadInstalledAsync(Package)` and refreshes itself with what comes
+back. The call is a new `IPackageService.ReadInstalledAsync(PackageInfo)`: `FindByIdAsync(id, source, localFirst:
+true)` after `Invalidate`, mapped as a search row is, or null when it fails (the row stays as it is: a failed read is
+never an error of its own, 013 R2.3).
+
+- The Search page's rows are the ones this fixes. Installed and Updates rows refresh too, and are then replaced by
+  the store's reload (002 R1.3); the extra read is one `FindByIdAsync`.
+- `PackageDetailsViewModel` watches `Row.Package`. When it changes, it reloads its details (`LoadAsync(Row)`), so
+  the version actions are recomputed against the new installed version. The selection and **Show all versions**
+  reset, as when another package opens.
+- An open pane on the Installed or Updates page whose row was replaced by the store's reload keeps the old row
+  object, which refreshed itself first, so it shows the same state.
+
+### R2.7, check before going on
+
+`PackageActions.InstallVersionAsync` starts, for an installed package, with `ReadInstalledAsync(package)`. If the
+installed version it returns differs (ordinal) from `package.InstalledVersion`, it calls the row's `Refresh` (through
+the row, which owns it; the pane passes the row) and returns without asking or queuing. A null read goes on as
+today. With R2.6 in place this is rare: it covers changes made outside the app since the pane loaded.
+
+### Components (amendment)
+
+| Layer | Type | Change |
+|-------|------|--------|
+| Core/Services | `WinGetPackageInstaller` | `ScopeFor`; counts before and after when going back; `AfterGoingBack` |
+| Core/Services | `IInstallContext`, `MsiInstallContext` | Windows Installer's context for a product code (`msi.dll`, R3.8) |
+| Core/Services | `CatalogConnection` | `CountInstalledAsync(id)` |
+| Core/Services | `IPackageService`, `WinGetPackageService` | `ReadInstalledAsync(PackageInfo)` |
+| Core/Models | `OperationOptions` | `PreviousScope` for the R3.5 chain and R3.7 |
+| Core/Models | `PackageInfo` | `InstalledScope`, set by `ReadInstalledAsync` (Q7's notice) |
+| Core/ViewModels | `PackageActions` | `ScopeNotice` in the going-back confirmation |
+| Core/Services | `OperationLogStore` | The "Scope" line |
+| Core/ViewModels | `PackageRowViewModel` | `Refresh(PackageInfo)`, refresh after a success |
+| Core/ViewModels | `PackageDetailsViewModel` | Reload when `Row.Package` changes |
+| Core/ViewModels | `PackageActions` | `ReadInstalledAsync`; R2.7's check in `InstallVersionAsync` |
+
+`IPackageInstaller.RunAsync` gains an optional explicit scope, only for the R3.5 chain and R3.7 (see above). `OperationOutcome` and `PackageOperation` gain `Scope` and `ScopeFromInstalled`.
+
 ## Testing
 
 | Requirement | Test |
@@ -256,6 +416,10 @@ No Core change for R1.7: excluded rows are already `PackageRowViewModel`s with t
 | R1.6 | `PackageDetailsViewModel`: only the selected item has `ShowAction`; it follows the selection, busy, and the installed version; `ActionText`/`ActionName` per direction (unit). VM: the button shows on the selected line in a 10-item list and after Show all |
 | R1.7 | VM: click and Enter on an Excluded row open its details; Esc returns focus to that row; going back from there works |
 | Live | Integration test: `GetDetailsAsync` on an installed package returns directions consistent with `IsUpdateAvailable` |
+| R3.8 | `ScopeFor`: an MSI context wins over WinGet's scope; WinGet's `User`, `Machine`, `Unknown`, empty, null without one; not going back → the setting, for each setting (unit). `MsiInstallContext` against a real product: integration. `ScopeNotice`: each setting against each installed scope and null; the confirmation carries it (unit). VM: Pandoc 3.13 for all users, then for the current user: go back to 3.12 → the matching installer runs, one entry left (T18 measured this with the tool) |
+| R3.9 | `AfterGoingBack`: more entries after → warning text and `SucceededUnconfirmed`; same count, fewer, or a null count → unchanged (unit). `PackageActions`: no exclusion after the warning (unit) |
+| R2.6 | `PackageRowViewModel`: after a success, `Refresh` with the read package updates the badge and texts; a null read leaves the row; a failure reads nothing (unit, fake service). `PackageDetailsViewModel` reloads when `Row.Package` changes (unit). VM: update Pandoc from Search, the row and the pane show 3.13 |
+| R2.7 | `PackageActions`: installed version read differs → no dialog, nothing queued, the row refreshed; same → as today; null → as today (unit) |
 
 ## Risks
 

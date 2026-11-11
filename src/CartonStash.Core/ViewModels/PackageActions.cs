@@ -77,6 +77,7 @@ public sealed class PackageActions(PackageOperationQueue queue, IPackageInstalle
                             ThenInstall = operation.Version,
                             PreviousVersion = operation.Options.PreviousVersion ?? operation.Package.InstalledVersion,
                             ExcludeOnSuccess = operation.Options.ExcludeOnSuccess, // R3.5: the R3.2 choice carries over
+                            PreviousScope = ScopeToKeep(operation), // R3.8: the install after the uninstall keeps it
                         });
                     }
                     break;
@@ -84,7 +85,8 @@ public sealed class PackageActions(PackageOperationQueue queue, IPackageInstalle
                     var previous = operation.Options.PreviousVersion!;
                     if (await AskAgreementsAsync(installer, dialogs, operation.Package, previous) is { } accepted)
                     {
-                        queue.Enqueue(OperationKind.Install, operation.Package, accepted, new OperationOptions { Version = previous });
+                        queue.Enqueue(OperationKind.Install, operation.Package, accepted,
+                            new OperationOptions { Version = previous, PreviousScope = operation.Options.PreviousScope }); // R3.8
                     }
                     break;
             }
@@ -101,11 +103,19 @@ public sealed class PackageActions(PackageOperationQueue queue, IPackageInstalle
                     AfterUninstall = true,
                     PreviousVersion = operation.Options.PreviousVersion,
                     ExcludeOnSuccess = operation.Options.ExcludeOnSuccess,
+                    PreviousScope = operation.Options.PreviousScope,
                 });
             }
         };
         return true;
     }
+
+    /// <summary>
+    /// 014 R3.8: the scope the failed going-back run asked for, when it was the installed one. A scope from the setting
+    /// isn't kept: the install after the uninstall then follows the setting, as any install does.
+    /// </summary>
+    internal static InstallScope? ScopeToKeep(PackageOperation operation) =>
+        operation.ScopeFromInstalled && operation.Scope is InstallScope.User or InstallScope.System ? operation.Scope : null;
 
     /// <summary>The R3.5 confirmation: names the package and both versions, and says what may be lost.</summary>
     internal static (string Title, string Message, string ConfirmText) UninstallFirstQuestion(PackageOperation operation)
@@ -125,10 +135,20 @@ public sealed class PackageActions(PackageOperationQueue queue, IPackageInstalle
     /// first, with the option to leave the package out of update checks (R3.1, R3.2); then the chosen version's
     /// agreements (R2.2). Nothing while the package is busy (003 R4.2).
     /// </summary>
-    public async Task InstallVersionAsync(PackageInfo package, PackageVersion version)
+    /// <param name="refresh">The row's <c>Refresh</c>: given the package as WinGet lists it when that isn't what the pane
+    /// showed (R2.7).</param>
+    public async Task InstallVersionAsync(PackageInfo package, PackageVersion version, Action<PackageInfo>? refresh = null)
     {
         if (queue.Find(package) is { IsActive: true } || version.Direction == VersionDirection.Installed)
         {
+            return;
+        }
+
+        // R2.7: older or newer depends on the installed version, so a list made for another one isn't acted on.
+        var fresh = package.IsInstalled ? await packages.ReadInstalledAsync(package) : null;
+        if (InstalledChanged(package, fresh))
+        {
+            refresh?.Invoke(fresh!);
             return;
         }
 
@@ -136,7 +156,8 @@ public sealed class PackageActions(PackageOperationQueue queue, IPackageInstalle
         if (version.Direction is VersionDirection.Older or VersionDirection.Unknown)
         {
             options = options with { GoingBack = package.IsInstalled, PreviousVersion = package.InstalledVersion };
-            var (title, message, confirmText) = GoingBackQuestion(package, version);
+            var notice = ScopeNotice(package.Name, version.Version, settings?.Current.InstallScope ?? InstallScope.Any, fresh?.InstalledScope);
+            var (title, message, confirmText) = GoingBackQuestion(package, version, notice);
             var alreadyExcluded = settings?.Current.IsExcluded(package.Id) ?? true;
             var (confirmed, exclude) = await dialogs.ConfirmWithOptionAsync(title, message, confirmText,
                 alreadyExcluded ? null : $"Leave {package.Name} out of update checks", optionChecked: true);
@@ -154,8 +175,22 @@ public sealed class PackageActions(PackageOperationQueue queue, IPackageInstalle
         }
     }
 
-    /// <summary>The going-back confirmation (014 R3.1): names the package and both versions.</summary>
-    internal static (string Title, string Message, string ConfirmText) GoingBackQuestion(PackageInfo package, PackageVersion version)
+    /// <summary>014 R2.7: WinGet now lists another installed version than the one the pane was made for. A failed read (null) isn't a change.</summary>
+    internal static bool InstalledChanged(PackageInfo shown, PackageInfo? fresh) =>
+        fresh is not null && !string.Equals(fresh.InstalledVersion, shown.InstalledVersion, StringComparison.Ordinal);
+
+    /// <summary>
+    /// 014 R3.8, Q7: going back uses the installed scope, so say so when it overrides a scope chosen in Settings. Nothing
+    /// with "Let WinGet decide", when the scopes match, or when the installed one isn't known.
+    /// </summary>
+    internal static string? ScopeNotice(string name, string version, InstallScope setting, InstallScope? installed) =>
+        setting == InstallScope.Any || installed is not (InstallScope.User or InstallScope.System) || installed == setting ? null
+        : installed == InstallScope.System
+            ? $"{name} is installed for all users, so {version} will be installed for all users too, not for the current user as set in Settings."
+            : $"{name} is installed for the current user, so {version} will be installed for the current user too, not for all users as set in Settings.";
+
+    /// <summary>The going-back confirmation (014 R3.1): names the package and both versions; R3.8's notice when there is one.</summary>
+    internal static (string Title, string Message, string ConfirmText) GoingBackQuestion(PackageInfo package, PackageVersion version, string? scopeNotice = null)
     {
         var name = package.Name;
         var v = version.Version;
@@ -164,9 +199,13 @@ public sealed class PackageActions(PackageOperationQueue queue, IPackageInstalle
         return (
             older ? $"Go back to {name} {v}?" : $"Install {name} {v}?",
             $"{name} {package.InstalledVersion} is installed. {doing} runs that version's installer over it. "
-                + $"Some installers can't go back, and {name}'s settings may not carry over to an older version.",
+                + $"Some installers can't go back, and {name}'s settings may not carry over to an older version."
+                + (scopeNotice is null ? "" : $" {scopeNotice}"),
             older ? $"Go back to {v}" : $"Install {v}");
     }
+
+    /// <summary>The package as WinGet lists it now (014 R2.6, R2.7); null when it can't be read.</summary>
+    public Task<PackageInfo?> ReadInstalledAsync(PackageInfo package) => packages.ReadInstalledAsync(package);
 
     /// <summary>The package's icon, for rows (005 R5). Never throws: no icon is fine.</summary>
     public async Task<Uri?> GetIconAsync(PackageInfo package)

@@ -1,6 +1,6 @@
 # 014 – Install a chosen version: Tasks
 
-**Status:** Done (2026-11-09)
+**Status:** Done (2026-11-09). Amendment T18 to T24: done (2026-11-10)
 **Design:** [design.md](design.md)
 
 Tick a task only when its verification passes. Keep tasks small enough for one commit, and keep the build green at
@@ -126,6 +126,47 @@ every commit (Q4). Manual checks run in the CartonStash-Test VM (or Windows Sand
   contrast. Changelog line.
   - Verify: entries in the log below.
 
+## Amendment R2.6, R2.7, R3.8, R3.9 (2026-11-10)
+
+Approved 2026-11-10: Q7 with a notice in the confirmation, Q8 as proposed.
+
+- [x] **T18.** VM, measure first: Pandoc 3.13 installed for all users, then for the current user (clean checkpoint
+  each time). Read `InstalledScope` from the COM API with the T1 console tool. Then `InstallPackageAsync` of 3.12
+  with `PackageInstallScope.System` over the all-users 3.13: record status, exit code and the uninstall entries.
+  Update design.md if the strings or the refusal differ from what it expects (R3.8).
+  - Verify: entries in the log below.
+- [x] **T19.** `IInstallContext` / `MsiInstallContext` (`MsiGetProductInfoEx`); `ScopeFor` in `WinGetPackageInstaller`, used when going back; `PreviousScope` on `OperationOptions`,
+  set before the R3.5 uninstall and used by the chained install and by **Install {previous version}**; the log's
+  "Scope" line (R3.8).
+  - Verify: `GoingBackScopeTests` (`ScopeFor_*_R3_8`, an MSI context wins over WinGet's; the scope through the
+    R3.5 chain and Install {previous version}; the log's "Scope" line; the real `msi.dll` on a missing product).
+    *Done 2026-11-10: also `OperationOutcome.Scope` / `ScopeFromInstalled` and `RunAsync`'s explicit scope, per the
+    design change made during this task. 713 unit and 22 integration tests pass.*
+- [x] **T20.** `CatalogConnection.CountInstalledAsync`; counts before and after when going back; `AfterGoingBack`
+  (R3.9).
+  - Verify: `AfterGoingBackTests` (`*_R3_9`): more entries → the warning, `SucceededUnconfirmed`; same, fewer, null →
+    unchanged. `PackageActionsVersionTests`: no exclusion after the warning.
+- [x] **T21.** `IPackageService.ReadInstalledAsync`, which also sets the new `PackageInfo.InstalledScope`; `PackageRowViewModel.Refresh` and the refresh after a success;
+  `PackageDetailsViewModel` reloads when `Row.Package` changes (R2.6).
+  - Verify: `PackageRowRefreshTests` (`*_R2_6`), `PackageDetailsVersionsTests` reload case; `dotnet test`.
+- [x] **T22.** `PackageActions.InstallVersionAsync` reads the installed version first (R2.7), and the going-back
+  confirmation adds `ScopeNotice` (R3.8, Q7).
+  - Verify: `PackageActionsVersionTests` (`*_R2_7`): differs → no dialog, nothing queued, row refreshed; same or
+    null → as today. `ScopeNoticeTests` (`*_R3_8`): "Let WinGet decide" → none; a setting matching the installed
+    scope → none; the other scope → the sentence; unknown scope → none. The dialog message carries it.
+- [x] **T23.** Integration test: `ReadInstalledAsync` on a package installed on the runner returns its installed
+  version; `CountInstalledAsync` returns at least 1 for it. Tagged `Category=Integration` (R2.6, R3.9).
+  - Verify: `dotnet test --filter Category=Integration`.
+- [x] **T24.** VM, on a build from this branch, the Pandoc run from the amendment: 3.10 → update to 3.13 from Search
+  (the tester answers UAC) → the row and pane show 3.13 (R2.6). Go back to 3.12 → 3.12 replaces 3.13, one uninstall entry, and the same for a per-user
+  3.13 (R3.8); the MSI context read for the all-users install (T18 only read the per-user one); with Settings on "Current user", the confirmation says 3.12 will be installed for all users
+  (Q7); an MSI that refuses (PowerShell wix, from T1) still gets **Uninstall, then install**, back in its own scope, one
+  entry, excluded if the box was checked. jq (portable) and Notepad++ (NSIS) still go back directly. Changelog line.
+  - Verify: entries in the log below. *Done 2026-11-10, with changes: R2.6 checked with jq (no UAC) instead of
+    Pandoc's all-users update; Q7's notice checked the other way round (Settings on "All users", Pandoc per-user);
+    PowerShell (wix) and Notepad++ (NSIS) not run, as each needs several UAC prompts: their behaviour is T1's and the
+    unit tests'. R3.9 isn't reproduced through the app, since R3.8 now prevents the second copy; its parts are.*
+
 ## Manual verification log
 
 | Criterion | Date | Result | Notes |
@@ -156,3 +197,12 @@ every commit (Q4). Manual checks run in the CartonStash-Test VM (or Windows Sand
 | T17, going back further (R1.7, R3.1) | 2026-11-09 | Pass | From that pane: 1.8.0 → 1.7.1, the dialog has no box (already excluded), installed 1.7.1 ("Chosen version: 1.7.1"), still excluded. The 1.7.1 line was below the pane's fold because UIA selection doesn't scroll; a click or the arrow keys scroll it into view |
 | T17, keyboard (R1.4, R1.6) | 2026-11-09 | Pass | Down, Space → item "1.8.1"; Tab → button "Update jq to 1.8.1"; Shift+Tab → back to the item |
 | T17, themes | 2026-11-09 | Pass | Light, dark, high contrast: the selected line and its button readable. No crashes |
+| Amendment finding | 2026-11-10 | Fail (found) | Build 1.1.99 of `main`. Pandoc 3.10 → 3.13 from Search: all-users MSI after UAC, Updated. Go back to 3.12 from the same pane: per-user MSI (`ALLUSERS=2`), "Installed successfully"; Pandoc 3.12 and 3.13 both installed (two uninstall entries, two folders), excluded. The go-back log says "Installed version: 3.10" |
+| T18, all users | 2026-11-10 | Measured | Pandoc 3.13 `--scope machine` (elevated): `C:\Program Files\Pandoc\`, HKLM entry, WinGet `InstalledScope` = `System`. `InstallPackageAsync` 3.12 with `PackageInstallScope.System`: Ok, exit 0, MSI `ALLUSERS = 1`, `PREVIOUSVERSIONSINSTALLED` = 3.13's code: 3.13 replaced, one entry (3.12) |
+| T18, current user | 2026-11-10 | Measured | Pandoc 3.13 `--scope user`: `C:\Users\tester\AppData\Local\Pandoc\`, entry under HKLM too, WinGet `InstalledScope` = **`System`**. 3.12 with `PackageInstallScope.User`: Ok, `MSIINSTALLPERUSER = 1`, 3.13 replaced, one entry. `MsiGetProductInfoEx` on 3.12: `UserUnmanaged` only, 1605 for UserManaged and Machine. So the design reads the scope from Windows Installer for MSI products |
+| T24, first run | 2026-11-10 | Fail (found) | Build of T23. The Search row's badge kept "Installed 1.8.1" after the jq update while the pane reloaded: `VersionBadge` only redraws for a new row. Fixed: it follows the row's refresh. And with both Pandoc copies installed (run B below), WinGet's search by ID still found one entry, so R3.9's count missed it. Fixed: going back also asks Windows Installer whether the old MSI product is still there (design, R3.9) |
+| T24, R2.6 | 2026-11-10 | Pass | Build of the fixes. jq 1.8.1 → **Update to this version** 1.8.2 from Search: afterwards the row reads "Installed 1.8.2, same as winget" and the pane lists "1.8.2 (installed)" |
+| T24, R3.8 per-user + Q7 | 2026-11-10 | Pass | Pandoc 3.13 `--scope user`, Settings on "All users". The confirmation ends "Pandoc is installed for the current user, so 3.12 will be installed for the current user too, not for all users as set in Settings." No UAC prompt; log "Scope: for the current user, as installed"; one uninstall entry, Pandoc 3.12 in `AppData\Local\Pandoc`; excluded (box ticked) |
+| T24, R3.8 all users | 2026-11-10 | Pass | Pandoc 3.13 `--scope machine` (elevated setup); Windows Installer: Machine only. Settings "Let WinGet decide": no notice. Go back to 3.12 → UAC prompt, answered by the maintainer → log "Scope: for all users, as installed", Installed; one entry, Pandoc 3.12 in `C:\Program Files\Pandoc\`; Windows Installer has 3.12 (Machine) and no longer 3.13 |
+| T24, portable | 2026-11-10 | Pass | jq 1.8.2 → 1.8.1 still goes back directly; log "Scope: for the current user, as installed" (WinGet's scope for a portable package) |
+| T24, second copy (R3.9 parts) | 2026-11-10 | Measured | The T1 tool, elevated: `PackageInstallScope.System` 3.13 over the per-user 3.12 → two uninstall entries, both folders, `winget list` shows Pandoc 3.12 and 3.13, but the by-ID search counts 1. Not reproduced through the app (R3.8 prevents it); `AfterGoingBack` and `StillInstalled` are unit tested. No crashes in any T24 run |

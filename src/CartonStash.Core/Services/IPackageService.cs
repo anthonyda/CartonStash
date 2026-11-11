@@ -21,6 +21,12 @@ public interface IPackageService
     Task<PackageDetails?> GetDetailsAsync(PackageInfo package, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// The package as WinGet lists it now, with how it's installed (014 R2.6, R2.7). Keeps <paramref name="package"/>'s
+    /// installed entry ID. Null when it can't be read: the caller keeps what it has (013 R2.3).
+    /// </summary>
+    Task<PackageInfo?> ReadInstalledAsync(PackageInfo package, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// The package's icon URL from WinGet, or null (005 R5). Works for packages from the latest search or installed list;
     /// results are cached for the session.
     /// </summary>
@@ -60,6 +66,7 @@ public interface IPackageInstaller
     /// <summary>Runs the operation. Throws <see cref="OperationCanceledException"/> when cancelled.</summary>
     /// <param name="version">The version to install or update to; null for WinGet's default (014 R2.1).</param>
     /// <param name="logPath">Where the installer should write its log, or null (009 R2).</param>
+    /// <param name="scope">A scope to ask for whatever else applies: the installed one, carried across the uninstall of 014 R3.5. Null otherwise.</param>
     Task<OperationOutcome> RunAsync(OperationKind kind, PackageInfo package, bool acceptAgreements, string? version, string? logPath,
-        IProgress<OperationProgress> progress, CancellationToken cancellationToken);
+        IProgress<OperationProgress> progress, CancellationToken cancellationToken, InstallScope? scope = null);
 }
