@@ -228,7 +228,7 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
     };
 
     /// <summary>
-    /// 015 R3.2, Q2: "Updated for the current user, as Pandoc is installed." when the update used the installed scope and
+    /// 015 R3.2, Q2: "Updated for the current user, the way it was installed." when the update used the installed scope and
     /// Settings names the other one. Nothing for "Let WinGet decide", when they match, or when the scope wasn't the
     /// installed one.
     /// </summary>
@@ -238,9 +238,9 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
         {
             return null;
         }
-        var name = string.IsNullOrWhiteSpace(packageName) ? "the package" : packageName;
+        // T9: an installed entry's name often carries its version ("Pandoc 3.12"), so the sentence doesn't repeat it.
         var who = used == InstallScope.System ? "all users" : "the current user";
-        return $"Updated for {who}, as {name} is installed.";
+        return $"Updated for {who}, the way it was installed.";
     }
 
     /// <summary>R3.9: the installed version's MSI product codes that Windows Installer has (W2: by index). Empty for anything else.</summary>

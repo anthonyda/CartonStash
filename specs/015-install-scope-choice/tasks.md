@@ -53,8 +53,8 @@ every commit (Q4). Manual checks run in the CartonStash-Test VM, never on the ho
     says "Installed for the current user". Clean VM: **Install for all users** → UAC, Program Files, "Installed for all
     users", the card's permission line.
   - 7-Zip and jq: a plain Install button.
-  - Pandoc 3.12 per-user: Update → stays per-user, no UAC. With Settings on "All users": "Updated for the current user,
-    as Pandoc is installed."
+  - Pandoc 3.12 per-user: Update → stays per-user, no UAC. With Settings on "All users": "Updated for the current user, the way it
+    was installed."
   - Keyboard: Tab to the split button, Enter installs, Alt+Down opens the menu; the names read correctly (UIA). Light,
     dark, high contrast. Changelog line.
 - [ ] **T10.** Close: every criterion maps to a passing test or a log entry, status `Done` in all three files and in

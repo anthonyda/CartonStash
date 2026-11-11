@@ -42,8 +42,8 @@ public class UpdateScopeTests
     }
 
     [Theory]
-    [InlineData(InstallScope.System, InstallScope.User, "Updated for the current user, as Pandoc is installed.")]
-    [InlineData(InstallScope.User, InstallScope.System, "Updated for all users, as Pandoc is installed.")]
+    [InlineData(InstallScope.System, InstallScope.User, "Updated for the current user, the way it was installed.")]
+    [InlineData(InstallScope.User, InstallScope.System, "Updated for all users, the way it was installed.")]
     public void Overriding_Settings_is_said_R3_2(InstallScope setting, InstallScope used, string message)
     {
         Assert.Equal(message, WinGetPackageInstaller.UpdatedScopeNote("Pandoc", setting, used, ScopeSource.Installed));

@@ -48,7 +48,7 @@ scope installed a second copy next to the first.
 | ID   | Story | Criterion |
 |------|-------|-----------|
 | R3.1 | US3   | When the app updates an installed package (Update, Update selected, Update all, a version's **Update to this version**), it shall ask WinGet for the installer with the scope the package is installed with, read as in R2.1. Only if that scope isn't known shall the setting apply. *(Q1.)* |
-| R3.2 | US3   | When R3.1 overrides a scope chosen in Settings, the operation's result and log shall say so ("Updated for the current user, as Pandoc is installed"), as 014 R3.8 does in its confirmation. Updates have no confirmation, so the result says it. *(Q2.)* |
+| R3.2 | US3   | When R3.1 overrides a scope chosen in Settings, the operation's result and log shall say so ("Updated for the current user, the way it was installed"), as 014 R3.8 does in its confirmation. Updates have no confirmation, so the result says it. *(Q2.)* |
 
 ## Out of scope
 

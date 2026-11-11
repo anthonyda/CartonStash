@@ -166,7 +166,7 @@ internal static bool UpdatesByInstalling(OperationKind kind, InstallScope? msiCo
 internal static string? UpdatedScopeNote(string name, InstallScope setting, InstallScope used, ScopeSource source)
 ```
 
-When it returns text, a successful update's message becomes "Updated for the current user, as Pandoc is installed."
+When it returns text, a successful update's message becomes "Updated for the current user, the way it was installed."
 (or "…for all users…"); a failure's message is unchanged, and the log's "Scope" line says "as installed" either way.
 
 ## Testing
@@ -182,7 +182,7 @@ When it returns text, a successful update's message becomes "Updated for the cur
 | R3.1 | `ScopeFor`: an update keeps the MSI context / WinGet scope; chosen and carried come first; not going back nor updating → the setting (unit) |
 | R3.2 | `UpdatedScopeNote` per setting × used scope (unit); the success message carries it |
 | Live | Integration: `OffersScopeChoiceAsync` for Pandoc true, 7-Zip false |
-| All | VM: Pandoc not installed → split button → **Install for the current user** → `AppData`, no UAC, "Installed for the current user"; **Install for all users** on a clean VM → UAC, Program Files, "Installed for all users"; per-user Pandoc 3.12 updated → stays per-user, no UAC; with Settings on "All users", the result says "Updated for the current user, as Pandoc is installed." |
+| All | VM: Pandoc not installed → split button → **Install for the current user** → `AppData`, no UAC, "Installed for the current user"; **Install for all users** on a clean VM → UAC, Program Files, "Installed for all users"; per-user Pandoc 3.12 updated → stays per-user, no UAC; with Settings on "All users", the result says "Updated for the current user, the way it was installed." |
 
 ## Risks and alternatives
 
