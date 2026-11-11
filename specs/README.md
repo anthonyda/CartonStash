@@ -51,6 +51,6 @@ If implementation reveals the spec is wrong, **stop, update the spec first**, th
 | 012 | [Readable release notes](012-release-notes/)           | Done (2026-11-07) |
 | 013 | [Honest operation results](013-honest-results/)        | Done (2026-11-07); R2.2 checked by unit tests only |
 | 014 | [Install a chosen version](014-choose-version/)        | Done (2026-11-09); Store packages and the notification text checked by unit tests only; amendment R1.6, R1.7 (action next to the selected version, Excluded rows open details): done; amendment R2.6, R2.7, R3.8, R3.9 (installed scope when going back, fresh installed state): done; R3.9 through the app and the refusing MSIs checked by unit tests only |
-| 015 | [Choose the install scope per install](015-install-scope-choice/) | Approved (requirements 2026-11-10, design 2026-11-11); in progress |
+| 015 | [Choose the install scope per install](015-install-scope-choice/) | Done (2026-11-11); keyboard by hand, dark and high contrast not checked |
 
 Suggested build order: 002 → 003 → 004 → 005 → 006 → 007 (006's scope setting slots into 003's installer when it lands).

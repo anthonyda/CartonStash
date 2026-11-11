@@ -1,6 +1,6 @@
 # 015 – Choose the install scope per install: Design
 
-**Status:** Approved (2026-11-11)
+**Status:** Done (2026-11-11). Approved 2026-11-11; R3.1 changed during T9 (update by install when WinGet disagrees)
 **Requirements:** [requirements.md](requirements.md), approved 2026-11-10 with Q1 to Q3 as proposed
 
 ## Overview

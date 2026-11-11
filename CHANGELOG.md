@@ -4,7 +4,13 @@ What's new in each version of CartonStash. Get it from the [Microsoft Store](htt
 
 ## 1.2.2
 
+### New
+
+- **Install for all users or just for you.** When a package has both kinds of installer, such as Pandoc, Git or VS Code, the **Install** button in its details opens a menu: **Install for all users** or **Install for the current user**, for that install only. **Install** itself still follows your setting. The details also say how an installed package is installed.
+
 ### Fixed
+
+- **Updates keep a package the way it's installed.** An update could move a package installed for you alone to all users, with a permission prompt, because WinGet misreads how some packages are installed. Updates now keep the scope Windows Installer reports, and say so when that differs from the scope set in Settings.
 
 - **Going back no longer installs a second copy.** Some packages, such as Pandoc, have one installer for the current user and one for all users. Going back to an older version could pick the other one, so both versions ended up installed and the app said it had worked. Going back now uses the installer that matches how the package is installed, as Windows Installer records it. If you chose a scope in Settings and the package is installed the other way, the confirmation says so. If a second copy still appears, the result says that both versions are installed and which one to uninstall.
 - **Packages installed for all users update and uninstall again.** Updating or uninstalling an MSI package installed for all users, such as Pandoc or PowerShell, could fail with "The installer failed with error code 1603": WinGet ran Windows Installer silently, and silently it can't ask for permission to remove a program installed for all users. For those packages the app now lets Windows show its permission prompt, with a small progress window, and the Activity card says a prompt may come. When removing the installed version still fails, the result says that, instead of blaming the installer.
