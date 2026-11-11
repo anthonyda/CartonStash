@@ -109,6 +109,9 @@ public sealed record OperationOptions
     /// {previous version}: once it's uninstalled, nothing knows it (014 R3.8). Null to let the installer decide.
     /// </summary>
     public InstallScope? PreviousScope { get; init; }
+
+    /// <summary>The scope the user chose for this install, from the details pane's split button (015 R1.5). Null: none chosen.</summary>
+    public InstallScope? Scope { get; init; }
 }
 
 /// <summary>The buttons a finished card may offer after going back failed (014 R3.5, R3.7).</summary>
@@ -314,7 +317,12 @@ public sealed partial class PackageOperation : ObservableObject
     public double ProgressValue => Percent ?? 0;
 
     /// <summary>"Install PowerToys 0.101.0" when a version was chosen (014 R2.1).</summary>
-    public string Title => Version is { } version ? $"{Verb} {Package.Name} {version}" : $"{Verb} {Package.Name}";
+    public string Title => (Version is { } version ? $"{Verb} {Package.Name} {version}" : $"{Verb} {Package.Name}") + Options.Scope switch
+    {
+        InstallScope.System => " for all users", // 015 R1.5
+        InstallScope.User => " for the current user",
+        _ => "",
+    };
 
     /// <summary>Short status for rows and the Activity pane (003 R3.1).</summary>
     public string StatusText => (Phase, Result) switch

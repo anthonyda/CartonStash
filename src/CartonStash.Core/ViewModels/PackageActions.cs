@@ -137,7 +137,8 @@ public sealed class PackageActions(PackageOperationQueue queue, IPackageInstalle
     /// </summary>
     /// <param name="refresh">The row's <c>Refresh</c>: given the package as WinGet lists it when that isn't what the pane
     /// showed (R2.7).</param>
-    public async Task InstallVersionAsync(PackageInfo package, PackageVersion version, Action<PackageInfo>? refresh = null)
+    /// <param name="scope">The scope chosen from the split button (015 R1.3, R1.5), or null for the setting.</param>
+    public async Task InstallVersionAsync(PackageInfo package, PackageVersion version, Action<PackageInfo>? refresh = null, InstallScope? scope = null)
     {
         if (queue.Find(package) is { IsActive: true } || version.Direction == VersionDirection.Installed)
         {
@@ -152,7 +153,7 @@ public sealed class PackageActions(PackageOperationQueue queue, IPackageInstalle
             return;
         }
 
-        var options = new OperationOptions { Version = version.Version };
+        var options = new OperationOptions { Version = version.Version, Scope = version.Direction == VersionDirection.NotInstalled ? scope : null };
         if (version.Direction is VersionDirection.Older or VersionDirection.Unknown)
         {
             options = options with { GoingBack = package.IsInstalled, PreviousVersion = package.InstalledVersion };
@@ -225,7 +226,9 @@ public sealed class PackageActions(PackageOperationQueue queue, IPackageInstalle
     }
 
     /// <summary>Install, after the user accepts the package's agreements if it has any (003 R1.2, R1.3).</summary>
-    public async Task InstallAsync(PackageInfo package)
+    /// <param name="scope">015 R1.5: the scope chosen from the details pane's split button; null for the setting. Only for
+    /// this install: Settings doesn't change.</param>
+    public async Task InstallAsync(PackageInfo package, InstallScope? scope = null)
     {
         if (queue.Find(package) is { IsActive: true })
         {
@@ -234,7 +237,7 @@ public sealed class PackageActions(PackageOperationQueue queue, IPackageInstalle
 
         if (await AskAgreementsAsync(package) is { } accepted)
         {
-            queue.Enqueue(OperationKind.Install, package, accepted);
+            queue.Enqueue(OperationKind.Install, package, accepted, scope is null ? null : new OperationOptions { Scope = scope });
         }
     }
 

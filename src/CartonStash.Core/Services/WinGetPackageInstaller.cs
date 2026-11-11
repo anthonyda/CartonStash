@@ -42,7 +42,7 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
     }
 
     public async Task<OperationOutcome> RunAsync(OperationKind kind, PackageInfo package, bool acceptAgreements, string? version, string? logPath,
-        IProgress<OperationProgress> progress, CancellationToken cancellationToken, InstallScope? scope = null)
+        IProgress<OperationProgress> progress, CancellationToken cancellationToken, InstallScope? scope = null, ScopeSource scopeSource = ScopeSource.Installed)
     {
         // Re-find the package; COM objects never leave this class (A2).
         var found = UninstallsInstalledEntry(kind, package)
@@ -57,7 +57,7 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
             var outcome = kind switch
             {
                 OperationKind.Uninstall => await UninstallAsync(found, package.Name, logPath, progress, cancellationToken),
-                _ => await InstallAsync(kind, found, package, acceptAgreements, version, scope, logPath, progress, cancellationToken),
+                _ => await InstallAsync(kind, found, package, acceptAgreements, version, scope, scopeSource, logPath, progress, cancellationToken),
             };
             if (goingBack && outcome.Result == OperationResult.Succeeded)
             {
@@ -86,7 +86,7 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
     }
 
     private async Task<OperationOutcome> InstallAsync(OperationKind kind, CatalogPackage package, PackageInfo info, bool acceptAgreements, string? version,
-        InstallScope? explicitScope, string? logPath, IProgress<OperationProgress> progress, CancellationToken cancellationToken)
+        InstallScope? explicitScope, ScopeSource explicitSource, string? logPath, IProgress<OperationProgress> progress, CancellationToken cancellationToken)
     {
         var name = info.Name;
         // 014 R3.8, 015 R3.1: going back and updates ask for the scope the package is installed with; anything else uses
@@ -98,7 +98,7 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
         var msiContext = installed is null ? null : await Task.Run(() => InstalledScopes.MsiContextOf(installed, _installContext), cancellationToken);
         var (scope, scopeSource) = keepsInstalled && explicitScope is null
             ? await Task.Run(() => ScopeFor(null, true, msiContext, InstalledScopes.WinGetScopeOf(installed), settings.Current.InstallScope), cancellationToken)
-            : ScopeFor(explicitScope, keepsInstalled, null, null, settings.Current.InstallScope);
+            : ScopeFor(explicitScope, keepsInstalled, null, null, settings.Current.InstallScope, explicitSource);
         // 015 R3.1: an update keeps the installed scope only if the version it installs has an installer for it.
         if (kind == OperationKind.Upgrade && scopeSource == ScopeSource.Installed && explicitScope is null
             && !await Task.Run(() => HasInstallerFor(TargetVersion(package, version), scope), cancellationToken))
@@ -127,9 +127,10 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
             options.PackageVersionId = id;
         }
 
-        if (mode == OperationMode.DefaultForAllUsersMsi)
+        // 003 R8.3; 015 R1.4: an install for all users the user chose may ask too (Inno and others elevate themselves).
+        if (mode == OperationMode.DefaultForAllUsersMsi || (scopeSource == ScopeSource.Chosen && scope == InstallScope.System))
         {
-            progress.Report(new OperationProgress(OperationPhase.Queued) { MayAskPermission = true }); // 003 R8.3
+            progress.Report(new OperationProgress(OperationPhase.Queued) { MayAskPermission = true });
         }
         var operation = kind == OperationKind.Upgrade
             ? connection.Manager.UpgradePackageAsync(package, options)
@@ -303,8 +304,8 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
     /// Installer comes before it.
     /// </summary>
     internal static (InstallScope Scope, ScopeSource Source) ScopeFor(InstallScope? explicitScope, bool keepsInstalled,
-        InstallScope? msiContext, string? winGetScope, InstallScope setting) =>
-        explicitScope is InstallScope.User or InstallScope.System ? (explicitScope.Value, ScopeSource.Installed)
+        InstallScope? msiContext, string? winGetScope, InstallScope setting, ScopeSource explicitSource = ScopeSource.Installed) =>
+        explicitScope is InstallScope.User or InstallScope.System ? (explicitScope.Value, explicitSource)
         : !keepsInstalled ? (setting, ScopeSource.Setting)
         : msiContext is InstallScope.User or InstallScope.System ? (msiContext.Value, ScopeSource.Installed)
         : FromWinGetScope(winGetScope) is { } fromWinGet ? (fromWinGet, ScopeSource.Installed)

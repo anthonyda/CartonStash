@@ -66,7 +66,9 @@ public interface IPackageInstaller
     /// <summary>Runs the operation. Throws <see cref="OperationCanceledException"/> when cancelled.</summary>
     /// <param name="version">The version to install or update to; null for WinGet's default (014 R2.1).</param>
     /// <param name="logPath">Where the installer should write its log, or null (009 R2).</param>
-    /// <param name="scope">A scope to ask for whatever else applies: the installed one, carried across the uninstall of 014 R3.5. Null otherwise.</param>
+    /// <param name="scope">A scope to ask for whatever else applies: the one the user chose (015 R1.5), or the installed one
+    /// carried across the uninstall of 014 R3.5. Null otherwise.</param>
+    /// <param name="scopeSource">Where <paramref name="scope"/> came from: <see cref="ScopeSource.Chosen"/> or <see cref="ScopeSource.Installed"/>.</param>
     Task<OperationOutcome> RunAsync(OperationKind kind, PackageInfo package, bool acceptAgreements, string? version, string? logPath,
-        IProgress<OperationProgress> progress, CancellationToken cancellationToken, InstallScope? scope = null);
+        IProgress<OperationProgress> progress, CancellationToken cancellationToken, InstallScope? scope = null, ScopeSource scopeSource = ScopeSource.Installed);
 }

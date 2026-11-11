@@ -187,8 +187,9 @@ public sealed class PackageOperationQueue(IPackageInstaller installer, IOperatio
                     operation.Phase = p.Phase;
                     operation.Percent = p.Percent;
                 });
+                var (scope, scopeSource) = ExplicitScope(operation);
                 outcome = await installer.RunAsync(operation.Kind, operation.Package, operation.AcceptAgreements, operation.Version, operation.LogFilePath, progress, cancellation.Token,
-                    operation.Kind == OperationKind.Uninstall ? null : operation.Options.PreviousScope); // 014 R3.8: the installs after the R3.5 uninstall
+                    scope, scopeSource);
             }
             catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
             {
@@ -234,6 +235,15 @@ public sealed class PackageOperationQueue(IPackageInstaller installer, IOperatio
         }
         Completed?.Invoke(this, operation);
     }
+
+    /// <summary>
+    /// The scope the installer must ask for, if any: the one the user chose (015 R1.5), else the installed one carried
+    /// across the R3.5 uninstall (014 R3.8). An uninstall asks for none.
+    /// </summary>
+    internal static (InstallScope? Scope, ScopeSource Source) ExplicitScope(PackageOperation operation) =>
+        operation.Kind == OperationKind.Uninstall ? (null, ScopeSource.Installed)
+        : operation.Options.Scope is { } chosen ? (chosen, ScopeSource.Chosen)
+        : (operation.Options.PreviousScope, ScopeSource.Installed);
 
     /// <summary>
     /// 014 R3.7: the install that follows the uninstall of R3.5 didn't happen, so the package is no longer installed. That
