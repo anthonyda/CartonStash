@@ -73,9 +73,8 @@ Design approved 2026-11-10.
   prompt (the maintainer answers), the card's line while it runs, "Updated", one entry, log "Mode: default…". Then
   **Uninstall** it: one prompt, uninstalled. jq and a per-user Pandoc: no prompt, "Mode: silent". PowerShell (wix)
   for all users, updated: what `/passive` shows. Changelog line.
-  - Verify: entries in the log below. *Done 2026-11-11, except the card's line (R8.3), which the script couldn't
-    see; see the log.*
-- [ ] **T19.** Mark amendment R8 `Done` here, in requirements.md, design.md and the README roadmap.
+  - Verify: entries in the log below. *Done 2026-11-11; the card's line needed a fix (one-way binding), see the log.*
+- [x] **T19.** Mark amendment R8 `Done` here, in requirements.md, design.md and the README roadmap.
 
 ## Manual verification log
 
@@ -101,5 +100,5 @@ Design approved 2026-11-10.
 | R8.1, all-users MSI with its own window (T18) | 2026-11-11 | Pass | PowerShell 7.6.8.0 (wix) for all users, **Update PowerShell 7-x64**: one UAC prompt; `/passive` showed only Windows Installer's "Please wait while Windows configures PowerShell 7-x64" window, nothing to answer; updated to 7.6.9.0, Default mode in the log |
 | R8.1, uninstall (T18) | 2026-11-11 | Pass | **Uninstall Pandoc** on the Installed page, confirmed: one UAC prompt, "Uninstalled successfully.", `winget list` no longer finds it; Default mode in the log |
 | R8.2 (T18) | 2026-11-11 | Pass | jq (portable) updated from the Updates page: no prompt, no permission line, "Mode: silent" |
-| R8.3 (T18) | 2026-11-11 | Not confirmed | Twice the script didn't find the card's line: once with the Activity pane closed (the line is only on the card), once with it open, where UI Automation stalled for ~13 s while Windows' consent screen was up and the update had finished by then. The flag, its visibility while active and its reset are unit tested |
+| R8.3 (T18) | 2026-11-11 | Fail (found), then Pass | The script couldn't find the line through UI Automation (pane closed, then UIA stalled under the consent screen), so the host took a screenshot every second instead. With Pandoc 3.12 for all users and Activity open, the UAC prompt opened behind the app (only the shield flashed in the taskbar; the maintainer saw no prompt) and the card read "Updating…" with no line: its text was a one-time x:Bind, set before the card had its operation. Fixed (one-way). On a fresh VM with that build: the card reads "Updating…" and "Windows may ask for permission. If nothing appears, look for the shield in the taskbar.", the shield flashing |
 | R8.4 | – | Unit tests only | Default mode now avoids the failure for all-users MSIs; the message is for a package the check misses. `WinGetErrorMessageTests.*_R8_4` |

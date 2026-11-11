@@ -1,6 +1,6 @@
 # 003 – Install / uninstall with progress: Requirements
 
-**Status:** Done (2026-10-30). Amendment R7 (say when a program is running): done 2026-11-06. **Amendment R8 (all-users MSI packages): Approved** 2026-11-10, with the proposed answers to Q8 and Q9
+**Status:** Done (2026-10-30). Amendment R7 (say when a program is running): done 2026-11-06. **Amendment R8 (all-users MSI packages): Done** 2026-11-11, approved 2026-11-10 with the proposed answers to Q8 and Q9
 **Depends on:** 001, 002
 
 ## Problem
