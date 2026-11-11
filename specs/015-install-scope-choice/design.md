@@ -133,6 +133,31 @@ where it updates today. For Pandoc's per-user 3.10 that WinGet reads as
 all users (014 T18), Windows Installer's `UserUnmanaged` now keeps the update per-user: no UAC prompt, no move to
 Program Files.
 
+### When WinGet disagrees (found in T9, 2026-11-11)
+
+T9 updated a per-user Pandoc 3.12 (Windows Installer: `UserUnmanaged`; WinGet: `InstalledScope` = Machine) with
+`UpgradePackageAsync` and `PackageInstallScope.User`: `NoApplicableUpgrade`, `0x8A15002B`. WinGet's upgrade keeps the
+scope *it* reads for the installed version, so asking for the other one matches no installer. On `main` this update
+worked by moving Pandoc to all users (014's first run); here it failed, a regression. Measured in the VM, same state:
+
+| Call | Scope | Result |
+|------|-------|--------|
+| `UpgradePackageAsync` | User | `NoApplicableUpgrade` |
+| `InstallPackageAsync` with the default version's `PackageVersionId` | User | Ok, no UAC; 3.13 replaced 3.12 in `AppData\Local\Pandoc`, one entry |
+
+So an update whose installed scope came from Windows Installer and **differs from WinGet's `InstalledScope`** runs
+as `InstallPackageAsync` of the default version (or the chosen one, 014 R1.1) with that scope. Windows Installer's
+upgrade table replaces the old version within its own context, as in 014 T18. Every other update stays
+`UpgradePackageAsync`. Such an install skips WinGet's `uninstallPrevious`, so 014 R3.9's check runs after it too
+(the old MSI product still registered → the "installed next to" warning). The log keeps `Action: Update`.
+
+```csharp
+// 015 R3.1: WinGet's own upgrade keeps the scope it reads; when Windows Installer says otherwise, install the new
+// version in Windows Installer's scope instead.
+internal static bool UpdatesByInstalling(OperationKind kind, InstallScope? msiContext, InstallScope? winGetScope) =>
+    kind == OperationKind.Upgrade && msiContext is InstallScope.User or InstallScope.System && winGetScope is { } w && w != msiContext;
+```
+
 ### Saying so (R3.2, Q2)
 
 ```csharp

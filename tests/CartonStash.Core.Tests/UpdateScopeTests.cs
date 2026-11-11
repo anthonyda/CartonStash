@@ -60,4 +60,23 @@ public class UpdateScopeTests
     {
         Assert.Null(WinGetPackageInstaller.UpdatedScopeNote("Pandoc", setting, used, source));
     }
+
+    [Theory] // T9: WinGet reads a per-user Pandoc as Machine, so its upgrade with User found nothing; install instead
+    [InlineData(InstallScope.User, InstallScope.System, true)]
+    [InlineData(InstallScope.System, InstallScope.User, true)]
+    [InlineData(InstallScope.User, InstallScope.User, false)] // they agree: WinGet's own upgrade
+    [InlineData(InstallScope.System, InstallScope.System, false)]
+    [InlineData(null, InstallScope.System, false)] // not an MSI Windows Installer knows
+    [InlineData(InstallScope.User, null, false)] // WinGet doesn't say: its upgrade has nothing to contradict
+    public void An_update_installs_when_Windows_Installer_and_WinGet_disagree_R3_1(InstallScope? msi, InstallScope? winGet, bool installs)
+    {
+        Assert.Equal(installs, WinGetPackageInstaller.UpdatesByInstalling(OperationKind.Upgrade, msi, winGet));
+    }
+
+    [Fact]
+    public void Only_an_update_R3_1()
+    {
+        Assert.False(WinGetPackageInstaller.UpdatesByInstalling(OperationKind.Install, InstallScope.User, InstallScope.System));
+        Assert.False(WinGetPackageInstaller.UpdatesByInstalling(OperationKind.Uninstall, InstallScope.User, InstallScope.System));
+    }
 }

@@ -52,8 +52,10 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
         {
             // 014 R3.9: going back counts the installed entries before and after, to catch a second copy.
             var goingBack = GoesBack(kind, package, version);
+            // 015 R3.1: an update may run as an install, which skips uninstallPrevious, so it gets the MSI half of the check.
+            var updating = kind == OperationKind.Upgrade && package.IsInstalled;
             var entriesBefore = goingBack ? await CountInstalledAsync(package.Id) : null;
-            var msiBefore = goingBack ? await Task.Run(() => MsiProductsOf(found.InstalledVersion), cancellationToken) : [];
+            var msiBefore = goingBack || updating ? await Task.Run(() => MsiProductsOf(found.InstalledVersion), cancellationToken) : [];
             var outcome = kind switch
             {
                 OperationKind.Uninstall => await UninstallAsync(found, package.Name, logPath, progress, cancellationToken),
@@ -64,6 +66,15 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
                 connection.Invalidate();
                 var stillInstalled = await Task.Run(() => AnyStillInstalled(msiBefore, ChosenProductCodes(found, version!)), CancellationToken.None);
                 outcome = AfterGoingBack(outcome, entriesBefore, await CountInstalledAsync(package.Id), stillInstalled, package.Name, version!, package.InstalledVersion);
+            }
+            else if (updating && msiBefore.Count > 0 && outcome.Result == OperationResult.Succeeded)
+            {
+                var target = version ?? found.DefaultInstallVersion?.Version;
+                if (target is not null)
+                {
+                    var stillInstalled = await Task.Run(() => AnyStillInstalled(msiBefore, ChosenProductCodes(found, target)), CancellationToken.None);
+                    outcome = AfterGoingBack(outcome, null, null, stillInstalled, package.Name, target, package.InstalledVersion);
+                }
             }
             switch (CheckAfter(kind, outcome, package, version))
             {
@@ -132,7 +143,15 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
         {
             progress.Report(new OperationProgress(OperationPhase.Queued) { MayAskPermission = true });
         }
-        var operation = kind == OperationKind.Upgrade
+        // 015 R3.1: WinGet's upgrade keeps the scope it reads; when Windows Installer says otherwise, install the new
+        // version in Windows Installer's scope (measured in T9: the upgrade found no installer, the install replaced it).
+        var byInstalling = scopeSource == ScopeSource.Installed
+            && UpdatesByInstalling(kind, msiContext, InstalledScopes.FromWinGetScope(InstalledScopes.WinGetScopeOf(installed)));
+        if (byInstalling && options.PackageVersionId is null && TargetVersionId(package) is { } defaultId)
+        {
+            options.PackageVersionId = defaultId;
+        }
+        var operation = kind == OperationKind.Upgrade && !byInstalling
             ? connection.Manager.UpgradePackageAsync(package, options)
             : connection.Manager.InstallPackageAsync(package, options);
         var winGetProgress = new Progress<InstallProgress>(p => progress.Report(MapInstallProgress(p)));
@@ -148,6 +167,27 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
             && UpdatedScopeNote(name, settings.Current.InstallScope, scope, scopeSource) is { } note
             ? outcome with { Message = note }
             : outcome;
+    }
+
+    /// <summary>
+    /// 015 R3.1: an update runs as an install when Windows Installer knows the installed version's scope and WinGet reads
+    /// it differently (T9: Pandoc per-user, which WinGet reads as Machine, so its upgrade found no per-user installer).
+    /// </summary>
+    internal static bool UpdatesByInstalling(OperationKind kind, InstallScope? msiContext, InstallScope? winGetScope) =>
+        kind == OperationKind.Upgrade && msiContext is InstallScope.User or InstallScope.System && winGetScope is { } w && w != msiContext;
+
+    /// <summary>The default version's ID, by index (W2): what an update by install puts in <c>PackageVersionId</c>.</summary>
+    private static PackageVersionId? TargetVersionId(CatalogPackage package)
+    {
+        try
+        {
+            var target = package.DefaultInstallVersion?.Version;
+            return target is null ? null : FindVersion(package, target);
+        }
+        catch (Exception)
+        {
+            return null;
+        }
     }
 
     /// <summary>The version an operation installs: the chosen one, else WinGet's default.</summary>
