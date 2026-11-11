@@ -16,7 +16,7 @@ public class GoingBackScopeTests
     [InlineData(InstallScope.System)]
     public void ScopeFor_not_going_back_uses_the_setting_R3_8(InstallScope setting)
     {
-        Assert.Equal((setting, ScopeSource.Setting), WinGetPackageInstaller.ScopeFor(null, goingBack: false, InstallScope.User, "Machine", setting));
+        Assert.Equal((setting, ScopeSource.Setting), WinGetPackageInstaller.ScopeFor(null, keepsInstalled: false, InstallScope.User, "Machine", setting));
     }
 
     [Theory] // T18: Windows Installer said UserUnmanaged where WinGet said System, so Windows Installer wins
@@ -25,7 +25,7 @@ public class GoingBackScopeTests
     [InlineData(InstallScope.User, null, InstallScope.User)]
     public void ScopeFor_an_MSI_context_wins_over_WinGets_scope_R3_8(InstallScope msi, string? winGet, InstallScope expected)
     {
-        Assert.Equal((expected, ScopeSource.Installed), WinGetPackageInstaller.ScopeFor(null, goingBack: true, msi, winGet, InstallScope.Any));
+        Assert.Equal((expected, ScopeSource.Installed), WinGetPackageInstaller.ScopeFor(null, keepsInstalled: true, msi, winGet, InstallScope.Any));
     }
 
     [Theory] // no MSI answer: WinGet's InstalledScope, by its strings
@@ -34,8 +34,8 @@ public class GoingBackScopeTests
     [InlineData("Machine", InstallScope.System)]
     public void ScopeFor_without_an_MSI_context_uses_WinGets_scope_R3_8(string winGet, InstallScope expected)
     {
-        Assert.Equal((expected, ScopeSource.Installed), WinGetPackageInstaller.ScopeFor(null, goingBack: true, null, winGet, InstallScope.Any));
-        Assert.Equal((expected, ScopeSource.Installed), WinGetPackageInstaller.ScopeFor(null, goingBack: true, InstallScope.Any, winGet, InstallScope.Any));
+        Assert.Equal((expected, ScopeSource.Installed), WinGetPackageInstaller.ScopeFor(null, keepsInstalled: true, null, winGet, InstallScope.Any));
+        Assert.Equal((expected, ScopeSource.Installed), WinGetPackageInstaller.ScopeFor(null, keepsInstalled: true, InstallScope.Any, winGet, InstallScope.Any));
     }
 
     [Theory] // neither knows: the setting (006 R2.1)
@@ -44,8 +44,8 @@ public class GoingBackScopeTests
     [InlineData(null)]
     public void ScopeFor_with_no_known_scope_uses_the_setting_R3_8(string? winGet)
     {
-        Assert.Equal((InstallScope.User, ScopeSource.Setting), WinGetPackageInstaller.ScopeFor(null, goingBack: true, null, winGet, InstallScope.User));
-        Assert.Equal((InstallScope.Any, ScopeSource.Setting), WinGetPackageInstaller.ScopeFor(null, goingBack: true, null, winGet, InstallScope.Any));
+        Assert.Equal((InstallScope.User, ScopeSource.Setting), WinGetPackageInstaller.ScopeFor(null, keepsInstalled: true, null, winGet, InstallScope.User));
+        Assert.Equal((InstallScope.Any, ScopeSource.Setting), WinGetPackageInstaller.ScopeFor(null, keepsInstalled: true, null, winGet, InstallScope.Any));
     }
 
     [Theory] // the scope carried across the R3.5 uninstall comes before anything else
@@ -53,15 +53,15 @@ public class GoingBackScopeTests
     [InlineData(InstallScope.System)]
     public void ScopeFor_an_explicit_scope_comes_first_R3_8(InstallScope explicitScope)
     {
-        Assert.Equal((explicitScope, ScopeSource.Installed), WinGetPackageInstaller.ScopeFor(explicitScope, goingBack: false, null, null, InstallScope.Any));
+        Assert.Equal((explicitScope, ScopeSource.Installed), WinGetPackageInstaller.ScopeFor(explicitScope, keepsInstalled: false, null, null, InstallScope.Any));
         var other = explicitScope == InstallScope.User ? InstallScope.System : InstallScope.User;
-        Assert.Equal((explicitScope, ScopeSource.Installed), WinGetPackageInstaller.ScopeFor(explicitScope, goingBack: true, other, "Machine", other));
+        Assert.Equal((explicitScope, ScopeSource.Installed), WinGetPackageInstaller.ScopeFor(explicitScope, keepsInstalled: true, other, "Machine", other));
     }
 
     [Fact]
     public void ScopeFor_an_explicit_Any_is_no_scope_R3_8()
     {
-        Assert.Equal((InstallScope.User, ScopeSource.Setting), WinGetPackageInstaller.ScopeFor(InstallScope.Any, goingBack: false, null, null, InstallScope.User));
+        Assert.Equal((InstallScope.User, ScopeSource.Setting), WinGetPackageInstaller.ScopeFor(InstallScope.Any, keepsInstalled: false, null, null, InstallScope.User));
     }
 
     [Fact] // machine first, then the per-user contexts (T18: 1605 for the contexts the product isn't in)

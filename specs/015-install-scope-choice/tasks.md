@@ -18,7 +18,7 @@ every commit (Q4). Manual checks run in the CartonStash-Test VM, never on the ho
   `PackageOperation`; the log's "Scope" line reads it. No behaviour change. *(014 R3.8, prepares R1.5)*
   - Verify: the existing `GoingBackScopeTests` and `UninstallThenInstallTests` pass, renamed where they read it.
     *Done 2026-11-11: the log also has the "chosen" wording ready for T4. 796 tests pass.*
-- [ ] **T3.** `ScopeFor` with the chosen scope, the carried one and `keepsInstalled` (going back or an update);
+- [x] **T3.** `ScopeFor` with the chosen scope, the carried one and `keepsInstalled` (going back or an update);
   `UpdatedScopeNote` and the success message (R3.1, R3.2).
   - Verify: `UpdateScopeTests` (`*_R3_1`, `*_R3_2`); `GoingBackScopeTests` still pass.
 - [ ] **T4.** `OperationOptions.Scope`; the queue passes `Scope ?? PreviousScope`; `PackageActions.InstallAsync` and

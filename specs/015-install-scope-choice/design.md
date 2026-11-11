@@ -123,7 +123,13 @@ internal static (InstallScope Scope, ScopeSource Source) ScopeFor(InstallScope? 
 // → Windows Installer, then WinGet → Installed; else the setting → Setting.
 ```
 
-`keepsInstalled` is `GoesBack(...) || kind == OperationKind.Upgrade`. For Pandoc's per-user 3.10 that WinGet reads as
+`keepsInstalled` is `GoesBack(...) || kind == OperationKind.Upgrade`.
+
+*Added 2026-11-11 during T3:* an update only keeps the installed scope when the version it installs has an
+installer for it (`GetApplicableInstaller` with that scope returns one whose `Scope` matches, as in R1.2, or a
+scope-less one). Otherwise it falls back to the setting, as today. Without this, a package whose new version
+dropped, say, its per-user installer would fail with "No installer for this PC with the selected install scope"
+where it updates today. For Pandoc's per-user 3.10 that WinGet reads as
 all users (014 T18), Windows Installer's `UserUnmanaged` now keeps the update per-user: no UAC prompt, no move to
 Program Files.
 
