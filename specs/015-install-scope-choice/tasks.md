@@ -42,7 +42,7 @@ every commit (Q4). Manual checks run in the CartonStash-Test VM, never on the ho
 
 ## Tests against WinGet
 
-- [ ] **T8.** Integration: `OffersScopeChoiceAsync` for Pandoc's default version is true, for 7-Zip false. Tagged
+- [x] **T8.** Integration: `OffersScopeChoiceAsync` for Pandoc's default version is true, for 7-Zip false. Tagged
   `Category=Integration` (R1.2).
   - Verify: `dotnet test --filter Category=Integration`.
 
