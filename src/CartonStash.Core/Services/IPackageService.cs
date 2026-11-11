@@ -27,6 +27,12 @@ public interface IPackageService
     Task<PackageInfo?> ReadInstalledAsync(PackageInfo package, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// 015 R1.2, R1.3: WinGet has a per-user and an all-users installer for that version of the package. False when it
+    /// has one scope, none, or the read fails.
+    /// </summary>
+    Task<bool> OffersScopeChoiceAsync(PackageInfo package, string version, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// The package's icon URL from WinGet, or null (005 R5). Works for packages from the latest search or installed list;
     /// results are cached for the session.
     /// </summary>
@@ -66,7 +72,9 @@ public interface IPackageInstaller
     /// <summary>Runs the operation. Throws <see cref="OperationCanceledException"/> when cancelled.</summary>
     /// <param name="version">The version to install or update to; null for WinGet's default (014 R2.1).</param>
     /// <param name="logPath">Where the installer should write its log, or null (009 R2).</param>
-    /// <param name="scope">A scope to ask for whatever else applies: the installed one, carried across the uninstall of 014 R3.5. Null otherwise.</param>
+    /// <param name="scope">A scope to ask for whatever else applies: the one the user chose (015 R1.5), or the installed one
+    /// carried across the uninstall of 014 R3.5. Null otherwise.</param>
+    /// <param name="scopeSource">Where <paramref name="scope"/> came from: <see cref="ScopeSource.Chosen"/> or <see cref="ScopeSource.Installed"/>.</param>
     Task<OperationOutcome> RunAsync(OperationKind kind, PackageInfo package, bool acceptAgreements, string? version, string? logPath,
-        IProgress<OperationProgress> progress, CancellationToken cancellationToken, InstallScope? scope = null);
+        IProgress<OperationProgress> progress, CancellationToken cancellationToken, InstallScope? scope = null, ScopeSource scopeSource = ScopeSource.Installed);
 }

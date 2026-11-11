@@ -42,7 +42,7 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
     }
 
     public async Task<OperationOutcome> RunAsync(OperationKind kind, PackageInfo package, bool acceptAgreements, string? version, string? logPath,
-        IProgress<OperationProgress> progress, CancellationToken cancellationToken, InstallScope? scope = null)
+        IProgress<OperationProgress> progress, CancellationToken cancellationToken, InstallScope? scope = null, ScopeSource scopeSource = ScopeSource.Installed)
     {
         // Re-find the package; COM objects never leave this class (A2).
         var found = UninstallsInstalledEntry(kind, package)
@@ -52,18 +52,29 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
         {
             // 014 R3.9: going back counts the installed entries before and after, to catch a second copy.
             var goingBack = GoesBack(kind, package, version);
+            // 015 R3.1: an update may run as an install, which skips uninstallPrevious, so it gets the MSI half of the check.
+            var updating = kind == OperationKind.Upgrade && package.IsInstalled;
             var entriesBefore = goingBack ? await CountInstalledAsync(package.Id) : null;
-            var msiBefore = goingBack ? await Task.Run(() => MsiProductsOf(found.InstalledVersion), cancellationToken) : [];
+            var msiBefore = goingBack || updating ? await Task.Run(() => MsiProductsOf(found.InstalledVersion), cancellationToken) : [];
             var outcome = kind switch
             {
                 OperationKind.Uninstall => await UninstallAsync(found, package.Name, logPath, progress, cancellationToken),
-                _ => await InstallAsync(kind, found, package, acceptAgreements, version, scope, logPath, progress, cancellationToken),
+                _ => await InstallAsync(kind, found, package, acceptAgreements, version, scope, scopeSource, logPath, progress, cancellationToken),
             };
             if (goingBack && outcome.Result == OperationResult.Succeeded)
             {
                 connection.Invalidate();
                 var stillInstalled = await Task.Run(() => AnyStillInstalled(msiBefore, ChosenProductCodes(found, version!)), CancellationToken.None);
                 outcome = AfterGoingBack(outcome, entriesBefore, await CountInstalledAsync(package.Id), stillInstalled, package.Name, version!, package.InstalledVersion);
+            }
+            else if (updating && msiBefore.Count > 0 && outcome.Result == OperationResult.Succeeded)
+            {
+                var target = version ?? found.DefaultInstallVersion?.Version;
+                if (target is not null)
+                {
+                    var stillInstalled = await Task.Run(() => AnyStillInstalled(msiBefore, ChosenProductCodes(found, target)), CancellationToken.None);
+                    outcome = AfterGoingBack(outcome, null, null, stillInstalled, package.Name, target, package.InstalledVersion);
+                }
             }
             switch (CheckAfter(kind, outcome, package, version))
             {
@@ -86,17 +97,25 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
     }
 
     private async Task<OperationOutcome> InstallAsync(OperationKind kind, CatalogPackage package, PackageInfo info, bool acceptAgreements, string? version,
-        InstallScope? explicitScope, string? logPath, IProgress<OperationProgress> progress, CancellationToken cancellationToken)
+        InstallScope? explicitScope, ScopeSource explicitSource, string? logPath, IProgress<OperationProgress> progress, CancellationToken cancellationToken)
     {
         var name = info.Name;
-        // 014 R3.8: going back asks for the scope the package is installed with; anything else uses the setting (006 R2.1).
+        // 014 R3.8, 015 R3.1: going back and updates ask for the scope the package is installed with; anything else uses
+        // the setting (006 R2.1).
         var goingBack = GoesBack(kind, info, version);
+        var keepsInstalled = goingBack || (kind == OperationKind.Upgrade && info.IsInstalled);
         var installed = package.InstalledVersion;
         // One read of Windows Installer's context serves both 014 R3.8 and 003 R8.1.
         var msiContext = installed is null ? null : await Task.Run(() => InstalledScopes.MsiContextOf(installed, _installContext), cancellationToken);
-        var (scope, fromInstalled) = goingBack && explicitScope is null
+        var (scope, scopeSource) = keepsInstalled && explicitScope is null
             ? await Task.Run(() => ScopeFor(null, true, msiContext, InstalledScopes.WinGetScopeOf(installed), settings.Current.InstallScope), cancellationToken)
-            : ScopeFor(explicitScope, goingBack, null, null, settings.Current.InstallScope);
+            : ScopeFor(explicitScope, keepsInstalled, null, null, settings.Current.InstallScope, explicitSource);
+        // 015 R3.1: an update keeps the installed scope only if the version it installs has an installer for it.
+        if (kind == OperationKind.Upgrade && scopeSource == ScopeSource.Installed && explicitScope is null
+            && !await Task.Run(() => HasInstallerFor(TargetVersion(package, version), scope), cancellationToken))
+        {
+            (scope, scopeSource) = (settings.Current.InstallScope, ScopeSource.Setting);
+        }
         var mode = ModeFor(kind, installed is not null, msiContext);
         var options = new InstallOptions
         {
@@ -114,16 +133,25 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
             // 014 R2.1: looked up again now, by index (W2); the source may have changed since the pane opened.
             if (FindVersion(package, version) is not { } id)
             {
-                return VersionUnavailable(info.Source) with { Scope = scope, ScopeFromInstalled = fromInstalled, Mode = mode };
+                return VersionUnavailable(info.Source) with { Scope = scope, ScopeSource = scopeSource, Mode = mode };
             }
             options.PackageVersionId = id;
         }
 
-        if (mode == OperationMode.DefaultForAllUsersMsi)
+        // 003 R8.3; 015 R1.4: an install for all users the user chose may ask too (Inno and others elevate themselves).
+        if (mode == OperationMode.DefaultForAllUsersMsi || (scopeSource == ScopeSource.Chosen && scope == InstallScope.System))
         {
-            progress.Report(new OperationProgress(OperationPhase.Queued) { MayAskPermission = true }); // 003 R8.3
+            progress.Report(new OperationProgress(OperationPhase.Queued) { MayAskPermission = true });
         }
-        var operation = kind == OperationKind.Upgrade
+        // 015 R3.1: WinGet's upgrade keeps the scope it reads; when Windows Installer says otherwise, install the new
+        // version in Windows Installer's scope (measured in T9: the upgrade found no installer, the install replaced it).
+        var byInstalling = scopeSource == ScopeSource.Installed
+            && UpdatesByInstalling(kind, msiContext, InstalledScopes.FromWinGetScope(InstalledScopes.WinGetScopeOf(installed)));
+        if (byInstalling && options.PackageVersionId is null && TargetVersionId(package) is { } defaultId)
+        {
+            options.PackageVersionId = defaultId;
+        }
+        var operation = kind == OperationKind.Upgrade && !byInstalling
             ? connection.Manager.UpgradePackageAsync(package, options)
             : connection.Manager.InstallPackageAsync(package, options);
         var winGetProgress = new Progress<InstallProgress>(p => progress.Report(MapInstallProgress(p)));
@@ -131,9 +159,88 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
 
         var extendedError = result.ExtendedErrorCode?.HResult ?? 0;
         var running = await RunningFilesAfterAsync(extendedError, package);
-        return MapInstallResult(kind, result.Status, result.InstallerErrorCode, result.RebootRequired, settings.Current.InstallScope,
+        var outcome = MapInstallResult(kind, result.Status, result.InstallerErrorCode, result.RebootRequired, settings.Current.InstallScope,
             extendedError, name, running, goingBackTo: goingBack ? version : null, installedVersion: info.InstalledVersion, mode: mode)
-            with { Details = FormatDetails(result.Status.ToString(), result.InstallerErrorCode, result.ExtendedErrorCode), Scope = scope, ScopeFromInstalled = fromInstalled, Mode = mode };
+            with { Details = FormatDetails(result.Status.ToString(), result.InstallerErrorCode, result.ExtendedErrorCode), Scope = scope, ScopeSource = scopeSource, Mode = mode };
+        // 015 R3.2: an update that kept the installed scope against a scope chosen in Settings says so.
+        return kind == OperationKind.Upgrade && outcome.Result == OperationResult.Succeeded
+            && UpdatedScopeNote(name, settings.Current.InstallScope, scope, scopeSource) is { } note
+            ? outcome with { Message = note }
+            : outcome;
+    }
+
+    /// <summary>
+    /// 015 R3.1: an update runs as an install when Windows Installer knows the installed version's scope and WinGet reads
+    /// it differently (T9: Pandoc per-user, which WinGet reads as Machine, so its upgrade found no per-user installer).
+    /// </summary>
+    internal static bool UpdatesByInstalling(OperationKind kind, InstallScope? msiContext, InstallScope? winGetScope) =>
+        kind == OperationKind.Upgrade && msiContext is InstallScope.User or InstallScope.System && winGetScope is { } w && w != msiContext;
+
+    /// <summary>The default version's ID, by index (W2): what an update by install puts in <c>PackageVersionId</c>.</summary>
+    private static PackageVersionId? TargetVersionId(CatalogPackage package)
+    {
+        try
+        {
+            var target = package.DefaultInstallVersion?.Version;
+            return target is null ? null : FindVersion(package, target);
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>The version an operation installs: the chosen one, else WinGet's default.</summary>
+    private static PackageVersionInfo? TargetVersion(CatalogPackage package, string? version)
+    {
+        try
+        {
+            return version is not null && FindVersion(package, version) is { } id ? package.GetPackageVersionInfo(id) : package.DefaultInstallVersion;
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>015 R3.1: WinGet has an installer of that scope (or one without a scope) for the version. A failed read is no.</summary>
+    private static bool HasInstallerFor(PackageVersionInfo? info, InstallScope scope)
+    {
+        try
+        {
+            var picked = info?.GetApplicableInstaller(new InstallOptions { PackageInstallScope = ToWinGet(scope) });
+            return InstallerFits(picked?.Scope, scope);
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>015 R3.1: the installer WinGet picked fits the scope: the same, or one with no scope (portable, MSIX).</summary>
+    internal static bool InstallerFits(PackageInstallerScope? picked, InstallScope scope) => picked switch
+    {
+        null => false,
+        PackageInstallerScope.Unknown => true,
+        PackageInstallerScope.User => scope == InstallScope.User,
+        PackageInstallerScope.System => scope == InstallScope.System,
+        _ => false,
+    };
+
+    /// <summary>
+    /// 015 R3.2, Q2: "Updated for the current user, the way it was installed." when the update used the installed scope and
+    /// Settings names the other one. Nothing for "Let WinGet decide", when they match, or when the scope wasn't the
+    /// installed one.
+    /// </summary>
+    internal static string? UpdatedScopeNote(string packageName, InstallScope setting, InstallScope used, ScopeSource source)
+    {
+        if (source != ScopeSource.Installed || setting == InstallScope.Any || used is not (InstallScope.User or InstallScope.System) || used == setting)
+        {
+            return null;
+        }
+        // T9: an installed entry's name often carries its version ("Pandoc 3.12"), so the sentence doesn't repeat it.
+        var who = used == InstallScope.System ? "all users" : "the current user";
+        return $"Updated for {who}, the way it was installed.";
     }
 
     /// <summary>R3.9: the installed version's MSI product codes that Windows Installer has (W2: by index). Empty for anything else.</summary>
@@ -232,17 +339,17 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
 
     /// <summary>
     /// 014 R3.8: the scope to ask WinGet for, and whether it's how the package is installed. An explicit scope (carried
-    /// across the R3.5 uninstall) comes first; then, only when going back, Windows Installer's context of the product,
+    /// across the R3.5 uninstall) comes first; then, only when going back or updating (015 R3.1), Windows Installer's context of the product,
     /// then WinGet's <c>InstalledScope</c>; then the setting. T18: WinGet's scope is wrong for some MSIs, so Windows
     /// Installer comes before it.
     /// </summary>
-    internal static (InstallScope Scope, bool FromInstalled) ScopeFor(InstallScope? explicitScope, bool goingBack,
-        InstallScope? msiContext, string? winGetScope, InstallScope setting) =>
-        explicitScope is InstallScope.User or InstallScope.System ? (explicitScope.Value, true)
-        : !goingBack ? (setting, false)
-        : msiContext is InstallScope.User or InstallScope.System ? (msiContext.Value, true)
-        : FromWinGetScope(winGetScope) is { } fromWinGet ? (fromWinGet, true)
-        : (setting, false);
+    internal static (InstallScope Scope, ScopeSource Source) ScopeFor(InstallScope? explicitScope, bool keepsInstalled,
+        InstallScope? msiContext, string? winGetScope, InstallScope setting, ScopeSource explicitSource = ScopeSource.Installed) =>
+        explicitScope is InstallScope.User or InstallScope.System ? (explicitScope.Value, explicitSource)
+        : !keepsInstalled ? (setting, ScopeSource.Setting)
+        : msiContext is InstallScope.User or InstallScope.System ? (msiContext.Value, ScopeSource.Installed)
+        : FromWinGetScope(winGetScope) is { } fromWinGet ? (fromWinGet, ScopeSource.Installed)
+        : (setting, ScopeSource.Setting);
 
     /// <summary>WinGet's <c>InstalledScope</c> metadata: "User" or "Machine"; anything else is unknown.</summary>
     internal static InstallScope? FromWinGetScope(string? value) => InstalledScopes.FromWinGetScope(value);

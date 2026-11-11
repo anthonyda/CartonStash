@@ -279,6 +279,26 @@ public class WinGetPackageServiceIntegrationTests
         Assert.NotNull(new MsiInstallContext().ContextOf(code));
     }
 
+    [Theory] // 015 R1.2, as measured in T1: Pandoc and Git have both scopes, 7-Zip only all users, jq none
+    [InlineData("JohnMacFarlane.Pandoc", "3.13", true)]
+    [InlineData("Git.Git", null, true)]
+    [InlineData("7zip.7zip", null, false)]
+    [InlineData("jqlang.jq", "1.8.2", false)]
+    public async Task OffersScopeChoice_follows_WinGets_installers(string id, string? version, bool expected)
+    {
+        var found = Assert.Single(await _service.SearchAsync(id), p => p.Id == id);
+
+        Assert.Equal(expected, await _service.OffersScopeChoiceAsync(found, version ?? found.AvailableVersion!));
+    }
+
+    [Fact]
+    public async Task OffersScopeChoice_for_a_version_the_source_doesnt_have_is_false() // 015 R1.2
+    {
+        var found = Assert.Single(await _service.SearchAsync("JohnMacFarlane.Pandoc"), p => p.Id == "JohnMacFarlane.Pandoc");
+
+        Assert.False(await _service.OffersScopeChoiceAsync(found, "0.0.0.1"));
+    }
+
     [Fact]
     public async Task Refresh_winget_source_succeeds() // 006 R3.2 (slow)
     {

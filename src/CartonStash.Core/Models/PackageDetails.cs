@@ -18,6 +18,15 @@ public sealed record PackageDetails
 
     /// <summary>Available versions, newest first (005 R2.1), each with how it compares with the installed one (014 R1.2).</summary>
     public IReadOnlyList<PackageVersion> Versions { get; init; } = [];
+
+    /// <summary>
+    /// 015 R1.1, R1.2: not installed, and WinGet has a per-user and an all-users installer for the default version, so the
+    /// pane's Install offers both scopes.
+    /// </summary>
+    public bool OffersScopeChoice { get; init; }
+
+    /// <summary>015 R2.1: how the installed version is installed (Windows Installer, then WinGet); null when unknown.</summary>
+    public InstallScope? InstalledScope { get; init; }
 }
 
 /// <summary>How an available version compares with the installed one, as WinGet's comparer decides (014 R1.2).</summary>

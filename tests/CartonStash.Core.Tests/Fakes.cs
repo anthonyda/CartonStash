@@ -70,6 +70,17 @@ internal sealed class FakePackageService : IPackageService
     public Task<PackageDetails?> GetDetailsAsync(PackageInfo package, CancellationToken cancellationToken = default) =>
         Details(package, cancellationToken);
 
+    /// <summary>015 R1.3: whether a version offers both scopes; false by default.</summary>
+    public Func<PackageInfo, string, bool> ScopeChoice { get; set; } = (_, _) => false;
+
+    public List<string> ScopeChoiceAsked { get; } = [];
+
+    public Task<bool> OffersScopeChoiceAsync(PackageInfo package, string version, CancellationToken cancellationToken = default)
+    {
+        ScopeChoiceAsked.Add(version);
+        return Task.FromResult(ScopeChoice(package, version));
+    }
+
     /// <summary>014 R2.6, R2.7: what a fresh read returns; null (the default) is a read that failed.</summary>
     public Func<PackageInfo, PackageInfo?> ReadInstalled { get; set; } = _ => null;
 
@@ -156,9 +167,13 @@ internal sealed class ScriptedInstaller : IPackageInstaller
     /// <summary>The explicit scope each operation ran with (014 R3.8).</summary>
     public List<InstallScope?> Scopes { get; } = [];
 
+    /// <summary>Where each explicit scope came from (015 R1.5).</summary>
+    public List<ScopeSource> ScopeSources { get; } = [];
+
     public Task<OperationOutcome> RunAsync(OperationKind kind, PackageInfo package, bool acceptAgreements, string? version, string? logPath,
-        IProgress<OperationProgress> progress, CancellationToken cancellationToken, InstallScope? scope = null)
+        IProgress<OperationProgress> progress, CancellationToken cancellationToken, InstallScope? scope = null, ScopeSource scopeSource = ScopeSource.Installed)
     {
+        ScopeSources.Add(scopeSource);
         Calls.Add((kind, package.Id, acceptAgreements));
         Versions.Add(version);
         Scopes.Add(scope);

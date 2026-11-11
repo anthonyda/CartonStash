@@ -272,7 +272,8 @@ the per-user 3.10. With the right scope, Pandoc goes back directly; it doesn't r
    `msi.dll`) calls `MsiGetProductInfoEx(code, null, context, "InstallLocation")` for the machine context, then the
    per-user ones. The first context Windows Installer has the product in wins: machine → `System`, user (managed or
    unmanaged) → `User`. This is Windows' own record, not a guess (P1).
-2. **Anything else, or no MSI answer: WinGet's `InstalledScope`** (`User` → `User`, `Machine` → `System`).
+2. **Anything else, or no MSI answer: WinGet's `InstalledScope`** (`User` → `User`, `System` or `Machine` → `System`).
+   *Corrected 2026-11-11 (015 T9): WinGet 1.29 returns `System`, as T18's log shows; only `Machine` was mapped.*
 3. **Neither:** the setting (006 R2.1).
 
 ```csharp

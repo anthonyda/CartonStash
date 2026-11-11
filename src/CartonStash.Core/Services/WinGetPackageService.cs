@@ -192,9 +192,57 @@ public sealed class WinGetPackageService(CatalogConnection connection, IInstallC
                 return null;
             }
             cancellationToken.ThrowIfCancellationRequested();
-            return ToDetails(version.GetCatalogPackageMetadata(), ReadVersions(found, version, package.IsPrimaryMatch));
+            var installed = found.InstalledVersion;
+            return ToDetails(version.GetCatalogPackageMetadata(), ReadVersions(found, version, package.IsPrimaryMatch)) with
+            {
+                OffersScopeChoice = installed is null && OffersScopeChoice(version), // 015 R1.1
+                InstalledScope = installed is null ? null : InstalledScopes.Read(installed, _installContext), // 015 R2.1
+            };
         }, cancellationToken);
     }
+
+    public Task<bool> OffersScopeChoiceAsync(PackageInfo package, string version, CancellationToken cancellationToken = default) =>
+        !package.IsManaged ? Task.FromResult(false) : Task.Run(async () =>
+        {
+            try
+            {
+                var found = await connection.FindForDetailsAsync(package.Id, package.Source, installed: false, cancellationToken);
+                var ids = found.AvailableVersions;
+                for (var i = 0; i < ids.Count; i++)
+                {
+                    if (string.Equals(ids[i].Version, version, StringComparison.Ordinal))
+                    {
+                        return OffersScopeChoice(found.GetPackageVersionInfo(ids[i]));
+                    }
+                }
+                return false;
+            }
+            catch (Exception) when (!cancellationToken.IsCancellationRequested)
+            {
+                return false;
+            }
+        }, cancellationToken);
+
+    /// <summary>015 R1.2 for one version, through WinGet's own choice of installer per scope.</summary>
+    private static bool OffersScopeChoice(PackageVersionInfo? version) => OffersScopeChoice(scope =>
+    {
+        try
+        {
+            return version?.GetApplicableInstaller(new InstallOptions { PackageInstallScope = scope })?.Scope;
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    });
+
+    /// <summary>
+    /// 015 R1.2: two real scopes, as WinGet itself would pick them. Asking for User also accepts an installer with no
+    /// scope (portable, MSIX, Notepad++'s zip), so the returned installer's own scope is what counts (015 T1).
+    /// </summary>
+    internal static bool OffersScopeChoice(Func<PackageInstallScope, PackageInstallerScope?> pick) =>
+        pick(PackageInstallScope.User) == PackageInstallerScope.User
+        && pick(PackageInstallScope.System) == PackageInstallerScope.System;
 
     public async Task<string?> GetIconUrlAsync(PackageInfo package, CancellationToken cancellationToken = default)
     {

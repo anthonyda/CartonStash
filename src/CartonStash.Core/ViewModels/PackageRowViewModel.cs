@@ -157,7 +157,11 @@ public sealed partial class PackageRowViewModel : ObservableObject
     private void Restart() => _actions.Queue.RequestRestart();
 
     /// <summary>A version chosen in the details pane, with the row's actions (014 R1.1).</summary>
-    public Task InstallVersionAsync(PackageVersion version) => _actions.InstallVersionAsync(Package, version, Refresh); // R2.7: Refresh when the list is stale
+    public Task InstallVersionAsync(PackageVersion version, InstallScope? scope = null) =>
+        _actions.InstallVersionAsync(Package, version, Refresh, scope); // 014 R2.7: Refresh when the list is stale; 015 R1.3: the scope
+
+    /// <summary>015 R1.1: Install from the pane's split button, in one scope.</summary>
+    public Task InstallInScopeAsync(InstallScope scope) => _actions.InstallAsync(Package, scope);
 
     [RelayCommand]
     private void Exclude() => _exclusions?.Update(s => s.WithExcluded(Id));

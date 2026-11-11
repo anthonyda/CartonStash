@@ -24,7 +24,26 @@
                 Command="{x:Bind Row.InstallCommand, Mode=OneWay}"
                 Content="Install"
                 Style="{StaticResource AccentButtonStyle}"
-                Visibility="{x:Bind Row.ShowInstall, Mode=OneWay}" />
+                Visibility="{x:Bind ui:Ui.VisibleIfNot(Row.ShowInstall, OffersScopeChoice), Mode=OneWay}" />
+            <!-- 015 R1.1, R1.4, R1.6, Q3: Install keeps the setting; the menu chooses a scope for this install -->
+            <SplitButton
+                AutomationProperties.Name="{x:Bind ui:Ui.Format('Install {0}', Row.Name), Mode=OneWay}"
+                Command="{x:Bind Row.InstallCommand, Mode=OneWay}"
+                Content="Install"
+                Visibility="{x:Bind ui:Ui.VisibleIfBoth(Row.ShowInstall, OffersScopeChoice), Mode=OneWay}">
+                <SplitButton.Flyout>
+                    <MenuFlyout Placement="Bottom">
+                        <MenuFlyoutItem
+                            AutomationProperties.Name="{x:Bind ui:Ui.Format('Install {0} for all users', Row.Name), Mode=OneWay}"
+                            Command="{x:Bind InstallForAllUsersCommand, Mode=OneWay}"
+                            Text="Install for all users (Windows may ask for permission)" />
+                        <MenuFlyoutItem
+                            AutomationProperties.Name="{x:Bind ui:Ui.Format('Install {0} for the current user', Row.Name), Mode=OneWay}"
+                            Command="{x:Bind InstallForCurrentUserCommand, Mode=OneWay}"
+                            Text="Install for the current user" />
+                    </MenuFlyout>
+                </SplitButton.Flyout>
+            </SplitButton>
             <Button
                 AutomationProperties.Name="{x:Bind ui:Ui.Format('Update {0}', Row.Name), Mode=OneWay}"
                 Command="{x:Bind Row.UpdateCommand, Mode=OneWay}"
