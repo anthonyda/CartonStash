@@ -77,8 +77,63 @@ public sealed partial class PackageDetailsViewModel(IPackageService packages, IR
         nameof(ShownVersions), nameof(HasMoreVersions), nameof(OffersVersionActions), nameof(ShowVersionsText),
         nameof(HasPublisher), nameof(HasShortDescription),
         nameof(HasDescription), nameof(HasLicense), nameof(HasHomepageUri), nameof(HasPublisherUri), nameof(HasSupportUri),
-        nameof(HasPrivacyUri), nameof(HasLicenseUri), nameof(HasReleaseNotesUri), nameof(HasTags), nameof(HasVersions))]
+        nameof(HasPrivacyUri), nameof(HasLicenseUri), nameof(HasReleaseNotesUri), nameof(HasTags), nameof(HasVersions),
+        nameof(OffersScopeChoice), nameof(InstalledScopeText), nameof(HasInstalledScope))]
     public partial PackageDetails? Details { get; private set; }
+
+    /// <summary>
+    /// 015 R1.1, R1.7: the pane's Install offers both scopes, for a package that isn't installed whose default version has
+    /// both. Rows never do. A plain bool for x:Bind.
+    /// </summary>
+    public bool OffersScopeChoice => Details?.OffersScopeChoice == true && Row?.Package.IsInstalled == false;
+
+    /// <summary>015 R2.1, R2.2: how the package is installed, or null when nothing knows.</summary>
+    public string? InstalledScopeText => Row?.Package.IsInstalled != true ? null : Details?.InstalledScope switch
+    {
+        InstallScope.System => "Installed for all users",
+        InstallScope.User => "Installed for the current user",
+        _ => null,
+    };
+
+    public bool HasInstalledScope => InstalledScopeText is not null;
+
+    [RelayCommand]
+    private Task InstallForAllUsersAsync() => Row?.InstallInScopeAsync(InstallScope.System) ?? Task.CompletedTask;
+
+    [RelayCommand]
+    private Task InstallForCurrentUserAsync() => Row?.InstallInScopeAsync(InstallScope.User) ?? Task.CompletedTask;
+
+    [RelayCommand(CanExecute = nameof(CanRunVersion))]
+    private Task RunVersionForAllUsersAsync() => RunVersionInScope(InstallScope.System);
+
+    [RelayCommand(CanExecute = nameof(CanRunVersion))]
+    private Task RunVersionForCurrentUserAsync() => RunVersionInScope(InstallScope.User);
+
+    private Task RunVersionInScope(InstallScope scope) =>
+        SelectedVersion is { } item && Row is { } row ? row.InstallVersionAsync(item.Version, scope) : Task.CompletedTask;
+
+    // 015 R1.3: asked once per version while this package is shown.
+    private readonly Dictionary<string, bool> _scopeChoices = new(StringComparer.Ordinal);
+
+    private async Task CheckScopesAsync(VersionItem item, PackageRowViewModel row)
+    {
+        if (!_scopeChoices.TryGetValue(item.Version.Version, out var offers))
+        {
+            try
+            {
+                offers = await packages.OffersScopeChoiceAsync(row.Package, item.Version.Version);
+            }
+            catch (Exception)
+            {
+                offers = false; // a failed check is a plain Install
+            }
+            _scopeChoices[item.Version.Version] = offers;
+        }
+        if (Row == row)
+        {
+            item.OffersScopeChoice = offers;
+        }
+    }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasError))]
@@ -112,7 +167,8 @@ public sealed partial class PackageDetailsViewModel(IPackageService packages, IR
 
     partial void OnDetailsChanged(PackageDetails? value) =>
         _versionItems = value is { } d
-            ? [.. d.Versions.Select(v => new VersionItem(v, VersionLabel(v, Row?.Package.InstalledVersion), Row?.Name ?? "", RunVersionCommand))]
+            ? [.. d.Versions.Select(v => new VersionItem(v, VersionLabel(v, Row?.Package.InstalledVersion), Row?.Name ?? "", RunVersionCommand,
+                RunVersionForAllUsersCommand, RunVersionForCurrentUserCommand))]
             : [];
 
     partial void OnSelectedVersionChanged(VersionItem? oldValue, VersionItem? newValue)
@@ -124,6 +180,10 @@ public sealed partial class PackageDetailsViewModel(IPackageService packages, IR
         if (newValue is not null)
         {
             newValue.IsSelected = true;
+            if (newValue.Version.Direction == VersionDirection.NotInstalled && Row is { } row)
+            {
+                _ = CheckScopesAsync(newValue, row); // 015 R1.3
+            }
         }
     }
 
@@ -165,6 +225,8 @@ public sealed partial class PackageDetailsViewModel(IPackageService packages, IR
         {
             OnPropertyChanged(nameof(CanRunVersion));
             RunVersionCommand.NotifyCanExecuteChanged();
+            RunVersionForAllUsersCommand.NotifyCanExecuteChanged();
+            RunVersionForCurrentUserCommand.NotifyCanExecuteChanged();
         }
         // 014 R2.6: the row now holds what WinGet lists after an operation (Refresh raises every property at once), so
         // the versions' actions are read again against the new installed version.
@@ -266,6 +328,7 @@ public sealed partial class PackageDetailsViewModel(IPackageService packages, IR
 
         Row = row;
         _loadedFor = row.Package;
+        _scopeChoices.Clear(); // 015 R1.3: per package
         IsOpen = true;
         Details = null;
         ErrorMessage = null;
