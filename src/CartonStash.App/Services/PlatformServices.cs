@@ -157,13 +157,20 @@ public sealed class DialogService(IClipboardService clipboard) : IDialogService
         dialog.PrimaryButtonClick += (_, e) =>
         {
             e.Cancel = true;
-            clipboard.SetText(text);
+            dialog.PrimaryButtonText = clipboard.SetText(text) ? "Copy" : "Couldn't copy, try again"; // BR-13
         };
         dialog.SecondaryButtonClick += async (_, e) =>
         {
             e.Cancel = true;
-            Directory.CreateDirectory(folder);
-            await Launcher.LaunchFolderPathAsync(folder);
+            try
+            {
+                Directory.CreateDirectory(folder);
+                await Launcher.LaunchFolderPathAsync(folder);
+            }
+            catch (Exception)
+            {
+                dialog.SecondaryButtonText = "Couldn't open the folder"; // BR-33: never ends the app
+            }
         };
         await ShowAsync(dialog);
     }
@@ -187,12 +194,29 @@ public sealed class DialogService(IClipboardService clipboard) : IDialogService
 /// <summary>Copies diagnostic text (006 R4.2).</summary>
 public sealed class ClipboardService : IClipboardService
 {
-    public void SetText(string text)
+    public bool SetText(string text)
     {
-        var package = new DataPackage();
-        package.SetText(text);
-        Clipboard.SetContent(package);
-        Clipboard.Flush(); // keep it available after the app exits
+        // BR-13: clipboard managers and remote sessions (Hyper-V's included) hold the clipboard for a moment after each
+        // change; Windows then refuses it. Try once more, then say so instead of ending the app.
+        for (var attempt = 0; attempt < 2; attempt++)
+        {
+            try
+            {
+                var package = new DataPackage();
+                package.SetText(text);
+                Clipboard.SetContent(package);
+                Clipboard.Flush(); // keep it available after the app exits
+                return true;
+            }
+            catch (Exception) when (attempt == 0)
+            {
+                Thread.Sleep(150);
+            }
+            catch (Exception)
+            {
+            }
+        }
+        return false;
     }
 }
 

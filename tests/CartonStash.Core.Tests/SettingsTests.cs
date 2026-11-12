@@ -364,6 +364,18 @@ public sealed class SettingsTests : IDisposable
         Assert.Equal(("msstore", true), packages.AgreementAnswers[^1]);
     }
 
+    [Fact] // BR-13: a busy clipboard is said, never thrown
+    public async Task A_busy_clipboard_says_so()
+    {
+        var clipboard = new FakeClipboard { Busy = true };
+        var vm = Vm(new FakeSettings(), new FakePackageService(), new FakeDialogs(), clipboard);
+        await vm.LoadCommand.ExecuteAsync(null);
+
+        vm.CopyDiagnosticsCommand.Execute(null);
+
+        Assert.Equal("Couldn't copy: another program is using the clipboard. Try again.", vm.SourcesStatus);
+    }
+
     [Fact]
     public async Task Diagnostic_text_has_versions_os_and_sources() // R4.1, R4.2
     {

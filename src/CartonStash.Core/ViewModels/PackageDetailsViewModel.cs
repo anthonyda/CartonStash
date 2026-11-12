@@ -375,7 +375,7 @@ public sealed partial class PackageDetailsViewModel(IPackageService packages, IR
                 return;
             }
             Details = details;
-            ReleaseNotes = WinGetNotesParser.Parse(details?.ReleaseNotes);
+            ReleaseNotes = ParseWinGetNotes(details?.ReleaseNotes); // BR-28
             GitHubRelease = GitHubRelease.TryParse(details?.ReleaseNotesUrl);
             State = details is null ? DetailsState.Partial : DetailsState.Loaded;
 
@@ -400,6 +400,19 @@ public sealed partial class PackageDetailsViewModel(IPackageService packages, IR
             {
                 _currentLoad = null;
             }
+        }
+    }
+
+    /// <summary>BR-28: notes that can't be parsed show nothing rather than failing the details load.</summary>
+    private static NotesDocument? ParseWinGetNotes(string? text)
+    {
+        try
+        {
+            return WinGetNotesParser.Parse(text);
+        }
+        catch (Exception)
+        {
+            return null;
         }
     }
 
@@ -462,7 +475,17 @@ public sealed partial class PackageDetailsViewModel(IPackageService packages, IR
     private async Task ShowGitHubNotesAsync(GitHubNotes notes, CancellationToken cancellationToken)
     {
         // Bodies can be long (up to 125,000 characters): parse off the UI thread.
-        var doc = await Task.Run(() => GitHubMarkdown.Parse(notes.Body, notes.Page, notes.Title), cancellationToken);
+        NotesDocument doc;
+        try
+        {
+            doc = await Task.Run(() => GitHubMarkdown.Parse(notes.Body, notes.Page, notes.Title), cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // BR-28: a body the parser can't read (very deep nesting) costs the notes, never the rest of the pane.
+            GitHubNotesMessage = "Couldn't read the notes from GitHub. Open the release page to read them.";
+            return;
+        }
         if (cancellationToken.IsCancellationRequested)
         {
             return;

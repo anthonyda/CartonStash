@@ -52,7 +52,15 @@ internal sealed class AppInstallerSetup(
             }
 
             progress.Report("Installing App Installer…");
-            var error = await addPackage(new Uri(bundlePath), extracted, cancellationToken);
+            string? error;
+            try
+            {
+                error = await addPackage(new Uri(bundlePath), extracted, cancellationToken);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                error = ex.Message; // BR-11: Windows usually reports a failed deployment by throwing, not in ErrorText
+            }
             return error is null ? null : $"Windows couldn't install App Installer: {error}";
         }
         catch (Exception ex) when (ex is HttpRequestException or IOException or InvalidDataException or UnauthorizedAccessException or TaskCanceledException)

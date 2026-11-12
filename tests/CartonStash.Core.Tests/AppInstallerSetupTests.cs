@@ -43,6 +43,8 @@ public class AppInstallerSetupTests
 
         public string? AddError { get; init; }
 
+        public Exception? AddThrows { get; init; }
+
         public AppInstallerSetup Setup(byte[] zip, string? bundleHash = null, Func<Uri, HttpResponseMessage>? respond = null) => new(
             new HttpClient(new Handler(respond ?? (uri => Ok(uri == BundleUrl ? BundleBytes : zip)))),
             new(BundleUrl, bundleHash ?? Hash(BundleBytes)),
@@ -52,7 +54,7 @@ public class AppInstallerSetupTests
             {
                 Added.Add((bundle.LocalPath, [.. dependencies.Select(d => Path.GetFileName(d.LocalPath))]));
                 Assert.True(File.Exists(bundle.LocalPath));
-                return Task.FromResult(AddError);
+                return AddThrows is { } ex ? Task.FromException<string?>(ex) : Task.FromResult(AddError);
             });
     }
 
@@ -102,6 +104,16 @@ public class AppInstallerSetupTests
 
         Assert.Contains("processor", error);
         Assert.Empty(run.Added);
+    }
+
+    [Fact] // BR-11: Windows throws when it can't deploy; the reason still shows
+    public async Task Passes_on_the_reason_when_windows_throws()
+    {
+        var run = new Run { AddThrows = new System.Runtime.InteropServices.COMException("Deployment failed with HRESULT 0x80073CF3.") };
+
+        var error = await run.Setup(Zip("x64/a.appx")).RunAsync(NoProgress, default);
+
+        Assert.Equal("Windows couldn't install App Installer: Deployment failed with HRESULT 0x80073CF3.", error);
     }
 
     [Fact]

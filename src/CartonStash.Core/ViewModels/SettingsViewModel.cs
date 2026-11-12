@@ -170,8 +170,8 @@ public sealed partial class SettingsViewModel : ObservableObject
     [RelayCommand]
     private void CopyDiagnostics()
     {
-        _clipboard.SetText(BuildDiagnosticText());
-        SourcesStatus = null;
+        // BR-13: another program can hold the clipboard; say so instead of ending the app.
+        SourcesStatus = _clipboard.SetText(BuildDiagnosticText()) ? null : "Couldn't copy: another program is using the clipboard. Try again.";
     }
 
     /// <summary>Plain text for bug reports: versions, OS build, sources (R4.2).</summary>

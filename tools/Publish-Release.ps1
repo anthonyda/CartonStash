@@ -6,13 +6,18 @@
 
 .PARAMETER Version
     Release version, e.g. 1.2.3 or v1.2.3 (from the git tag, 007 R3.2). Becomes the MSIX version 1.2.3.0.
+
+.PARAMETER Force
+    Empties -Output and -StoreOutput even when they hold files that aren't build outputs. Without it, only the default
+    folders (artifacts\, store\) or folders holding build files alone are emptied (bug review BR-31).
 #>
 [CmdletBinding()]
 param(
     [Parameter(Mandatory)][string]$Version,
     [string[]]$Runtimes = @('win-x64', 'win-arm64'),
     [string]$Output = (Join-Path $PSScriptRoot '..\artifacts'),
-    [string]$StoreOutput = (Join-Path $PSScriptRoot '..\store')
+    [string]$StoreOutput = (Join-Path $PSScriptRoot '..\store'),
+    [switch]$Force
 )
 
 $ErrorActionPreference = 'Stop'
@@ -24,9 +29,18 @@ $semver = $Version.TrimStart('v')
 if ($semver -notmatch '^(\d+)\.(\d+)\.(\d+)$') { throw "Version must look like 1.2.3 (got '$Version')." }
 $msixVersion = "$semver.0"
 
+# BR-31: each build starts with empty output folders, but a mistyped path is never emptied without asking.
+$buildFiles = '*.zip', '*.msix', '*.msixupload', '*.appxsym', '*.msixbundle'
+$defaults = (Join-Path $root 'artifacts'), (Join-Path $root 'store')
 foreach ($folder in $Output, $StoreOutput) {
     New-Item -ItemType Directory -Force $folder | Out-Null
-    Get-ChildItem $folder -File | Remove-Item
+    $files = @(Get-ChildItem $folder -File)
+    $other = @($files | Where-Object { $name = $_.Name; -not ($buildFiles | Where-Object { $name -like $_ }) })
+    $isDefault = (Resolve-Path $folder).Path.TrimEnd('\') -in $defaults
+    if ($other.Count -gt 0 -and -not $isDefault -and -not $Force) {
+        throw "$folder holds files that aren't build outputs ($(($other | Select-Object -First 3 -ExpandProperty Name) -join ', ')). Use an empty folder or pass -Force."
+    }
+    $files | Remove-Item
 }
 $Output = (Resolve-Path $Output).Path
 $StoreOutput = (Resolve-Path $StoreOutput).Path
