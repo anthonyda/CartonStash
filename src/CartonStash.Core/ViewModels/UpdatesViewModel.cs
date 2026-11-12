@@ -80,12 +80,12 @@ public sealed partial class UpdatesViewModel : ObservableObject
 
     [RelayCommand(CanExecute = nameof(HasSelection))]
     private async Task UpdateSelectedAsync() =>
-        await _actions.UpdateManyAsync(_selected.Where(r => !r.IsBusy).Select(r => r.Package).ToList(), confirm: false);
+        await _actions.UpdateManyAsync(_selected.Where(r => r.ShowUpdate).Select(r => r.Package).ToList()); // BR-21: the row's own rule
 
-    /// <summary>Confirms with the package count, then queues them all (R2.3, constitution P2).</summary>
+    /// <summary>Queues every row that offers Update, with no confirmation (R9.1, constitution P2 as amended 2026-11-12).</summary>
     [RelayCommand]
     private async Task UpdateAllAsync() =>
-        await _actions.UpdateManyAsync(Updates.Where(r => !r.IsBusy && r.ShowUpdate).Select(r => r.Package).ToList(), confirm: true);
+        await _actions.UpdateManyAsync(Updates.Where(r => r.ShowUpdate).Select(r => r.Package).ToList());
 
     private void OnStoreChanged(object? sender, PropertyChangedEventArgs e)
     {

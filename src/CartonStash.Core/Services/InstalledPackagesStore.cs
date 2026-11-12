@@ -14,6 +14,7 @@ public sealed partial class InstalledPackagesStore : ObservableObject
     private CancellationTokenSource? _currentLoad;
     private Task? _firstLoad;
     private bool _changedSinceLoad;
+    private bool _reloadWhenLoaded; // BR-30: an operation ended while a load ran
 
     public InstalledPackagesStore(IPackageService packages, PackageOperationQueue queue)
     {
@@ -21,7 +22,15 @@ public sealed partial class InstalledPackagesStore : ObservableObject
         queue.Completed += (_, operation) => _changedSinceLoad |= operation.IsSuccess;
         queue.Drained += async (_, _) =>
         {
-            if (_changedSinceLoad && IsLoaded)
+            if (!_changedSinceLoad)
+            {
+                return;
+            }
+            if (IsLoading)
+            {
+                _reloadWhenLoaded = true; // BR-30: that load may have read the list before the change
+            }
+            else if (IsLoaded)
             {
                 await ReloadAsync();
             }
@@ -58,6 +67,7 @@ public sealed partial class InstalledPackagesStore : ObservableObject
         using var load = new CancellationTokenSource();
         _currentLoad = load;
         _changedSinceLoad = false;
+        _reloadWhenLoaded = false;
         IsLoading = true;
         ErrorMessage = null;
 
@@ -83,6 +93,11 @@ public sealed partial class InstalledPackagesStore : ObservableObject
                 _currentLoad = null;
                 IsLoading = false;
                 IsLoaded = true;
+                if (_reloadWhenLoaded)
+                {
+                    _reloadWhenLoaded = false;
+                    _ = ReloadAsync(); // BR-30
+                }
             }
         }
     }

@@ -56,6 +56,14 @@ public sealed partial class MainWindow : Window
         };
         Root.SizeChanged += (_, _) => ApplyActivityPin();
         ActivitySplit.PaneClosing += (_, e) => e.Cancel = ActivitySplit.DisplayMode == SplitViewDisplayMode.Inline; // 009 R3.2
+        ActivitySplit.PaneOpening += (_, _) => Activity.RefreshTimes(); // BR-33: yesterday's cards show their date
+        Activated += (_, e) =>
+        {
+            if (e.WindowActivationState != WindowActivationState.Deactivated)
+            {
+                Activity.RefreshTimes(); // a pinned pane, back the next morning
+            }
+        };
         activity.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(ActivityViewModel.IsPinned))

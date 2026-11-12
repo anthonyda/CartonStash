@@ -271,6 +271,9 @@ public sealed partial class PackageOperation : ObservableObject
     /// <summary>Start time for the card (009 R1.4).</summary>
     public string TimeText => FormatTime(StartedAt, DateTimeOffset.Now);
 
+    /// <summary>BR-33: the time text depends on today's date, so a card from yesterday reads it again when shown.</summary>
+    public void RefreshTimeText() => OnPropertyChanged(nameof(TimeText));
+
     /// <summary>"14:32" today, with the date on other days.</summary>
     internal static string FormatTime(DateTimeOffset? time, DateTimeOffset now)
     {

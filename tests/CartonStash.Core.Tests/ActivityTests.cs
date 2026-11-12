@@ -309,3 +309,39 @@ public class QueueKeepsGoingTests
         public string Read(PackageOperation operation) => throw new NotSupportedException("disk gone");
     }
 }
+
+/// <summary>BR-30 (002 R1.3) and BR-33 (009 R1.4).</summary>
+public class StoreAndCardTimeTests
+{
+    [Fact] // an operation ends while the first load runs: one more load follows it
+    public async Task An_operation_ending_during_the_first_load_reloads_after_it_002_R1_3()
+    {
+        var app = new TestApp();
+        var first = new TaskCompletionSource<IReadOnlyList<PackageInfo>>();
+        var loads = 0;
+        app.Packages.Installed = _ => ++loads == 1 ? first.Task : Task.FromResult<IReadOnlyList<PackageInfo>>([Pkg.Installed("A")]);
+        var load = app.Store.EnsureLoadedAsync();
+
+        await app.Actions.InstallAsync(Pkg.Remote("A"));
+        app.Installer.Complete("A");
+        await app.Queue.Idle;
+        Assert.Equal(1, loads); // still the first one
+        first.SetResult([]);
+        await load;
+
+        Assert.Equal(2, loads);
+        Assert.Equal(["A"], app.Store.Packages.Select(p => p.Id));
+    }
+
+    [Fact]
+    public void A_card_reads_its_time_again_when_asked_009_R1_4()
+    {
+        var op = new PackageOperation(OperationKind.Install, Pkg.Remote("A"), false, _ => { }, _ => { }, _ => { }, () => { });
+        var changed = new List<string?>();
+        op.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+
+        op.RefreshTimeText();
+
+        Assert.Equal([nameof(PackageOperation.TimeText)], changed);
+    }
+}

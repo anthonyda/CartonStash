@@ -62,6 +62,14 @@
   - Verify: logged below.
   - Done 2026-11-12: released 1.3.0 crashed, test build 1.3.96 didn't.
 
+## Amendment R9: Update all without a confirmation (2026-11-12, bug review BR-34)
+
+- [x] **T20.** `UpdateManyAsync` asks no question; Update all and Update selected take the rows that offer Update (also
+  BR-21). *(R9.1, R9.2)*
+  - Verify: `Update_all_queues_without_a_confirmation_R9_1`, `Update_all_queues_everything_without_a_question_R9_1`,
+    `Update_selected_leaves_out_a_row_that_doesnt_offer_update_R6_2`; agreements still asked
+    (`Update_all_asks_for_agreements_before_queuing_and_leaves_out_declined`).
+
 ## Manual verification log
 
 | Criterion | Date | Result | Notes |
