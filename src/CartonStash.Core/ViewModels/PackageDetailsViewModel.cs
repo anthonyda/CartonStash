@@ -385,7 +385,7 @@ public sealed partial class PackageDetailsViewModel(IPackageService packages, IR
                 await ShowGitHubNotesAsync(cached, load.Token);
             }
         }
-        catch (OperationCanceledException) when (load.IsCancellationRequested)
+        catch (Exception) when (load.IsCancellationRequested) // BR-14: any error on a superseded load: the newer one shows its own result
         {
         }
         catch (Exception ex) when (!load.IsCancellationRequested)
@@ -442,7 +442,7 @@ public sealed partial class PackageDetailsViewModel(IPackageService packages, IR
                 ShowGitHubFailure(result);
             }
         }
-        catch (OperationCanceledException) when (load.IsCancellationRequested)
+        catch (Exception) when (load.IsCancellationRequested) // BR-14: any error on a superseded load: the newer one shows its own result
         {
         }
         catch (Exception) when (!load.IsCancellationRequested)

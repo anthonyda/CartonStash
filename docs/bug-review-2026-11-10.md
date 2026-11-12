@@ -326,7 +326,7 @@ and remote sessions do that, the Hyper-V enhanced session included. Neither call
 
 ### BR-14 A superseded load that fails for a real reason escapes the catch filters
 
-- [ ] Reviewed. *2026-11-12, fix approved as proposed: any error from a load that a newer one replaced is ignored, since the newer load shows its own result. In the installed list's store, Search and the details pane, with a unit test where an old load fails with a real error. Code waits until the whole review is read.*
+- [x] Reviewed. *2026-11-12, fixed: any error on a superseded load or search is ignored (installed list, Search, details pane). `SupersededLoadTests`.*
 
 **Where:** [InstalledPackagesStore.cs:72-78](../src/CartonStash.Core/Services/InstalledPackagesStore.cs#L72-L78),
 [SearchViewModel.cs:117-124](../src/CartonStash.Core/ViewModels/SearchViewModel.cs#L117-L124),
@@ -345,7 +345,7 @@ It needs a failure and a new load at the same moment, for example Refresh presse
 
 ### BR-15 Dropping the cached catalogs can be undone by a connection already under way
 
-- [ ] Reviewed. *2026-11-12, fix approved as proposed: a counter that each `Invalidate` raises; a connection notes it when it starts and is only cached if it hasn't changed when it finishes. Covers the remote-first, local-first and installed-only catalogs. Unit test on that rule (a connection that started before an invalidate isn't kept). Code waits until the whole review is read.*
+- [x] Reviewed. *2026-11-12, fixed: `CatalogCache` keeps a catalog only if no invalidate happened while it connected, for all three catalogs. `CatalogCacheTests`.*
 
 **Where:** [CatalogConnection.cs:31-38](../src/CartonStash.Core/Services/CatalogConnection.cs#L31-L38),
 [CatalogConnection.cs:103-135](../src/CartonStash.Core/Services/CatalogConnection.cs#L103-L135),
@@ -361,7 +361,7 @@ waits on the gate and gets the catalog from before the install. The new package 
 
 ### BR-16 Search maps its results on the UI thread
 
-- [ ] Reviewed. *2026-11-12, fix approved as proposed: move search's result mapping off the UI thread (`Task.Run`, as the installed list does), and the same for the version loop in `GetAgreementsAsync` and `GetPackageCatalogByName` in `RefreshSourceAsync` (constitution A4). Measure the stall on a 50-result search before and after. Code waits until the whole review is read.*
+- [x] Reviewed. *2026-11-12, fixed: search results are mapped on the thread pool; the version lookup for agreements and the source lookup for Refresh too.*
 
 **Where:** [WinGetPackageService.cs:45](../src/CartonStash.Core/Services/WinGetPackageService.cs#L45),
 [WinGetPackageService.cs:281-295](../src/CartonStash.Core/Services/WinGetPackageService.cs#L281-L295),
@@ -476,7 +476,7 @@ that is restart-pending isn't queued.
 
 ### BR-22 The version list has no guard around WinGet's comparer
 
-- [ ] Reviewed. *2026-11-12, fix approved as proposed. Code waits until the whole review is read.*
+- [x] Reviewed. *2026-11-12, fixed: `SafeCompare` makes a version WinGet refuses Unknown; the row badge's comparison catches any exception type (BR-12). `SafeCompareTests`.*
 
 **Where:** [WinGetPackageService.cs:367](../src/CartonStash.Core/Services/WinGetPackageService.cs#L367) and
 [:376](../src/CartonStash.Core/Services/WinGetPackageService.cs#L376), against `Compare` at
@@ -492,7 +492,7 @@ already handles (014 R1.2: "Install this version"). Unit test on the mapping wit
 
 ### BR-23 "No applicable update" doesn't mention the scope setting
 
-- [ ] Reviewed. *2026-11-12, fix approved as proposed. Code waits until the whole review is read.*
+- [x] Reviewed. *2026-11-12, fixed: with a scope set in Settings, "No applicable update" uses the install's hint. `No_applicable_update_names_the_scope_setting_when_one_is_set`.*
 
 **Where:** [WinGetPackageInstaller.cs:81](../src/CartonStash.Core/Services/WinGetPackageInstaller.cs#L81),
 [:430-433](../src/CartonStash.Core/Services/WinGetPackageInstaller.cs#L430-L433). Spec 006 R2.1, 003. Confirmed.
@@ -510,7 +510,7 @@ for this PC." Unit test on the message.
 
 ### BR-24 Source agreement check: what happens when reading the sources fails
 
-- [ ] Reviewed. *2026-11-12, fix approved as proposed. Code waits until the whole review is read.*
+- [x] Reviewed. *2026-11-12, fixed: a failed first read still loads the installed list; a failed re-read after an answer is ignored (the answer is saved). Two tests in `SourceAgreementCheckTests`.*
 
 **Where:** [SourceAgreementCheck.cs:19-27](../src/CartonStash.Core/Services/SourceAgreementCheck.cs#L19-L27),
 [:34](../src/CartonStash.Core/Services/SourceAgreementCheck.cs#L34),
@@ -529,7 +529,7 @@ tests with a package service whose `GetSourcesAsync` throws.
 
 ### BR-25 No recovery when WinGet's server goes away
 
-- [ ] Reviewed. *2026-11-12, fix approved as proposed. Code waits until the whole review is read.*
+- [x] Reviewed. *2026-11-12, fixed: on RPC server unavailable, disconnected or call failed, the connection makes a new package manager, drops the catalogs and retries once (search, installed list, details, sources, an operation's first lookup); then "WinGet stopped responding. Restart CartonStash." `ReconnectTests`.*
 
 **Where:** [CatalogConnection.cs:22](../src/CartonStash.Core/Services/CatalogConnection.cs#L22). Plausible.
 
@@ -606,7 +606,7 @@ always show. Unit test with a parser that throws.
 
 ### BR-29 Icon and version caches use the package ID alone
 
-- [ ] Reviewed. *2026-11-12, fix approved as proposed. Code waits until the whole review is read.*
+- [x] Reviewed. *2026-11-12, fixed: icon and version caches are keyed by source and ID. `CacheKeyTests`.*
 
 **Where:** [WinGetPackageService.cs:21-22](../src/CartonStash.Core/Services/WinGetPackageService.cs#L21-L22).
 Confirmed; only with two sources that list the same ID.

@@ -20,6 +20,28 @@ public class SourceAgreementCheckTests
         return app;
     }
 
+    [Fact] // BR-24: reading the sources failed: the installed list still loads (the Updates badge)
+    public async Task A_failed_first_read_still_loads_the_installed_list()
+    {
+        var app = App(Winget());
+        app.Packages.SourcesError = new InvalidCastException("Interface not registered");
+
+        await app.Agreements.RunAsync();
+
+        Assert.True(app.Packages.InstalledCalls > 0);
+    }
+
+    [Fact] // BR-24: the read after an answer fails: no exception, the answer is saved
+    public async Task A_failed_read_after_an_answer_doesnt_throw()
+    {
+        var app = App(Store(AgreementStatus.Unanswered), Winget());
+        app.Dialogs.SourceAsked = () => app.Packages.SourcesError = new UnauthorizedAccessException("denied");
+
+        await app.Agreements.RunAsync();
+
+        Assert.Single(app.Packages.AgreementAnswers);
+    }
+
     [Fact]
     public async Task Asks_about_an_unanswered_source_before_loading_the_installed_list() // R3.4, R3.5, R3.6
     {

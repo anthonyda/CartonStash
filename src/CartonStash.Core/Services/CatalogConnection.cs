@@ -15,9 +15,10 @@ public sealed class CatalogConnection(ISettings settings)
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly ConcurrentDictionary<string, SourceFailure> _failedSources = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, byte> _leftOutSources = new(StringComparer.OrdinalIgnoreCase);
-    private PackageCatalog? _remoteFirst;
-    private PackageCatalog? _localFirst;
-    private PackageCatalog? _installedOnly;
+    // BR-15: each keeps a catalog only if no Invalidate happened while it connected.
+    private readonly CatalogCache<PackageCatalog> _remoteFirst = new();
+    private readonly CatalogCache<PackageCatalog> _localFirst = new();
+    private readonly CatalogCache<PackageCatalog> _installedOnly = new();
 
     private readonly Lock _managerLock = new();
     private PackageManager? _manager;
@@ -42,6 +43,47 @@ public sealed class CatalogConnection(ISettings settings)
         }
     }
 
+    // BR-25: WinGet's server process ended (App Installer updated, a crash): every call on the old manager fails.
+    private const int RpcServerUnavailable = unchecked((int)0x800706BA);
+    private const int ObjectDisconnected = unchecked((int)0x80010108);
+    private const int RpcCallFailed = unchecked((int)0x800706BE);
+
+    internal static bool IsServerGone(Exception ex) => ex.HResult is RpcServerUnavailable or ObjectDisconnected or RpcCallFailed;
+
+    internal const string ServerGoneMessage = "WinGet stopped responding. Restart CartonStash.";
+
+    /// <summary>BR-25: runs a read; if WinGet's server went away, makes a new manager and tries once more.</summary>
+    internal Task<T> WithReconnectAsync<T>(Func<Task<T>> call) => RetryOnceAsync(call, Reconnect);
+
+    internal static async Task<T> RetryOnceAsync<T>(Func<Task<T>> call, Action reconnect)
+    {
+        try
+        {
+            return await call();
+        }
+        catch (Exception ex) when (IsServerGone(ex))
+        {
+            reconnect();
+        }
+        try
+        {
+            return await call();
+        }
+        catch (Exception again) when (IsServerGone(again))
+        {
+            throw new WinGetException(ServerGoneMessage, again.HResult);
+        }
+    }
+
+    private void Reconnect()
+    {
+        lock (_managerLock)
+        {
+            _manager = null;
+        }
+        Invalidate();
+    }
+
     /// <summary>Starts WinGet now, so the app's start finds out at once whether it can (011 R3.5).</summary>
     public void Activate() => _ = Manager;
 
@@ -56,9 +98,9 @@ public sealed class CatalogConnection(ISettings settings)
     {
         _failedSources.Clear();
         _leftOutSources.Clear();
-        _remoteFirst = null;
-        _localFirst = null;
-        _installedOnly = null;
+        _remoteFirst.Invalidate();
+        _localFirst.Invalidate();
+        _installedOnly.Invalidate();
     }
 
     /// <summary>Leaves these sources out of the next connection. Memory only: the user's sources stay as they are (011 R1.6).</summary>
@@ -68,8 +110,8 @@ public sealed class CatalogConnection(ISettings settings)
         {
             _failedSources[failure.Source] = failure;
         }
-        _remoteFirst = null;
-        _localFirst = null;
+        _remoteFirst.Invalidate();
+        _localFirst.Invalidate();
     }
 
     /// <summary>Saves the user's answer for this agreement text and reconnects with it (006 R3.9).</summary>
@@ -107,19 +149,20 @@ public sealed class CatalogConnection(ISettings settings)
     /// </summary>
     internal async Task<PackageCatalog> GetInstalledOnlyAsync(CancellationToken cancellationToken)
     {
-        if (_installedOnly is { } cached)
+        if (_installedOnly.Value is { } cached)
         {
             return cached;
         }
 
-        // A rare double connect while two loads race is harmless; the last one is kept.
+        // A rare double connect while two loads race is harmless; the last one is kept, unless an Invalidate came between.
+        var generation = _installedOnly.Begin();
         var reference = Manager.GetLocalPackageCatalog(LocalPackageCatalog.InstalledPackages);
         var connect = await reference.ConnectAsync().AsTask(cancellationToken);
         if (connect.Status != ConnectResultStatus.Ok)
         {
             throw new WinGetException(WinGetPackageService.DescribeConnectFailure(connect.Status), connect.ExtendedErrorCode);
         }
-        return _installedOnly = connect.PackageCatalog;
+        return _installedOnly.Keep(generation, connect.PackageCatalog);
     }
 
     /// <param name="localFirst">
@@ -129,8 +172,8 @@ public sealed class CatalogConnection(ISettings settings)
     /// <returns>Null when no source may be used and <paramref name="localFirst"/> is false (006 R3.10).</returns>
     private async Task<PackageCatalog?> GetAsync(bool localFirst, CancellationToken cancellationToken)
     {
-        var cached = localFirst ? _localFirst : _remoteFirst;
-        if (cached is not null)
+        var cache = localFirst ? _localFirst : _remoteFirst;
+        if (cache.Value is { } cached)
         {
             return cached;
         }
@@ -138,22 +181,14 @@ public sealed class CatalogConnection(ISettings settings)
         await _gate.WaitAsync(cancellationToken);
         try
         {
-            cached = localFirst ? _localFirst : _remoteFirst;
-            if (cached is not null)
+            if (cache.Value is { } kept)
             {
-                return cached;
+                return kept;
             }
 
+            var generation = cache.Begin();
             var catalog = await ConnectAsync(localFirst, IsInUse, cancellationToken);
-            if (localFirst)
-            {
-                _localFirst = catalog;
-            }
-            else
-            {
-                _remoteFirst = catalog;
-            }
-            return catalog;
+            return catalog is null ? null : cache.Keep(generation, catalog);
         }
         finally
         {

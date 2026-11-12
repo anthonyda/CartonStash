@@ -31,3 +31,24 @@ public class VersionDirectionTests
         Assert.Equal("0.9", ViewModels.PackageDetailsViewModel.VersionLabel(new("0.9", VersionDirection.Older), "1.0"));
     }
 }
+
+/// <summary>BR-22 (014 R1.2): WinGet's comparer refusing a version makes it Unknown, not a failed load.</summary>
+public class SafeCompareTests
+{
+    [Fact]
+    public void A_comparison_that_throws_is_unknown_R1_2()
+    {
+        var compared = CartonStash.Core.Services.WinGetPackageService.SafeCompare(() => throw new ArgumentException("empty version"));
+
+        Assert.Null(compared);
+        Assert.Equal(CartonStash.Core.Models.VersionDirection.Unknown,
+            CartonStash.Core.Services.WinGetPackageService.Direction(compared, installed: true, primaryMatch: true));
+    }
+
+    [Fact]
+    public void A_comparison_that_works_is_kept()
+    {
+        Assert.Equal(Microsoft.Management.Deployment.CompareResult.Lesser,
+            CartonStash.Core.Services.WinGetPackageService.SafeCompare(() => Microsoft.Management.Deployment.CompareResult.Lesser));
+    }
+}

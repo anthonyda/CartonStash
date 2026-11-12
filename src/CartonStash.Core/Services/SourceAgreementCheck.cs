@@ -21,9 +21,12 @@ public sealed class SourceAgreementCheck(IPackageService packages, IDialogServic
         {
             sources = await packages.GetSourcesAsync();
         }
-        catch (Exception ex) when (ex is WinGetException or System.Runtime.InteropServices.COMException)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            return; // Nothing to ask about. CatalogConnection still leaves out what isn't accepted.
+            // Nothing to ask about. CatalogConnection still leaves out what isn't accepted. BR-24: the installed list
+            // still loads, so the Updates badge doesn't wait for a page to open.
+            await installed.EnsureLoadedAsync();
+            return;
         }
 
         var accepted = false;
@@ -31,7 +34,7 @@ public sealed class SourceAgreementCheck(IPackageService packages, IDialogServic
         {
             accepted |= await AnswerAsync(source) == AgreementAnswer.Accepted;
         }
-        Update(await packages.GetSourcesAsync());
+        await UpdateListAsync();
         await (accepted ? installed.ReloadAsync() : installed.EnsureLoadedAsync());
     }
 
@@ -52,7 +55,7 @@ public sealed class SourceAgreementCheck(IPackageService packages, IDialogServic
         var answer = await AnswerAsync(source);
         if (answer != AgreementAnswer.Dismissed)
         {
-            Update(await packages.GetSourcesAsync());
+            await UpdateListAsync();
         }
         if (answer == AgreementAnswer.Accepted)
         {
@@ -65,7 +68,7 @@ public sealed class SourceAgreementCheck(IPackageService packages, IDialogServic
     public async Task WithdrawAsync(SourceInfo source)
     {
         packages.SetSourceAgreementAnswer(source, accepted: false);
-        Update(await packages.GetSourcesAsync());
+        await UpdateListAsync();
         await installed.ReloadAsync();
     }
 
@@ -87,6 +90,18 @@ public sealed class SourceAgreementCheck(IPackageService packages, IDialogServic
             packages.SetSourceAgreementAnswer(source, answer == AgreementAnswer.Accepted); // Dismissed asks again at the next start (R3.9)
         }
         return answer;
+    }
+
+    /// <summary>BR-24: a failed read keeps the list on screen; the answer is already saved, and the next read shows it.</summary>
+    private async Task UpdateListAsync()
+    {
+        try
+        {
+            Update(await packages.GetSourcesAsync());
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+        }
     }
 
     private void Update(IReadOnlyList<SourceInfo> sources)

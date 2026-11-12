@@ -50,7 +50,10 @@ public sealed class WinGetPackageService(CatalogConnection connection, IInstallC
     private readonly SemaphoreSlim _iconReads = new(4, 4);
 
 
-    public async Task<IReadOnlyList<PackageInfo>> SearchAsync(string query, int maxResults = 50, CancellationToken cancellationToken = default)
+    public Task<IReadOnlyList<PackageInfo>> SearchAsync(string query, int maxResults = 50, CancellationToken cancellationToken = default) =>
+        connection.WithReconnectAsync(() => SearchCoreAsync(query, maxResults, cancellationToken)); // BR-25
+
+    private async Task<IReadOnlyList<PackageInfo>> SearchCoreAsync(string query, int maxResults, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(query))
         {
@@ -69,7 +72,9 @@ public sealed class WinGetPackageService(CatalogConnection connection, IInstallC
             return options;
         }
 
-        return ToPackages(await connection.FindAsync(localFirst: false, Options, cancellationToken));
+        var matches = await connection.FindAsync(localFirst: false, Options, cancellationToken);
+        // BR-16 (A4): about ten calls into WinGet's process per result; off the UI thread, as the installed list.
+        return await Task.Run(() => ToPackages(matches), cancellationToken);
     }
 
     public IReadOnlyList<SourceFailure> SourceFailures => connection.SourceFailures;
@@ -78,7 +83,10 @@ public sealed class WinGetPackageService(CatalogConnection connection, IInstallC
     /// One row per installed program (002 R6): WinGet's installed-only catalog joined with its source matches.
     /// Both reads run in parallel off the UI thread.
     /// </summary>
-    public async Task<IReadOnlyList<PackageInfo>> GetInstalledAsync(CancellationToken cancellationToken = default)
+    public Task<IReadOnlyList<PackageInfo>> GetInstalledAsync(CancellationToken cancellationToken = default) =>
+        connection.WithReconnectAsync(() => GetInstalledCoreAsync(cancellationToken)); // BR-25
+
+    private async Task<IReadOnlyList<PackageInfo>> GetInstalledCoreAsync(CancellationToken cancellationToken)
     {
         var entries = Task.Run(() => ReadInstalledEntriesAsync(cancellationToken), cancellationToken);
         var packages = Task.Run(() => ReadMatchedPackagesAsync(cancellationToken), cancellationToken);
@@ -115,7 +123,7 @@ public sealed class WinGetPackageService(CatalogConnection connection, IInstallC
             var available = package.DefaultInstallVersion;
             if (available is not null)
             {
-                _versions.SetInstalled(package.Id, available); // 005 R5 icons
+                _versions.SetInstalled(CacheKey(available.PackageCatalog.Info.Name, package.Id), available); // 005 R5 icons
             }
             packages.Add(new MatchedPackage(
                 package.Id,
@@ -132,7 +140,10 @@ public sealed class WinGetPackageService(CatalogConnection connection, IInstallC
 
     /// <summary>WinGet decides how an installed version compares with a package's available version (002 R7.1, P1).</summary>
     private VersionStatus CompareWithAvailable(MatchedPackage package, string installedVersion) =>
-        _versions.Installed(package.Id) is { } available ? Compare(available, installedVersion) : VersionStatus.Unknown;
+        _versions.Installed(CacheKey(package.Source, package.Id)) is { } available ? Compare(available, installedVersion) : VersionStatus.Unknown;
+
+    /// <summary>BR-29: two sources can list the same ID; each keeps its own icon and version.</summary>
+    internal static string CacheKey(string? source, string id) => $"{source}{id}";
 
     internal static VersionStatus ToVersionStatus(CompareResult availableComparedToInstalled) => availableComparedToInstalled switch
     {
@@ -152,7 +163,7 @@ public sealed class WinGetPackageService(CatalogConnection connection, IInstallC
         {
             return ToVersionStatus(available.CompareToVersion(installedVersion));
         }
-        catch (Exception ex) when (ex is ArgumentException or System.Runtime.InteropServices.COMException)
+        catch (Exception ex) when (ex is not OperationCanceledException) // BR-12: whatever type the projection maps WinGet's code to
         {
             return VersionStatus.Unknown;
         }
@@ -175,7 +186,10 @@ public sealed class WinGetPackageService(CatalogConnection connection, IInstallC
         return codes;
     }
 
-    public Task<PackageDetails?> GetDetailsAsync(PackageInfo package, CancellationToken cancellationToken = default)
+    public Task<PackageDetails?> GetDetailsAsync(PackageInfo package, CancellationToken cancellationToken = default) =>
+        connection.WithReconnectAsync(() => GetDetailsCoreAsync(package, cancellationToken)); // BR-25
+
+    private Task<PackageDetails?> GetDetailsCoreAsync(PackageInfo package, CancellationToken cancellationToken)
     {
         if (!package.IsManaged)
         {
@@ -246,11 +260,12 @@ public sealed class WinGetPackageService(CatalogConnection connection, IInstallC
 
     public async Task<string?> GetIconUrlAsync(PackageInfo package, CancellationToken cancellationToken = default)
     {
-        if (_iconUrls.TryGetValue(package.Id, out var cached))
+        var key = CacheKey(package.Source, package.Id);
+        if (_iconUrls.TryGetValue(key, out var cached))
         {
             return cached;
         }
-        if (_versions.Any(package.Id) is not { } version)
+        if (_versions.Any(key) is not { } version)
         {
             return null;
         }
@@ -259,7 +274,7 @@ public sealed class WinGetPackageService(CatalogConnection connection, IInstallC
         try
         {
             var url = await Task.Run(() => PickIcon(version.GetCatalogPackageMetadata().Icons), cancellationToken);
-            _iconUrls[package.Id] = url;
+            _iconUrls[key] = url;
             return url;
         }
         finally
@@ -275,6 +290,9 @@ public sealed class WinGetPackageService(CatalogConnection connection, IInstallC
     }
 
     public Task<IReadOnlyList<SourceInfo>> GetSourcesAsync(CancellationToken cancellationToken = default) =>
+        connection.WithReconnectAsync(() => GetSourcesCoreAsync(cancellationToken)); // BR-25
+
+    private Task<IReadOnlyList<SourceInfo>> GetSourcesCoreAsync(CancellationToken cancellationToken) =>
         Task.Run<IReadOnlyList<SourceInfo>>(() =>
         {
             var catalogs = connection.Manager.GetPackageCatalogs();
@@ -315,7 +333,7 @@ public sealed class WinGetPackageService(CatalogConnection connection, IInstallC
 
     public async Task<string?> RefreshSourceAsync(string sourceName, CancellationToken cancellationToken = default)
     {
-        var reference = connection.Manager.GetPackageCatalogByName(sourceName);
+        var reference = await Task.Run(() => connection.Manager.GetPackageCatalogByName(sourceName), cancellationToken); // BR-16
         if (reference is null)
         {
             return $"Source '{sourceName}' no longer exists.";
@@ -364,7 +382,7 @@ public sealed class WinGetPackageService(CatalogConnection connection, IInstallC
             var info = ToPackageInfo(package);
             if (package.DefaultInstallVersion is { } version)
             {
-                versions.Add(new(info.Id, version));
+                versions.Add(new(CacheKey(info.Source, info.Id), version));
             }
             packages.Add(info);
         }
@@ -442,7 +460,7 @@ public sealed class WinGetPackageService(CatalogConnection connection, IInstallC
         {
             versions.Add(ids[i].Version);
         }
-        if (versions.Count > 1 && reference.CompareToVersion(versions[0]) == CompareResult.Greater)
+        if (versions.Count > 1 && SafeCompare(() => reference.CompareToVersion(versions[0])) == CompareResult.Greater)
         {
             versions.Reverse();
         }
@@ -451,10 +469,23 @@ public sealed class WinGetPackageService(CatalogConnection connection, IInstallC
         var list = new List<PackageVersion>(versions.Count);
         foreach (var v in versions)
         {
-            CompareResult? compared = installed is not null && primaryMatch ? installed.CompareToVersion(v) : null;
+            CompareResult? compared = installed is not null && primaryMatch ? SafeCompare(() => installed.CompareToVersion(v)) : null;
             list.Add(new PackageVersion(v, Direction(compared, installed is not null, primaryMatch)));
         }
         return list;
+    }
+
+    /// <summary>BR-22: a version WinGet refuses to compare (an empty one, say) is Unknown, not a failed details load.</summary>
+    internal static CompareResult? SafeCompare(Func<CompareResult> compare)
+    {
+        try
+        {
+            return compare();
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            return null;
+        }
     }
 
     /// <summary>

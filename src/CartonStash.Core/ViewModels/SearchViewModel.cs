@@ -114,7 +114,7 @@ public sealed partial class SearchViewModel : ObservableObject
                 EmptyMessage = $"No packages found for '{query}'";
             }
         }
-        catch (OperationCanceledException) when (search.IsCancellationRequested)
+        catch (Exception) when (search.IsCancellationRequested) // BR-14: any error on a superseded search
         {
         }
         catch (Exception ex) when (!search.IsCancellationRequested)
