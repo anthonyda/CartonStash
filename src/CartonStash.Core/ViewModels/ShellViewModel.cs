@@ -26,15 +26,18 @@ public sealed partial class ShellViewModel : ObservableObject
     private readonly IDialogService _dialogs;
     private readonly WinGetHost? _host;
     private readonly IAppRestarter? _restarter;
+    private readonly ITaskbarBadge? _badge;
+    private int? _badgeShown;
 
     public ShellViewModel(PackageOperationQueue queue, UpdatesViewModel updates, IDialogService dialogs, ISettings settings,
-        WinGetHost? host = null, IAppRestarter? restarter = null)
+        WinGetHost? host = null, IAppRestarter? restarter = null, ITaskbarBadge? badge = null)
     {
         _queue = queue;
         _updates = updates;
         _dialogs = dialogs;
         _host = host;
         _restarter = restarter;
+        _badge = badge;
 
         queue.Completed += (_, operation) => ShowOutcome(operation);
         queue.RestartRequested += async (_, _) => await RestartAsync();
@@ -163,7 +166,19 @@ public sealed partial class ShellViewModel : ObservableObject
         {
             OnPropertyChanged(nameof(UpdatesCount));
             OnPropertyChanged(nameof(HasUpdates));
+            ShowOnTaskbar(_updates.Count);
         }
+    }
+
+    // 016 R1.1-R1.6: only a count read from WinGet this session; while loading or after an error the badge keeps its value.
+    private void ShowOnTaskbar(int? count)
+    {
+        if (_badge is null || count is not { } n || n == _badgeShown)
+        {
+            return;
+        }
+        _badgeShown = n;
+        _badge.Show(n);
     }
 }
 

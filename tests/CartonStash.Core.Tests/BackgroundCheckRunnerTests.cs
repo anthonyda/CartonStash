@@ -17,6 +17,7 @@ public sealed class BackgroundCheckRunnerTests : IDisposable
     private readonly FakeNotifier _notifier = new();
     private readonly FakeActivity _activity = new();
     private readonly FakeNetwork _network = new();
+    private readonly FakeBadge _badge = new();
     private readonly CheckHistoryStore _history;
     private readonly BackgroundCheckRunner _runner;
 
@@ -24,7 +25,7 @@ public sealed class BackgroundCheckRunnerTests : IDisposable
     {
         var clock = new FixedClock();
         _history = new CheckHistoryStore(_dir, clock);
-        _runner = new BackgroundCheckRunner(_packages, _settings, _history, _notifier, _activity, _network, clock, TimeZoneInfo.Utc);
+        _runner = new BackgroundCheckRunner(_packages, _settings, _history, _notifier, _activity, _network, clock, TimeZoneInfo.Utc, _badge);
     }
 
     public void Dispose()
@@ -288,6 +289,55 @@ public sealed class BackgroundCheckRunnerTests : IDisposable
         public event EventHandler? Changed { add { } remove { } }
 
         public void Update(Func<AppSettings, AppSettings> change) => Current = change(Current);
+    }
+
+    private sealed class FakeBadge : ITaskbarBadge
+    {
+        public List<int> Shown { get; } = [];
+
+        public void Show(int count) => Shown.Add(count);
+    }
+
+    [Fact]
+    public async Task TaskbarBadge_gets_the_count_without_excluded_packages() // 016 R2.1, R1.2
+    {
+        _settings.Current = _settings.Current with { ExcludedPackageIds = ["git.git"] };
+        Installed(Pkg.Installed("Git.Git", "Git", update: true), Pkg.Installed("B", "Python", update: true));
+
+        await Run();
+
+        Assert.Equal([1], _badge.Shown);
+    }
+
+    [Fact]
+    public async Task TaskbarBadge_is_cleared_when_nothing_needs_updating() // 016 R2.1
+    {
+        Installed(Pkg.Installed("A"));
+
+        await Run();
+
+        Assert.Equal([0], _badge.Shown);
+    }
+
+    [Fact]
+    public async Task TaskbarBadge_is_left_alone_when_the_check_fails_or_is_skipped() // 016 R2.2
+    {
+        _packages.Installed = _ => throw new WinGetException("Couldn't reach the package sources.", null);
+        await Run();
+        _activity.OperationsRunning = true;
+        await Run();
+
+        Assert.Empty(_badge.Shown);
+    }
+
+    [Fact]
+    public async Task TaskbarBadge_is_left_alone_when_no_check_is_due() // 016 R2.2
+    {
+        _settings.Current = _settings.Current with { CheckScheduleSetAt = Now.AddHours(-1) };
+
+        await Run();
+
+        Assert.Empty(_badge.Shown);
     }
 
     private sealed class FakeNotifier : INotifier

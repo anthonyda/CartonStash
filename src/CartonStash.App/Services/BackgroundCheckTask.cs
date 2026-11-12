@@ -66,7 +66,8 @@ public sealed class BackgroundCheckTask : IBackgroundTask
             new CheckHistoryStore(AppPackage.LocalFolder!),
             new WindowsNotifier(),
             new AppActivityMarker(),
-            new WindowsNetworkState());
+            new WindowsNetworkState(),
+            badge: new WindowsTaskbarBadge()); // 016 R2.1
 
         await runner.RunAsync(trigger, cancel);
 
