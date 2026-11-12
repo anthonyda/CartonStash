@@ -50,7 +50,10 @@ public sealed class WinGetPackageService(CatalogConnection connection, IInstallC
     private readonly SemaphoreSlim _iconReads = new(4, 4);
 
 
-    public async Task<IReadOnlyList<PackageInfo>> SearchAsync(string query, int maxResults = 50, CancellationToken cancellationToken = default)
+    public Task<IReadOnlyList<PackageInfo>> SearchAsync(string query, int maxResults = 50, CancellationToken cancellationToken = default) =>
+        connection.WithReconnectAsync(() => SearchCoreAsync(query, maxResults, cancellationToken)); // BR-25
+
+    private async Task<IReadOnlyList<PackageInfo>> SearchCoreAsync(string query, int maxResults, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(query))
         {
@@ -80,7 +83,10 @@ public sealed class WinGetPackageService(CatalogConnection connection, IInstallC
     /// One row per installed program (002 R6): WinGet's installed-only catalog joined with its source matches.
     /// Both reads run in parallel off the UI thread.
     /// </summary>
-    public async Task<IReadOnlyList<PackageInfo>> GetInstalledAsync(CancellationToken cancellationToken = default)
+    public Task<IReadOnlyList<PackageInfo>> GetInstalledAsync(CancellationToken cancellationToken = default) =>
+        connection.WithReconnectAsync(() => GetInstalledCoreAsync(cancellationToken)); // BR-25
+
+    private async Task<IReadOnlyList<PackageInfo>> GetInstalledCoreAsync(CancellationToken cancellationToken)
     {
         var entries = Task.Run(() => ReadInstalledEntriesAsync(cancellationToken), cancellationToken);
         var packages = Task.Run(() => ReadMatchedPackagesAsync(cancellationToken), cancellationToken);
@@ -177,7 +183,10 @@ public sealed class WinGetPackageService(CatalogConnection connection, IInstallC
         return codes;
     }
 
-    public Task<PackageDetails?> GetDetailsAsync(PackageInfo package, CancellationToken cancellationToken = default)
+    public Task<PackageDetails?> GetDetailsAsync(PackageInfo package, CancellationToken cancellationToken = default) =>
+        connection.WithReconnectAsync(() => GetDetailsCoreAsync(package, cancellationToken)); // BR-25
+
+    private Task<PackageDetails?> GetDetailsCoreAsync(PackageInfo package, CancellationToken cancellationToken)
     {
         if (!package.IsManaged)
         {
@@ -277,6 +286,9 @@ public sealed class WinGetPackageService(CatalogConnection connection, IInstallC
     }
 
     public Task<IReadOnlyList<SourceInfo>> GetSourcesAsync(CancellationToken cancellationToken = default) =>
+        connection.WithReconnectAsync(() => GetSourcesCoreAsync(cancellationToken)); // BR-25
+
+    private Task<IReadOnlyList<SourceInfo>> GetSourcesCoreAsync(CancellationToken cancellationToken) =>
         Task.Run<IReadOnlyList<SourceInfo>>(() =>
         {
             var catalogs = connection.Manager.GetPackageCatalogs();

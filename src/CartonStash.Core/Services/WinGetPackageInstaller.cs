@@ -45,9 +45,10 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
         IProgress<OperationProgress> progress, CancellationToken cancellationToken, InstallScope? scope = null, ScopeSource scopeSource = ScopeSource.Installed)
     {
         // Re-find the package; COM objects never leave this class (A2).
-        var found = UninstallsInstalledEntry(kind, package)
-            ? await connection.FindInstalledEntryAsync(package.InstalledId!, cancellationToken)
-            : await connection.FindByIdAsync(package.Id, package.Source, localFirst: kind != OperationKind.Install, cancellationToken);
+        // BR-25: the lookup is the call that meets a WinGet server gone since the last operation; nothing has run yet.
+        var found = await connection.WithReconnectAsync(() => UninstallsInstalledEntry(kind, package)
+            ? connection.FindInstalledEntryAsync(package.InstalledId!, cancellationToken)
+            : connection.FindByIdAsync(package.Id, package.Source, localFirst: kind != OperationKind.Install, cancellationToken));
         try
         {
             // 014 R3.9: going back counts the installed entries before and after, to catch a second copy.

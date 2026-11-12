@@ -43,6 +43,47 @@ public sealed class CatalogConnection(ISettings settings)
         }
     }
 
+    // BR-25: WinGet's server process ended (App Installer updated, a crash): every call on the old manager fails.
+    private const int RpcServerUnavailable = unchecked((int)0x800706BA);
+    private const int ObjectDisconnected = unchecked((int)0x80010108);
+    private const int RpcCallFailed = unchecked((int)0x800706BE);
+
+    internal static bool IsServerGone(Exception ex) => ex.HResult is RpcServerUnavailable or ObjectDisconnected or RpcCallFailed;
+
+    internal const string ServerGoneMessage = "WinGet stopped responding. Restart CartonStash.";
+
+    /// <summary>BR-25: runs a read; if WinGet's server went away, makes a new manager and tries once more.</summary>
+    internal Task<T> WithReconnectAsync<T>(Func<Task<T>> call) => RetryOnceAsync(call, Reconnect);
+
+    internal static async Task<T> RetryOnceAsync<T>(Func<Task<T>> call, Action reconnect)
+    {
+        try
+        {
+            return await call();
+        }
+        catch (Exception ex) when (IsServerGone(ex))
+        {
+            reconnect();
+        }
+        try
+        {
+            return await call();
+        }
+        catch (Exception again) when (IsServerGone(again))
+        {
+            throw new WinGetException(ServerGoneMessage, again.HResult);
+        }
+    }
+
+    private void Reconnect()
+    {
+        lock (_managerLock)
+        {
+            _manager = null;
+        }
+        Invalidate();
+    }
+
     /// <summary>Starts WinGet now, so the app's start finds out at once whether it can (011 R3.5).</summary>
     public void Activate() => _ = Manager;
 
