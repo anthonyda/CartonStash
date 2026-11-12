@@ -45,7 +45,7 @@ public sealed class WinGetPackageService(CatalogConnection connection, IInstallC
 
     // 005 R5: version info of packages from the latest lists, so icons can be read later without searching again.
     // COM objects stay in this class (A2).
-    private readonly ConcurrentDictionary<string, PackageVersionInfo> _versions = new(StringComparer.OrdinalIgnoreCase);
+    private readonly VersionCache<PackageVersionInfo> _versions = new();
     private readonly ConcurrentDictionary<string, string?> _iconUrls = new(StringComparer.OrdinalIgnoreCase);
     private readonly SemaphoreSlim _iconReads = new(4, 4);
 
@@ -115,7 +115,7 @@ public sealed class WinGetPackageService(CatalogConnection connection, IInstallC
             var available = package.DefaultInstallVersion;
             if (available is not null)
             {
-                _versions[package.Id] = available; // 005 R5 icons
+                _versions.SetInstalled(package.Id, available); // 005 R5 icons
             }
             packages.Add(new MatchedPackage(
                 package.Id,
@@ -132,7 +132,7 @@ public sealed class WinGetPackageService(CatalogConnection connection, IInstallC
 
     /// <summary>WinGet decides how an installed version compares with a package's available version (002 R7.1, P1).</summary>
     private VersionStatus CompareWithAvailable(MatchedPackage package, string installedVersion) =>
-        _versions.TryGetValue(package.Id, out var available) ? Compare(available, installedVersion) : VersionStatus.Unknown;
+        _versions.Installed(package.Id) is { } available ? Compare(available, installedVersion) : VersionStatus.Unknown;
 
     internal static VersionStatus ToVersionStatus(CompareResult availableComparedToInstalled) => availableComparedToInstalled switch
     {
@@ -250,7 +250,7 @@ public sealed class WinGetPackageService(CatalogConnection connection, IInstallC
         {
             return cached;
         }
-        if (!_versions.TryGetValue(package.Id, out var version))
+        if (_versions.Any(package.Id) is not { } version)
         {
             return null;
         }
@@ -270,7 +270,7 @@ public sealed class WinGetPackageService(CatalogConnection connection, IInstallC
 
     public void InvalidateCache()
     {
-        _versions.Clear(); // the next load fills it again; icon URLs stay cached
+        _versions.ClearInstalled(); // the next load fills it again; search entries and icon URLs stay (BR-05)
         connection.Invalidate();
     }
 
@@ -356,16 +356,18 @@ public sealed class WinGetPackageService(CatalogConnection connection, IInstallC
     private List<PackageInfo> ToPackages(IReadOnlyList<MatchResult> matches)
     {
         var packages = new List<PackageInfo>(matches.Count);
+        var versions = new List<KeyValuePair<string, PackageVersionInfo>>(matches.Count);
         for (var i = 0; i < matches.Count; i++)
         {
             var package = matches[i].CatalogPackage;
             var info = ToPackageInfo(package);
             if (package.DefaultInstallVersion is { } version)
             {
-                _versions[info.Id] = version;
+                versions.Add(new(info.Id, version));
             }
             packages.Add(info);
         }
+        _versions.SetSearch(versions);
         return packages;
     }
 
