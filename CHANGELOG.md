@@ -2,9 +2,13 @@
 
 What's new in each version of CartonStash. Get it from the [Microsoft Store](https://apps.microsoft.com/detail/9MT37M7DBZRK).
 
-## 1.4.1
+## 1.4.2
 
-A round of fixes from a review of the whole app, and two small changes.
+A round of fixes from a review of the whole app, and a few changes. (1.4.1 was never released.)
+
+### New
+
+- **Retry as administrator.** Some installers need administrator rights and don't ask for them, such as Microsoft 365 Copilot's: its update used to fail with only an error code. The result now says the installer needs administrator rights, and offers **Retry as administrator**. Press it, accept Windows' permission prompt, and the update runs again in the same window. CartonStash itself keeps running without administrator rights.
 
 ### Changed
 

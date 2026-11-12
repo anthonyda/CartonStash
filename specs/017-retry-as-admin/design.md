@@ -18,8 +18,8 @@ CartonStash process for that one operation (Q1 a) and reads its result back.
 | Core/Services | `WinGetPackageInstaller.MapInstallResult` | R1.1 message and `OffersRetryAsAdmin` for those codes | changed |
 | Core/Models | `OperationOutcome`, `PackageOperation` | `OffersRetryAsAdmin`; `OperationOptions.Elevated` | changed |
 | Core/Services | `PackageOperationQueue` | An elevated operation goes to `IElevatedRunner` instead of `IPackageInstaller`; same queue, same card | changed |
-| Core/Services | `IElevatedRunner` | Runs one operation elevated, returns its `OperationOutcome`; declined prompt → Cancelled (R1.5) | new |
-| App/Services | `ElevatedRunner` | Starts `CartonStash.exe --run-elevated <file>` with the `runas` verb; the request and the result are JSON files in the app's data folder | new |
+| Core/Services | `IElevatedRunner`, `ElevatedRequest`, `ElevatedProtocol` | Runs one operation elevated, returns its `OperationOutcome`; declined prompt → Cancelled (R1.5); the request's encoding and checks | new |
+| App/Services | `ElevatedProcessRunner` | Starts `CartonStash.exe --run-elevated <request> <result file>` with the `runas` verb. The request is on the command line (set when Windows asks, so nothing can change it afterwards); the result is a JSON file in the app's data folder | new |
 | App | `Program` | `--run-elevated`: no window, runs the operation through `WinGetPackageInstaller`, writes the result, exits | changed |
 | App/Controls | `OperationCard`, row | **Retry as administrator** next to Retry (R1.3) | changed |
 
@@ -43,9 +43,10 @@ shows "Installing…" / "Updating…" with no percentage, and "May ask for permi
 - **T1 may show that WinGet's COM server refuses an elevated caller.** Then Q1 (b): the runner starts
   `winget.exe upgrade|install --id <id> --exact --source <source> --silent --accept-package-agreements
   --disable-interactivity [--version] [--scope]` elevated, and maps its exit code. Needs the A6 amendment.
-- A request file in the data folder could be changed by another process of the same user before the elevated process
-  reads it. The elevated process only accepts the operations the app can queue (install/update one package ID from a
-  configured source), never a command line.
+- The request travels on the command line, fixed when Windows asks for permission. The elevated process only accepts
+  an install or update of one package (`ElevatedProtocol.Decode`), never a command line of its own.
+- The elevated copy is started by path, so it runs without the package's identity. It only uses Core (no XAML, no
+  Windows App SDK), which T1 and T5 showed works.
 
 ## Testing
 

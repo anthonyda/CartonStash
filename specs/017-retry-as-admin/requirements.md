@@ -1,6 +1,6 @@
 # 017 – Retry as administrator: Requirements
 
-**Status:** Approved (2026-11-12), Q1 as answered by the maintainer (R1.8), Q2 and Q3 as proposed
+**Status:** Done (2026-11-12). Approved 2026-11-12, Q1 as answered by the maintainer (R1.8), Q2 and Q3 as proposed
 **Depends on:** 003, 004, 009, 013
 
 ## Problem
