@@ -12,8 +12,11 @@ public interface IOperationLogStore
     /// <summary>A new log path for this run, or null if the folder can't be used.</summary>
     string? CreateLogPath(PackageOperation operation);
 
-    /// <summary>Writes the summary at the top of the log, keeping what the installer wrote (R2.2, R2.3).</summary>
-    void Complete(PackageOperation operation);
+    /// <summary>
+    /// Writes the summary at the top of the log, keeping what the installer wrote (R2.2, R2.3). False when it couldn't.
+    /// Runs off the UI thread (BR-20): it must not touch the operation's observable state.
+    /// </summary>
+    bool Complete(PackageOperation operation);
 
     /// <summary>The text to show: the log file, or the summary alone if the file can't be read (R2.5).</summary>
     string Read(PackageOperation operation);
@@ -73,21 +76,22 @@ public sealed class OperationLogStore : IOperationLogStore
         }
     }
 
-    public void Complete(PackageOperation operation)
+    public bool Complete(PackageOperation operation)
     {
         if (operation.LogFilePath is not { } path)
         {
-            return;
+            return true;
         }
 
         try
         {
             var installerLog = File.Exists(path) ? File.ReadAllText(path) : null;
             File.WriteAllText(path, Compose(operation, installerLog, FindRecord(operation)));
+            return true;
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        catch (Exception)
         {
-            operation.LogFilePath = null; // the dialog falls back to the summary
+            return false; // R2.5: never an error of its own (BR-10: whatever the cause)
         }
     }
 
@@ -97,16 +101,37 @@ public sealed class OperationLogStore : IOperationLogStore
         {
             if (operation.LogFilePath is { } path && File.Exists(path))
             {
-                var text = File.ReadAllText(path);
-                return text.Length <= MaxShownCharacters
-                    ? text
-                    : $"(Only the end of this log is shown. The full log is in {path})\n\n{text[^MaxShownCharacters..]}";
+                return ReadEnd(path);
             }
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        catch (Exception)
         {
         }
         return Compose(operation, null, FindRecord(operation));
+    }
+
+    /// <summary>BR-20: reads only the end of a long log, the part that holds the error, instead of the whole file.</summary>
+    internal static string ReadEnd(string path)
+    {
+        using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+        // UTF-8 takes at most 4 bytes a character: this many bytes hold at least the characters shown.
+        var limit = (long)MaxShownCharacters * 4;
+        if (stream.Length <= limit)
+        {
+            using var whole = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
+            var all = whole.ReadToEnd();
+            if (all.Length <= MaxShownCharacters)
+            {
+                return all;
+            }
+            return Cut(path, all);
+        }
+        stream.Seek(-limit, SeekOrigin.End);
+        using var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: false);
+        return Cut(path, reader.ReadToEnd());
+
+        static string Cut(string path, string text) =>
+            $"(Only the end of this log is shown. The full log is in {path})\n\n{text[^Math.Min(MaxShownCharacters, text.Length)..]}";
     }
 
     private WinGetRecord? FindRecord(PackageOperation operation) =>

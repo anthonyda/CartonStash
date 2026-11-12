@@ -377,6 +377,6 @@ public sealed partial class ActivityViewModel : ObservableObject
     private void ClearFinished() => _queue.ClearFinished();
 
     /// <summary>The Log button of a finished operation (R2.2).</summary>
-    public Task ShowLogAsync(PackageOperation operation) =>
-        _dialogs.ShowLogAsync(operation.Title, _logs.Read(operation), _logs.Folder);
+    public async Task ShowLogAsync(PackageOperation operation) =>
+        await _dialogs.ShowLogAsync(operation.Title, await Task.Run(() => _logs.Read(operation)), _logs.Folder); // BR-20: off the UI thread
 }

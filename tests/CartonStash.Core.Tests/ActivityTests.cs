@@ -30,7 +30,7 @@ public sealed class ActivityTests : IDisposable
     }
 
     [Fact]
-    public void Each_run_gets_its_own_log_path_passed_to_the_installer() // R2.2
+    public async Task Each_run_gets_its_own_log_path_passed_to_the_installer() // R2.2
     {
         var (installer, queue, _, _, _, _) = Create();
 
@@ -43,18 +43,20 @@ public sealed class ActivityTests : IDisposable
         Assert.DoesNotContain("Odd:Name", Path.GetFileName(path)); // sanitized
 
         installer.Complete(@"ARP\Machine\X64\Odd:Name", OperationResult.Failed, "no");
+        await queue.Idle; // BR-20: the log is written off the UI thread
         op.RetryCommand.Execute(null);
         Assert.Equal(2, installer.LogPaths.Count);
     }
 
     [Fact]
-    public void Log_has_the_summary_and_the_installer_log() // R2.2
+    public async Task Log_has_the_summary_and_the_installer_log() // R2.2
     {
         var (installer, queue, logs, _, _, _) = Create();
         var op = queue.Enqueue(OperationKind.Upgrade, Pkg.Installed("Git.Git", "Git", update: true));
         File.WriteAllText(op.LogFilePath!, "installer line 1");
 
         installer.Complete("Git.Git", OperationResult.Failed, "The installer failed with error code 1603.");
+        await queue.Idle; // BR-20: the log is written off the UI thread
 
         var text = logs.Read(op);
         Assert.Contains("Action: Update", text);
@@ -66,12 +68,13 @@ public sealed class ActivityTests : IDisposable
     }
 
     [Fact]
-    public void Log_says_so_when_the_installer_wrote_nothing() // R2.3
+    public async Task Log_says_so_when_the_installer_wrote_nothing() // R2.3
     {
         var (installer, queue, logs, _, _, _) = Create();
         var op = queue.Enqueue(OperationKind.Uninstall, Pkg.Installed("A"));
 
         installer.Complete("A");
+        await queue.Idle; // BR-20: the log is written off the UI thread
 
         Assert.Contains("The installer didn't write a log.", logs.Read(op));
     }
@@ -96,7 +99,7 @@ public sealed class ActivityTests : IDisposable
     }
 
     [Fact]
-    public void WinGets_record_comes_last_and_is_saved() // R2.8
+    public async Task WinGets_record_comes_last_and_is_saved() // R2.8
     {
         var records = new FixedRecords(new WinGetRecord("winget line 1", null));
         var (installer, queue, logs) = CreateWith(records);
@@ -104,6 +107,7 @@ public sealed class ActivityTests : IDisposable
         File.WriteAllText(op.LogFilePath!, "installer line 1");
 
         installer.Complete("A");
+        await queue.Idle; // BR-20: the log is written off the UI thread
 
         var text = logs.Read(op);
         Assert.True(text.IndexOf("installer line 1", StringComparison.Ordinal) < text.IndexOf("--- WinGet log ---", StringComparison.Ordinal));
@@ -113,12 +117,13 @@ public sealed class ActivityTests : IDisposable
     }
 
     [Fact]
-    public void A_missing_record_is_explained_and_the_operation_still_succeeds() // R2.9
+    public async Task A_missing_record_is_explained_and_the_operation_still_succeeds() // R2.9
     {
         var (installer, queue, logs) = CreateWith(new FixedRecords(new WinGetRecord(null, WinGetRecordReader.NotFound)));
         var op = queue.Enqueue(OperationKind.Install, Pkg.Remote("A"));
 
         installer.Complete("A");
+        await queue.Idle; // BR-20: the log is written off the UI thread
 
         Assert.Equal(OperationResult.Succeeded, op.Result);
         Assert.Contains(WinGetRecordReader.NotFound, logs.Read(op));
@@ -190,15 +195,20 @@ public sealed class ActivityTests : IDisposable
     }
 
     [Fact]
-    public void Log_button_opens_the_dialog_with_the_log() // R2.1, R2.2, R2.4
+    public async Task Log_button_opens_the_dialog_with_the_log() // R2.1, R2.2, R2.4
     {
         var (installer, queue, _, dialogs, _, _) = Create();
         var op = queue.Enqueue(OperationKind.Install, Pkg.Remote("A", "Contoso"));
         Assert.False(op.ShowLogCommand.CanExecute(null)); // finished only
 
         installer.Complete("A");
+        await queue.Idle; // BR-20: the log is written off the UI thread
         Assert.True(op.ShowLogCommand.CanExecute(null));
         op.ShowLogCommand.Execute(null);
+        for (var i = 0; i < 200 && dialogs.LogsShown.Count == 0; i++)
+        {
+            await Task.Delay(10); // BR-20: the log is read off the UI thread
+        }
 
         var shown = Assert.Single(dialogs.LogsShown);
         Assert.Equal("Install Contoso", shown.Title);
@@ -240,5 +250,62 @@ public sealed class ActivityTests : IDisposable
         var queue = new PackageOperationQueue(installer);
         var op = queue.Enqueue(OperationKind.Install, Pkg.Remote("A"));
         return op;
+    }
+}
+
+/// <summary>BR-10 (009 R2.5): nothing around one operation stops the queue.</summary>
+public class QueueKeepsGoingTests
+{
+    [Fact]
+    public async Task A_completed_handler_that_throws_doesnt_stop_the_queue_R2_5()
+    {
+        var installer = new ScriptedInstaller();
+        SynchronizationContext.SetSynchronizationContext(new InlineSynchronizationContext());
+        var queue = new PackageOperationQueue(installer);
+        var drained = 0;
+        queue.Completed += (_, _) => throw new InvalidOperationException("a handler failed");
+        queue.Drained += (_, _) => drained++;
+
+        queue.Enqueue(OperationKind.Install, Pkg.Remote("A"));
+        var b = queue.Enqueue(OperationKind.Install, Pkg.Remote("B"));
+        installer.Complete("A");
+        installer.Complete("B");
+        await queue.Idle;
+
+        Assert.Equal(OperationResult.Succeeded, b.Result);
+        Assert.Equal(1, drained);
+        Assert.False(queue.HasPendingWork);
+        var c = queue.Enqueue(OperationKind.Install, Pkg.Remote("C")); // still running operations
+        Assert.True(installer.IsRunning("C"));
+        installer.Complete("C");
+        await queue.Idle;
+        Assert.Equal(OperationResult.Succeeded, c.Result);
+    }
+
+    [Fact]
+    public async Task A_log_store_that_throws_doesnt_stop_the_queue_R2_5()
+    {
+        var installer = new ScriptedInstaller();
+        SynchronizationContext.SetSynchronizationContext(new InlineSynchronizationContext());
+        var queue = new PackageOperationQueue(installer, new ThrowingLogs());
+
+        var a = queue.Enqueue(OperationKind.Install, Pkg.Remote("A"));
+        installer.Complete("A");
+        await queue.Idle;
+        var b = queue.Enqueue(OperationKind.Install, Pkg.Remote("B"));
+        installer.Complete("B");
+        await queue.Idle;
+
+        Assert.Equal(OperationResult.Succeeded, a.Result);
+        Assert.Equal(OperationResult.Succeeded, b.Result);
+        Assert.Null(a.LogFilePath);
+    }
+
+    private sealed class ThrowingLogs : IOperationLogStore
+    {
+        public string Folder => "x";
+        public string? CreateLogPath(PackageOperation operation) => "x.log";
+        public bool Complete(PackageOperation operation) => throw new NotSupportedException("disk gone");
+        public string Read(PackageOperation operation) => throw new NotSupportedException("disk gone");
     }
 }
