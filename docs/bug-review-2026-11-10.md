@@ -39,7 +39,21 @@ One thing applies to many findings: the App has no handler for unhandled excepti
 | BR-16 | 2 | Confirmed | Search maps its results on the UI thread |
 | BR-17 | 2 | Plausible | The update check mode has no guard: a bad index would reset all settings |
 | BR-18 | 2 | Confirmed | Background check: three gaps in "use old data" and "never throws" |
-| BR-19 to BR-33 | 3 | Mixed | Small ones, listed at the end |
+| BR-19 | 3 | Confirmed | A failed icon download leaves an empty square |
+| BR-20 | 3 | Confirmed | Operation logs are read and written on the UI thread, whole file |
+| BR-21 | 3 | Confirmed | Update selected doesn't apply the row's own rules |
+| BR-22 | 3 | Plausible | The version list has no guard around WinGet's comparer |
+| BR-23 | 3 | Confirmed | "No applicable update" doesn't mention the scope setting |
+| BR-24 | 3 | Confirmed | Source agreement check: what happens when reading the sources fails |
+| BR-25 | 3 | Plausible | No recovery when WinGet's server goes away |
+| BR-26 | 3 | Plausible | The WinGet presence check doesn't prove WinGet can start, and background checks skip it |
+| BR-27 | 3 | Plausible | Interval mode: a timer tick can arrive "not yet due" |
+| BR-28 | 3 | Plausible | GitHub notes that can't be parsed break the pane for that package |
+| BR-29 | 3 | Confirmed | Icon and version caches use the package ID alone |
+| BR-30 | 3 | Confirmed | The first installed load and an operation finishing |
+| BR-31 | 3 | Confirmed | `Publish-Release.ps1` empties any folder it is given |
+| BR-32 | 3 | Plausible | A restart on the Settings page may open it with nothing selected in the navigation |
+| BR-33 | 3 | Mixed | Small gaps (five) |
 
 ---
 
@@ -403,105 +417,282 @@ happen today.
 
 ## Tier 3
 
-- [ ] **BR-19 A failed icon download leaves an empty square.**
-  *2026-11-12: reproduced in the test VM (1.4.0 Store build, the app's downloads blocked by a firewall rule): rows with an icon address show nothing. Fix approved: on `ImageFailed`, show the generic package glyph again. Code waits until the whole review is read.*
-  [PackageIcon.xaml.cs:83-90](../src/CartonStash.App/Controls/PackageIcon.xaml.cs#L83-L90) hides the glyph as soon as
-  it has an address, and nothing handles `ImageFailed`. A dead link or an unsupported format shows nothing. Confirmed.
+*Expanded on 2026-11-12 with an example and a proposed fix for each. Links point at commit `b3c98a8`, as above.*
 
-- [ ] **BR-20 Operation logs are read and written on the UI thread, whole file.**
-  [PackageOperationQueue.cs:215](../src/CartonStash.Core/Services/PackageOperationQueue.cs#L215) calls
-  [OperationLogStore.cs:85-86](../src/CartonStash.Core/Services/OperationLogStore.cs#L85-L86), which reads the whole
-  installer log and writes it back, and
-  [WinGetRecordReader.cs:42-46](../src/CartonStash.Core/Services/WinGetRecordReader.cs#L42-L46), which reads every
-  WinGet log made during the operation. The Log button reads the whole file again to show its last million characters
-  in one TextBox. A verbose MSI log can be tens of MB: the window freezes at the end of the operation. Confirmed; cost
-  unmeasured.
+### BR-19 A failed icon download leaves an empty square
 
-- [ ] **BR-21 Update selected doesn't apply the row's own rules.**
-  [UpdatesViewModel.cs:81-83](../src/CartonStash.Core/ViewModels/UpdatesViewModel.cs#L81-L83) filters on busy only;
-  Update all and the row button also need `ShowUpdate`. A selected row whose update just succeeded, or App Installer
-  waiting for a restart (004 R6.2), is queued again. Confirmed.
+- [ ] Reviewed. *2026-11-12: reproduced in the test VM (1.4.0 Store build, the app's downloads blocked by a firewall rule): rows with an icon address show nothing. Fix approved: on `ImageFailed`, show the generic package glyph again. Code waits until the whole review is read.*
 
-- [ ] **BR-22 The version list has no guard around WinGet's comparer.**
-  [WinGetPackageService.cs:367](../src/CartonStash.Core/Services/WinGetPackageService.cs#L367) and
-  [:376](../src/CartonStash.Core/Services/WinGetPackageService.cs#L376) call `CompareToVersion` without the `try` that
-  `Compare` has ([:124-131](../src/CartonStash.Core/Services/WinGetPackageService.cs#L124-L131)). One version string
-  WinGet refuses, an empty one for example, fails the whole details load. Plausible.
+**Where:** [PackageIcon.xaml.cs:83-90](../src/CartonStash.App/Controls/PackageIcon.xaml.cs#L83-L90). Spec 005 R5.1.
+Confirmed.
 
-- [ ] **BR-23 "No applicable update" doesn't mention the scope setting.**
-  The scope setting applies to updates too
-  ([WinGetPackageInstaller.cs:81](../src/CartonStash.Core/Services/WinGetPackageInstaller.cs#L81), 006 R2.1). A
-  mismatch ends as "No applicable update for this PC."
-  ([:433](../src/CartonStash.Core/Services/WinGetPackageInstaller.cs#L433)), while installs get the hint to change the
-  setting ([:430-432](../src/CartonStash.Core/Services/WinGetPackageInstaller.cs#L430-L432)). Confirmed.
+**What happens:** as soon as a package has an icon address, the control hides the generic "package" glyph and waits
+for the image. Nothing handles the image's `ImageFailed` event, so when the download fails the row shows an empty
+space: no picture and no glyph. Causes: a dead link in the manifest, an image format Windows can't decode, a firewall
+or proxy that blocks the icon's host.
 
-- [ ] **BR-24 Source agreement check: what happens when reading the sources fails.**
-  [SourceAgreementCheck.cs:19-27](../src/CartonStash.Core/Services/SourceAgreementCheck.cs#L19-L27): at start it
-  returns without loading the installed list, so the Updates badge stays empty until a page is opened. The later reads
-  ([:34](../src/CartonStash.Core/Services/SourceAgreementCheck.cs#L34),
-  [:55](../src/CartonStash.Core/Services/SourceAgreementCheck.cs#L55),
-  [:68](../src/CartonStash.Core/Services/SourceAgreementCheck.cs#L68)) have no catch: from Settings and from Search's
-  Read and accept, an exception there ends the app. Confirmed.
+**Proposed fix:** handle `ImageFailed`: hide the picture and show the glyph again. The row's `HasIcon` stays as it is,
+so nothing asks again.
 
-- [ ] **BR-25 No recovery when WinGet's server goes away.**
-  [CatalogConnection.cs:22](../src/CartonStash.Core/Services/CatalogConnection.cs#L22) makes one `PackageManager` for
-  the session. If the server process ends, every call fails with "RPC server unavailable" until CartonStash restarts.
-  Nothing makes a new one or says what to do. Plausible.
+### BR-20 Operation logs are read and written on the UI thread, whole file
 
-- [ ] **BR-26 The WinGet presence check doesn't prove WinGet can start, and background checks skip it.**
-  [WinGetAvailability.cs:13-18](../src/CartonStash.Core/Services/WinGetAvailability.cs#L13-L18) only checks that the
-  App Installer package is registered. One too old to have the COM API still passes, and then `new PackageManager()`
-  ends the process. [BackgroundCheckTask.cs:62-71](../src/CartonStash.App/Services/BackgroundCheckTask.cs#L62-L71)
-  makes the connection with no check at all, and before the runner knows whether a check is due: every "user present"
-  trigger starts WinGet's server, even to do nothing. Plausible.
+- [ ] Reviewed
 
-- [ ] **BR-27 Interval mode: a timer tick can arrive "not yet due".**
-  The timer repeats from when it was registered
-  ([BackgroundCheckScheduler.cs:58](../src/CartonStash.App/Services/BackgroundCheckScheduler.cs#L58)), a check counts
-  as due from 15 minutes early ([CheckSchedule.cs:33-34](../src/CartonStash.Core/Services/CheckSchedule.cs#L33-L34)),
-  and the last check's time is taken when it ends
-  ([BackgroundCheckRunner.cs:144-145](../src/CartonStash.Core/Services/BackgroundCheckRunner.cs#L144-L145)). A late,
-  slow check followed by a tick on time can make that tick more than 15 minutes early. It is dropped with no entry, and
-  the next chance is the following tick or an unlock. Plausible.
+**Where:** [PackageOperationQueue.cs:215](../src/CartonStash.Core/Services/PackageOperationQueue.cs#L215) calls
+[OperationLogStore.cs:85-86](../src/CartonStash.Core/Services/OperationLogStore.cs#L85-L86) and
+[WinGetRecordReader.cs:42-46](../src/CartonStash.Core/Services/WinGetRecordReader.cs#L42-L46). Specs 009 R2,
+constitution A4. Confirmed; cost not measured.
 
-- [ ] **BR-28 GitHub notes that can't be parsed break the pane for that package.**
-  The body is cached before it is parsed
-  ([GitHubReleaseNotesService.cs:72-75](../src/CartonStash.Core/Services/GitHubReleaseNotesService.cs#L72-L75)). The
-  pane parses cached notes inside its own load
-  ([PackageDetailsViewModel.cs:279-282](../src/CartonStash.Core/ViewModels/PackageDetailsViewModel.cs#L279-L282)), and
-  any exception there becomes "Couldn't load details". If the Markdown parser throws on a body (it does for very deep
-  nesting), that package's pane shows an error for the rest of the session. Plausible.
+**What happens:** when an operation ends, `Finish` runs on the UI thread and writes its log there: it reads the
+installer's whole log file, adds the app's header and WinGet's record of the operation (which reads every WinGet log
+written during it), and writes it all back. Pressing **Log** reads the whole file again and puts up to a million
+characters in one `TextBox`. Most installers write a few KB. A verbose MSI log can be tens of MB, and then the window
+freezes for a moment at the end of the operation and again when the log opens.
 
-- [ ] **BR-29 Icon and version caches use the package ID alone.**
-  [WinGetPackageService.cs:21-22](../src/CartonStash.Core/Services/WinGetPackageService.cs#L21-L22). Two sources with
-  the same ID share one entry: the wrong icon, and the installed badge can be compared against the other source's
-  version. Confirmed; only with such sources.
+**Example:** an update of a large MSI product (Office tools, Visual Studio components) with verbose logging: the
+window stops responding for a second or more when the card turns to "Updated".
 
-- [ ] **BR-30 The first installed load and an operation finishing.**
-  [InstalledPackagesStore.cs:21-28](../src/CartonStash.Core/Services/InstalledPackagesStore.cs#L21-L28) reloads on
-  `Drained` only when a load has already finished. If the first load is running when an operation ends, no reload
-  follows, and that load may have read the list before the change. Confirmed; narrow.
+**Proposed fix:** compose and write the log on a background thread (`Task.Run`), after the card shows its result.
+For the Log dialog, read on a background thread and only the end of the file (the last ~1 MB, the part that holds
+the error), with a line saying the start was cut and that **Open folder** has the whole file. Measure the freeze with
+a large log in the VM before and after.
 
-- [ ] **BR-31 `Publish-Release.ps1` empties any folder it is given.**
-  [Publish-Release.ps1:27-30](../tools/Publish-Release.ps1#L27-L30) deletes every file in `-Output` and
-  `-StoreOutput`. Right for the two default folders; a mistyped path is emptied with no question. Confirmed.
+### BR-21 Update selected doesn't apply the row's own rules
 
-- [ ] **BR-32 A restart on the Settings page may open it with nothing selected in the navigation.**
-  [MainWindow.xaml.cs:82-84](../src/CartonStash.App/MainWindow.xaml.cs#L82-L84) runs before the window is shown, when
-  `Nav.SettingsItem` may still be null. Plausible; cosmetic.
+- [ ] Reviewed
 
-- [ ] **BR-33 Small gaps.**
-  - [Settings.cs:64-78](../src/CartonStash.Core/Services/Settings.cs#L64-L78) and
-    [:102-111](../src/CartonStash.Core/Services/Settings.cs#L102-L111) don't catch `UnauthorizedAccessException`: a
-    settings file the user can't read ends the app at start.
-  - [CheckHistoryStore.cs:75-77](../src/CartonStash.Core/Services/CheckHistoryStore.cs#L75-L77): the app and a
-    background check write through the same `.tmp` name. If they collide, one record is lost silently.
-  - [BackgroundCheckTask.cs:27](../src/CartonStash.App/Services/BackgroundCheckTask.cs#L27): the result of
-    `CoRegisterClassObject` is ignored. If it fails, the process waits its 12 minutes for nothing.
-  - [PlatformServices.cs:162-167](../src/CartonStash.App/Services/PlatformServices.cs#L162-L167): Open folder creates
-    the folder inside an `async void` handler with no catch.
-  - [PackageOperation.cs:206](../src/CartonStash.Core/Models/PackageOperation.cs#L206): the card's time is worked out
-    when the operation starts, so yesterday's card keeps showing the time without the date.
+**Where:** [UpdatesViewModel.cs:81-83](../src/CartonStash.Core/ViewModels/UpdatesViewModel.cs#L81-L83). Spec 004
+R2.2, R6.2. Confirmed.
+
+**What happens:** a row offers **Update** only when it should (`ShowUpdate`): not busy, not just updated, not App
+Installer waiting for a restart. **Update all** uses the same rule. **Update selected** only skips busy rows.
+
+**Example:** App Installer updated and waits for CartonStash to restart (004 R6.2: its row shows "Restart CartonStash
+to finish"). Tick it with a few others and press **Update selected**: App Installer is updated again.
+
+**Proposed fix:** filter **Update selected** with `ShowUpdate`, as **Update all** does. Unit test: a selected row
+that is restart-pending isn't queued.
+
+### BR-22 The version list has no guard around WinGet's comparer
+
+- [ ] Reviewed
+
+**Where:** [WinGetPackageService.cs:367](../src/CartonStash.Core/Services/WinGetPackageService.cs#L367) and
+[:376](../src/CartonStash.Core/Services/WinGetPackageService.cs#L376), against `Compare` at
+[:124-131](../src/CartonStash.Core/Services/WinGetPackageService.cs#L124-L131). Spec 014 R1.1. Plausible.
+
+**What happens:** to mark each available version newer, older or installed, the details pane asks WinGet to compare
+it with the installed version (`CompareToVersion`). The badge on rows does the same through `Compare`, which catches
+an error and says "can't compare". The details pane's two calls have no such catch. If WinGet refuses one version
+string (an empty one, for example), the whole details load fails and the pane shows "Couldn't load details".
+
+**Proposed fix:** use the same guarded comparison: a version WinGet can't compare gets `Unknown`, which the pane
+already handles (014 R1.2: "Install this version"). Unit test on the mapping with a comparer that throws.
+
+### BR-23 "No applicable update" doesn't mention the scope setting
+
+- [ ] Reviewed
+
+**Where:** [WinGetPackageInstaller.cs:81](../src/CartonStash.Core/Services/WinGetPackageInstaller.cs#L81),
+[:430-433](../src/CartonStash.Core/Services/WinGetPackageInstaller.cs#L430-L433). Spec 006 R2.1, 003. Confirmed.
+
+**What happens:** the install scope setting (Let WinGet decide / Current user / All users) applies to updates too.
+When an install finds no installer for the chosen scope, the message says to change the setting. When an update hits
+the same mismatch, it only says "No applicable update for this PC.", which reads like WinGet has nothing to offer.
+
+**Example:** Settings set to "Current user"; VLC's newer version only has an all-users installer. Update VLC: "No
+applicable update for this PC.", while VLC stays listed on Updates.
+
+**Proposed fix:** when the update ran with a scope from Settings, use the install's wording: "No installer for this
+PC with the selected install scope. Try changing it in Settings." With "Let WinGet decide", keep "No applicable update
+for this PC." Unit test on the message.
+
+### BR-24 Source agreement check: what happens when reading the sources fails
+
+- [ ] Reviewed
+
+**Where:** [SourceAgreementCheck.cs:19-27](../src/CartonStash.Core/Services/SourceAgreementCheck.cs#L19-L27),
+[:34](../src/CartonStash.Core/Services/SourceAgreementCheck.cs#L34),
+[:55](../src/CartonStash.Core/Services/SourceAgreementCheck.cs#L55),
+[:68](../src/CartonStash.Core/Services/SourceAgreementCheck.cs#L68). Spec 006 R3.8 to R3.11. Confirmed.
+
+**What happens:** at start, the app reads the sources to ask about agreements, then loads the installed list.
+1. If that first read fails, it returns early and **skips loading the installed list**. The Updates badge stays
+   empty until you open Installed or Updates.
+2. After you answer an agreement (at start, from Search's **Read and accept**, or from Settings), the app reads the
+   sources again with no catch. If that read fails, the error isn't caught and the app closes.
+
+**Proposed fix:** (1) on a failed first read, still load the installed list. (2) Catch a failed re-read: keep the
+answer (it's already saved) and keep the old source list on screen; the next visit to Settings reads it again. Unit
+tests with a package service whose `GetSourcesAsync` throws.
+
+### BR-25 No recovery when WinGet's server goes away
+
+- [ ] Reviewed
+
+**Where:** [CatalogConnection.cs:22](../src/CartonStash.Core/Services/CatalogConnection.cs#L22). Plausible.
+
+**What happens:** the app talks to WinGet through one `PackageManager` object, made once at start. It lives in
+WinGet's own server process. If that process ends (App Installer updated by the Store, a crash, someone ends it in
+Task Manager), every later call fails with "The RPC server is unavailable" (`0x800706BA`) or "The object invoked has
+disconnected" (`0x80010108`). Search, Refresh and every operation keep failing until CartonStash is restarted, and
+the message doesn't say so.
+
+**Example:** CartonStash stays open overnight; the Store updates App Installer; in the morning every search fails.
+
+**Proposed fix:** on those two error codes, make a new `PackageManager`, drop the cached catalogs and retry the call
+once. If it fails again, say "WinGet stopped responding. Restart CartonStash." Check in the VM first: end
+`WindowsPackageManagerServer.exe` while the app is open, then search.
+
+### BR-26 The WinGet presence check doesn't prove WinGet can start, and background checks skip it
+
+- [ ] Reviewed
+
+**Where:** [WinGetAvailability.cs:13-18](../src/CartonStash.Core/Services/WinGetAvailability.cs#L13-L18),
+[BackgroundCheckTask.cs:62-71](../src/CartonStash.App/Services/BackgroundCheckTask.cs#L62-L71). Spec 011 R3.
+Plausible.
+
+**What happens:**
+1. At start the app checks that App Installer is registered. An App Installer too old to have WinGet's COM API passes
+   that check, and then making the `PackageManager` fails. BR-12's fix catches that failure and opens the setup
+   window, so this part becomes "the setup window opens late" rather than a crash.
+2. The background check makes its WinGet connection before it knows whether a check is due. Every unlock ("user
+   present") then starts WinGet's server for nothing in most cases, which costs memory and a few seconds of CPU.
+
+**Proposed fix:** (1) covered by BR-12; also read App Installer's version and treat one older than the API's minimum
+as missing, so the right setup message shows. (2) Make the connection lazily: the runner gets a factory and only calls
+it once a check is due and not skipped. Unit test: a check that isn't due never calls the factory.
+
+### BR-27 Interval mode: a timer tick can arrive "not yet due"
+
+- [ ] Reviewed
+
+**Where:** [BackgroundCheckScheduler.cs:58](../src/CartonStash.App/Services/BackgroundCheckScheduler.cs#L58),
+[CheckSchedule.cs:33-34](../src/CartonStash.Core/Services/CheckSchedule.cs#L33-L34),
+[BackgroundCheckRunner.cs:144-145](../src/CartonStash.Core/Services/BackgroundCheckRunner.cs#L144-L145). Spec 010
+R1.3, R1.5. Plausible.
+
+**What happens:** "Every N hours" uses a Windows timer that repeats every N hours from when it was registered. The
+app counts a check as due from 15 minutes before N hours have passed since the **end** of the last check. When a
+check ends late (the timer fired late, or the check took long), the next tick on the timer's own rhythm can come more
+than 15 minutes too early by the app's count. That tick is dropped with no history entry, and the next chance is the
+following tick, N hours later, or an unlock.
+
+**Example:** every 24 hours, timer registered at 9:00. One day the PC wakes at 9:20, the check runs and ends at 9:25.
+Next day the timer fires at 9:00, 23 h 35 min later: more than 15 minutes early, dropped. The next check is the day
+after, unless the user unlocks in between.
+
+**Proposed fix:** count from when the last check **started**, and in interval mode accept a tick from the timer
+itself if it's within a quarter of the interval (at least 15 minutes) of being due. Unlock checks keep today's rule.
+Unit tests in `CheckScheduleTests` with the example above.
+
+### BR-28 GitHub notes that can't be parsed break the pane for that package
+
+- [ ] Reviewed
+
+**Where:** [GitHubReleaseNotesService.cs:72-75](../src/CartonStash.Core/Services/GitHubReleaseNotesService.cs#L72-L75),
+[PackageDetailsViewModel.cs:279-282](../src/CartonStash.Core/ViewModels/PackageDetailsViewModel.cs#L279-L282).
+Spec 012 R2.9. Plausible.
+
+**What happens:** notes loaded from GitHub are kept in memory before they are turned into text for the pane. When the
+pane opens again for that package, it shows the kept notes at once, inside its own details load (012 R2.9). If the
+Markdown parser throws on that body (it does for very deep nesting), the error ends the whole load: the pane shows
+"Couldn't load details" for that package for the rest of the session, not just "couldn't show the notes".
+
+**Proposed fix:** parse before keeping: a body that doesn't parse is never cached and the pane says "Couldn't read
+the notes from GitHub" with the link. And catch a parse error separately in the pane, so the rest of the details
+always show. Unit test with a parser that throws.
+
+### BR-29 Icon and version caches use the package ID alone
+
+- [ ] Reviewed
+
+**Where:** [WinGetPackageService.cs:21-22](../src/CartonStash.Core/Services/WinGetPackageService.cs#L21-L22).
+Confirmed; only with two sources that list the same ID.
+
+**What happens:** the app keeps each package's icon and available version under its WinGet ID only. Two sources can
+list the same ID (a company's private source mirroring `winget`, for example). They then share one entry: the second
+source's row may show the first one's icon, and the installed badge may compare against the other source's version.
+Since BR-05's fix, the Installed badge only reads the installed list's own entries, which narrows the second part.
+
+**Proposed fix:** key both caches by source and ID. Unit test on the key.
+
+### BR-30 The first installed load and an operation finishing
+
+- [ ] Reviewed
+
+**Where:** [InstalledPackagesStore.cs:21-28](../src/CartonStash.Core/Services/InstalledPackagesStore.cs#L21-L28).
+Spec 002 R1.3. Confirmed; narrow.
+
+**What happens:** after operations end, the installed list reloads, but only if a load has already finished. If the
+**first** load is still running when an operation ends, no reload follows, and that first load may have read the list
+before the change.
+
+**Example:** start the app on Search (the installed list loads in the background, which takes a few seconds on a busy
+PC), install something small at once. The install ends before the first load does: Installed and Updates don't show
+the change until the next Refresh or operation.
+
+**Proposed fix:** when operations end while a load is running, mark a reload as needed and run it once that load
+ends. Unit test with a slow fake load.
+
+### BR-31 `Publish-Release.ps1` empties any folder it is given
+
+- [ ] Reviewed
+
+**Where:** [Publish-Release.ps1:27-30](../tools/Publish-Release.ps1#L27-L30). Developer tool only. Confirmed.
+
+**What happens:** the script deletes every file at the top of `-Output` and `-StoreOutput` before building. That's
+right for `artifacts\` and `store\`, which only hold builds. A mistyped path (`-Output C:\Users\me\Documents`) is
+emptied with no question.
+
+**Proposed fix:** empty a folder only if it's one of the two defaults, or if every file in it is a build output
+(`*.zip`, `*.msix`, `*.msixupload`, `*.appxsym`, `*.msixbundle`). Otherwise stop with "‹folder› holds other files;
+use an empty folder or pass -Force". The VM build folders are new and empty each time, so they keep working.
+
+### BR-32 A restart on the Settings page may open it with nothing selected in the navigation
+
+- [ ] Reviewed
+
+**Where:** [MainWindow.xaml.cs:82-84](../src/CartonStash.App/MainWindow.xaml.cs#L82-L84). Spec 004 R6.3.
+Plausible; cosmetic.
+
+**What happens:** after "Restart CartonStash" (App Installer's update, 004 R6.3), the app reopens the page that was
+open. For Settings it selects `Nav.SettingsItem`, but this runs before the window is shown, when that item may not
+exist yet. Settings then opens with no item highlighted in the navigation.
+
+**Proposed fix:** select it once the navigation has loaded (its `Loaded` event), as for the other pages. Check in the
+VM: restart from Settings.
+
+### BR-33 Small gaps
+
+- [ ] Reviewed
+
+Five small ones, each with its fix:
+
+1. **A settings file the user can't read ends the app at start.**
+   [Settings.cs:64-78](../src/CartonStash.Core/Services/Settings.cs#L64-L78) and
+   [:102-111](../src/CartonStash.Core/Services/Settings.cs#L102-L111) catch a corrupt file but not
+   `UnauthorizedAccessException` (a file whose permissions were changed, or locked by security software).
+   *Fix:* treat it like a file that can't be read: defaults in memory and the "Settings were reset" notice, without
+   overwriting the file.
+2. **Two writers of the check history share one temp file name.**
+   [CheckHistoryStore.cs:75-77](../src/CartonStash.Core/Services/CheckHistoryStore.cs#L75-L77): the app and a
+   background check write through the same `.tmp` file. If both write at once, one record is lost without a word.
+   *Fix:* a unique temp name per write, and a named mutex around read-and-write so neither overwrites the other's
+   record.
+3. **The background COM registration's result is ignored.**
+   [BackgroundCheckTask.cs:27](../src/CartonStash.App/Services/BackgroundCheckTask.cs#L27): if
+   `CoRegisterClassObject` fails, Windows can't hand the task to the process, and the process waits its whole 12
+   minutes for nothing. *Fix:* check the result and exit at once when it fails.
+4. **Open folder can end the app.**
+   [PlatformServices.cs:162-167](../src/CartonStash.App/Services/PlatformServices.cs#L162-L167): the Log dialog's
+   **Open folder** creates the logs folder with no catch. If that fails (permissions, disk), the app closes.
+   *Fix:* catch it and show "Couldn't open the folder: …".
+5. **Yesterday's card shows a time without the date.**
+   [PackageOperation.cs:206](../src/CartonStash.Core/Models/PackageOperation.cs#L206): the card's time text adds the
+   date for another day, but it's only re-read when the start time changes. A card from 23:50 still reads "23:50" the
+   next morning instead of the date and time. *Fix:* raise `TimeText` again for every card when the Activity pane
+   opens, and at midnight while it's open. `FormatTime` already has a test for another day; add one for the refresh.
 
 ---
 
