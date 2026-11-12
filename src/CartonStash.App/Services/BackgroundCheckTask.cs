@@ -21,10 +21,11 @@ public sealed class BackgroundCheckTask : IBackgroundTask
 
     private readonly CancellationTokenSource _cancelled = new();
 
-    public static void RegisterClass()
+    /// <summary>False when Windows refused the registration: no task can reach this process (BR-33).</summary>
+    public static bool RegisterClass()
     {
         var id = typeof(BackgroundCheckTask).GUID;
-        ComServer.CoRegisterClassObject(ref id, new ComServer.Factory(), ComServer.ClsctxLocalServer, ComServer.RegclsMultipleUse, out _);
+        return ComServer.CoRegisterClassObject(ref id, new ComServer.Factory(), ComServer.ClsctxLocalServer, ComServer.RegclsMultipleUse, out _) >= 0;
     }
 
     [MTAThread]

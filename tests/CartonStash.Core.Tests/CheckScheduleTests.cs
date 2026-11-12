@@ -115,4 +115,16 @@ public sealed class CheckScheduleTests
 
         Assert.Equal(expected, CheckSchedule.TimerMinutes(now.AddMinutes(minutes), now));
     }
+
+    [Fact] // BR-27: every 24 hours, timer at 9:00; yesterday's check ran 9:20 to 9:25 after a late wake
+    public void The_interval_timer_counts_a_quarter_early_R1_3()
+    {
+        var daily = new AppSettings { CheckMode = CheckMode.Interval, CheckIntervalHours = 24 };
+        var lastStarted = At(1, 1, 9, 20);
+
+        Assert.True(CheckSchedule.IsDue(daily, lastStarted, At(1, 2, 9), Paris, fromTimer: true));   // the next tick, 23 h 40 min later
+        Assert.False(CheckSchedule.IsDue(daily, lastStarted, At(1, 2, 9), Paris));                   // an unlock keeps 15 minutes
+        Assert.False(CheckSchedule.IsDue(daily, lastStarted, At(1, 2, 3), Paris, fromTimer: true));  // not 6 hours early
+        Assert.True(CheckSchedule.IsDue(Every6Hours, At(1, 1, 10), At(1, 1, 15, 45), Paris, fromTimer: true)); // never less than 15 minutes
+    }
 }

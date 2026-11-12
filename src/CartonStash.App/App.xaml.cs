@@ -1,4 +1,3 @@
-using System.Runtime.InteropServices;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
 using Microsoft.Windows.AppLifecycle;
@@ -51,10 +50,12 @@ public partial class App : Application
     {
         try
         {
-            Services.GetRequiredService<CatalogConnection>(); // activates WinGet (011 R3.5)
+            Services.GetRequiredService<CatalogConnection>().Activate(); // activates WinGet (011 R3.5)
         }
-        catch (COMException)
+        catch (Exception)
         {
+            // BR-12: the projection maps WinGet's codes to several exception types (access denied, a missing
+            // interface…); any of them means WinGet couldn't start, and the setup window says so.
             return false;
         }
 

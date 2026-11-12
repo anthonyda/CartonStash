@@ -136,7 +136,14 @@ public sealed partial class CheckSettingsViewModel : ObservableObject
     [RelayCommand]
     private void RemoveExclusion(ExcludedPackageRow row) => _settings.Update(s => s.WithoutExcluded(row.Id));
 
-    partial void OnModeIndexChanged(int value) => ScheduleChanged(s => s with { CheckMode = (CheckMode)value });
+    partial void OnModeIndexChanged(int value)
+    {
+        // BR-17: the radio buttons report -1 when none is selected; an unknown mode would reset every setting at the next start.
+        if (Enum.IsDefined((CheckMode)value))
+        {
+            ScheduleChanged(s => s with { CheckMode = (CheckMode)value });
+        }
+    }
 
     partial void OnIntervalIndexChanged(int value)
     {

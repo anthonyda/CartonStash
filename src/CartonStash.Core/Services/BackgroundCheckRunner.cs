@@ -63,37 +63,52 @@ public sealed class BackgroundCheckRunner(
     /// <summary>Runs a check if one is due. Returns what it recorded, or null when none was due (R3.10). Never throws (R1.6).</summary>
     public async Task<CheckRecord?> RunAsync(CheckTrigger trigger, CancellationToken cancellationToken = default)
     {
+        // BR-27: a check counts from when it started, so a slow or late one doesn't push the next timer tick out.
         var now = _clock.GetUtcNow();
-        if (settings.WasReset)
-        {
-            return Record(new CheckRecord(now, trigger, CheckResult.Failed, Reason: "The app's settings couldn't be read."));
-        }
-        if (!CheckSchedule.IsDue(settings.Current, Since(), now, _zone))
-        {
-            return null;
-        }
-        if (activity.OperationsRunning)
-        {
-            return Record(new CheckRecord(now, trigger, CheckResult.SkippedBusy));
-        }
-        if (network.IsMetered)
-        {
-            return Record(new CheckRecord(now, trigger, CheckResult.SkippedMetered));
-        }
-
         try
         {
+            if (settings.WasReset)
+            {
+                return Record(new CheckRecord(now, trigger, CheckResult.Failed, Reason: "The app's settings couldn't be read."));
+            }
+            // BR-18: the due and skip tests are inside the try too, so an error there is recorded, never thrown.
+            if (!CheckSchedule.IsDue(settings.Current, Since(), now, _zone, fromTimer: trigger == CheckTrigger.Schedule))
+            {
+                return null;
+            }
+            if (activity.OperationsRunning)
+            {
+                return Record(new CheckRecord(now, trigger, CheckResult.SkippedBusy));
+            }
+            if (network.IsMetered)
+            {
+                return Record(new CheckRecord(now, trigger, CheckResult.SkippedMetered));
+            }
+
             await RefreshSourcesAsync(cancellationToken);
             var installed = await packages.GetInstalledAsync(cancellationToken);
-            return Finish(installed, trigger);
+            return Finish(installed, trigger, now);
         }
         catch (OperationCanceledException)
         {
-            return Record(new CheckRecord(_clock.GetUtcNow(), trigger, CheckResult.Failed, Reason: "Windows stopped the check."));
+            return TryRecord(new CheckRecord(now, trigger, CheckResult.Failed, Reason: "Windows stopped the check."));
         }
         catch (Exception ex)
         {
-            return Record(new CheckRecord(_clock.GetUtcNow(), trigger, CheckResult.Failed, Reason: ex.Message));
+            return TryRecord(new CheckRecord(now, trigger, CheckResult.Failed, Reason: ex.Message));
+        }
+    }
+
+    // R1.6: never throws, even when the history can't be written (R3.13).
+    private CheckRecord? TryRecord(CheckRecord record)
+    {
+        try
+        {
+            return Record(record);
+        }
+        catch (Exception)
+        {
+            return record;
         }
     }
 
@@ -126,13 +141,13 @@ public sealed class BackgroundCheckRunner(
                 await packages.RefreshSourceAsync(source.Name, budget.Token);
             }
         }
-        catch (Exception ex) when (ex is WinGetException || (ex is OperationCanceledException && !cancellationToken.IsCancellationRequested))
+        catch (Exception) when (!cancellationToken.IsCancellationRequested)
         {
-            // R1.9: go on with the data WinGet already has.
+            // R1.9 (BR-18): whatever stopped the refresh, go on with the data WinGet already has.
         }
     }
 
-    private CheckRecord Finish(IReadOnlyList<PackageInfo> installed, CheckTrigger trigger)
+    private CheckRecord Finish(IReadOnlyList<PackageInfo> installed, CheckTrigger trigger, DateTimeOffset started)
     {
         // The Updates page's rule (R1.3).
         var withUpdate = installed.Where(p => p.HasUpdate && p.IsManaged).ToList();
@@ -143,18 +158,30 @@ public sealed class BackgroundCheckRunner(
         var excluded = withUpdate.Count - names.Count;
 
         var record = Record(new CheckRecord(
-            _clock.GetUtcNow(),
+            started,
             trigger,
             names.Count > 0 ? CheckResult.Updates : CheckResult.None,
             names.Count,
             excluded,
             names));
 
-        badge?.Show(names.Count); // 016 R2.1: only after a check that finished (R2.2)
-
-        if (names.Count > 0 && !activity.WindowInForeground)
+        // BR-18: the check is recorded; a badge or notification that fails mustn't add a second, Failed entry.
+        try
         {
-            notifier.ShowUpdates(NotificationTitle(names.Count, excluded), NotificationBody(names));
+            badge?.Show(names.Count); // 016 R2.1: only after a check that finished (R2.2)
+        }
+        catch (Exception)
+        {
+        }
+        try
+        {
+            if (names.Count > 0 && !activity.WindowInForeground)
+            {
+                notifier.ShowUpdates(NotificationTitle(names.Count, excluded), NotificationBody(names));
+            }
+        }
+        catch (Exception)
+        {
         }
         return record;
     }

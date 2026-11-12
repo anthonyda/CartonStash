@@ -72,8 +72,10 @@ public static class Program
     {
         var server = new Thread(() =>
         {
-            BackgroundCheckTask.RegisterClass();
-            BackgroundDone.WaitOne(BackgroundLimit);
+            if (BackgroundCheckTask.RegisterClass()) // BR-33: if Windows refused, no task comes: exit now, not after the time limit
+            {
+                BackgroundDone.WaitOne(BackgroundLimit);
+            }
         });
         server.SetApartmentState(ApartmentState.MTA);
         server.Start();
