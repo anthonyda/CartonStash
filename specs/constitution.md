@@ -8,7 +8,9 @@ amend this file first, explicitly and with a reason.
 - **P1. A thin, honest frontend.** WinGet is the source of truth. We never maintain our own package
   database or guess at state WinGet can tell us.
 - **P2. Never surprise the user.** No install, uninstall or upgrade runs without an explicit user action.
-  Destructive actions (uninstall, "update all") ask for confirmation.
+  Destructive actions (uninstall) ask for confirmation. **Update all** doesn't: it only queues what the Updates page
+  lists, and each update can be cancelled while it's queued. *(Amended 2026-11-12, maintainer's request: the dialog only
+  repeated what the button says. Spec 004 amendment R9.)*
 - **P3. Always show progress and outcome.** Every long operation shows progress, can be cancelled
   where WinGet allows it, and ends with a visible success or error message.
 

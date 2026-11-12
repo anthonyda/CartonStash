@@ -54,6 +54,7 @@ One thing applies to many findings: the App has no handler for unhandled excepti
 | BR-31 | 3 | Confirmed | `Publish-Release.ps1` empties any folder it is given |
 | BR-32 | 3 | Plausible | A restart on the Settings page may open it with nothing selected in the navigation |
 | BR-33 | 3 | Mixed | Small gaps (five) |
+| BR-34 | 3 | Request | Update all asks for a confirmation (added 2026-11-12) |
 
 ---
 
@@ -436,7 +437,7 @@ so nothing asks again.
 
 ### BR-20 Operation logs are read and written on the UI thread, whole file
 
-- [ ] Reviewed
+- [ ] Reviewed. *2026-11-12, fix approved as proposed. Code waits until the whole review is read.*
 
 **Where:** [PackageOperationQueue.cs:215](../src/CartonStash.Core/Services/PackageOperationQueue.cs#L215) calls
 [OperationLogStore.cs:85-86](../src/CartonStash.Core/Services/OperationLogStore.cs#L85-L86) and
@@ -459,7 +460,7 @@ a large log in the VM before and after.
 
 ### BR-21 Update selected doesn't apply the row's own rules
 
-- [ ] Reviewed
+- [ ] Reviewed. *2026-11-12, fix approved as proposed. Code waits until the whole review is read.*
 
 **Where:** [UpdatesViewModel.cs:81-83](../src/CartonStash.Core/ViewModels/UpdatesViewModel.cs#L81-L83). Spec 004
 R2.2, R6.2. Confirmed.
@@ -475,7 +476,7 @@ that is restart-pending isn't queued.
 
 ### BR-22 The version list has no guard around WinGet's comparer
 
-- [ ] Reviewed
+- [ ] Reviewed. *2026-11-12, fix approved as proposed. Code waits until the whole review is read.*
 
 **Where:** [WinGetPackageService.cs:367](../src/CartonStash.Core/Services/WinGetPackageService.cs#L367) and
 [:376](../src/CartonStash.Core/Services/WinGetPackageService.cs#L376), against `Compare` at
@@ -491,7 +492,7 @@ already handles (014 R1.2: "Install this version"). Unit test on the mapping wit
 
 ### BR-23 "No applicable update" doesn't mention the scope setting
 
-- [ ] Reviewed
+- [ ] Reviewed. *2026-11-12, fix approved as proposed. Code waits until the whole review is read.*
 
 **Where:** [WinGetPackageInstaller.cs:81](../src/CartonStash.Core/Services/WinGetPackageInstaller.cs#L81),
 [:430-433](../src/CartonStash.Core/Services/WinGetPackageInstaller.cs#L430-L433). Spec 006 R2.1, 003. Confirmed.
@@ -509,7 +510,7 @@ for this PC." Unit test on the message.
 
 ### BR-24 Source agreement check: what happens when reading the sources fails
 
-- [ ] Reviewed
+- [ ] Reviewed. *2026-11-12, fix approved as proposed. Code waits until the whole review is read.*
 
 **Where:** [SourceAgreementCheck.cs:19-27](../src/CartonStash.Core/Services/SourceAgreementCheck.cs#L19-L27),
 [:34](../src/CartonStash.Core/Services/SourceAgreementCheck.cs#L34),
@@ -528,7 +529,7 @@ tests with a package service whose `GetSourcesAsync` throws.
 
 ### BR-25 No recovery when WinGet's server goes away
 
-- [ ] Reviewed
+- [ ] Reviewed. *2026-11-12, fix approved as proposed. Code waits until the whole review is read.*
 
 **Where:** [CatalogConnection.cs:22](../src/CartonStash.Core/Services/CatalogConnection.cs#L22). Plausible.
 
@@ -546,7 +547,7 @@ once. If it fails again, say "WinGet stopped responding. Restart CartonStash." C
 
 ### BR-26 The WinGet presence check doesn't prove WinGet can start, and background checks skip it
 
-- [ ] Reviewed
+- [ ] Reviewed. *2026-11-12, fix approved as proposed. Code waits until the whole review is read.*
 
 **Where:** [WinGetAvailability.cs:13-18](../src/CartonStash.Core/Services/WinGetAvailability.cs#L13-L18),
 [BackgroundCheckTask.cs:62-71](../src/CartonStash.App/Services/BackgroundCheckTask.cs#L62-L71). Spec 011 R3.
@@ -565,7 +566,7 @@ it once a check is due and not skipped. Unit test: a check that isn't due never 
 
 ### BR-27 Interval mode: a timer tick can arrive "not yet due"
 
-- [ ] Reviewed
+- [ ] Reviewed. *2026-11-12, fix approved as proposed. Code waits until the whole review is read.*
 
 **Where:** [BackgroundCheckScheduler.cs:58](../src/CartonStash.App/Services/BackgroundCheckScheduler.cs#L58),
 [CheckSchedule.cs:33-34](../src/CartonStash.Core/Services/CheckSchedule.cs#L33-L34),
@@ -588,7 +589,7 @@ Unit tests in `CheckScheduleTests` with the example above.
 
 ### BR-28 GitHub notes that can't be parsed break the pane for that package
 
-- [ ] Reviewed
+- [ ] Reviewed. *2026-11-12, fix approved as proposed. Code waits until the whole review is read.*
 
 **Where:** [GitHubReleaseNotesService.cs:72-75](../src/CartonStash.Core/Services/GitHubReleaseNotesService.cs#L72-L75),
 [PackageDetailsViewModel.cs:279-282](../src/CartonStash.Core/ViewModels/PackageDetailsViewModel.cs#L279-L282).
@@ -605,7 +606,7 @@ always show. Unit test with a parser that throws.
 
 ### BR-29 Icon and version caches use the package ID alone
 
-- [ ] Reviewed
+- [ ] Reviewed. *2026-11-12, fix approved as proposed. Code waits until the whole review is read.*
 
 **Where:** [WinGetPackageService.cs:21-22](../src/CartonStash.Core/Services/WinGetPackageService.cs#L21-L22).
 Confirmed; only with two sources that list the same ID.
@@ -619,7 +620,7 @@ Since BR-05's fix, the Installed badge only reads the installed list's own entri
 
 ### BR-30 The first installed load and an operation finishing
 
-- [ ] Reviewed
+- [ ] Reviewed. *2026-11-12, fix approved as proposed. Code waits until the whole review is read.*
 
 **Where:** [InstalledPackagesStore.cs:21-28](../src/CartonStash.Core/Services/InstalledPackagesStore.cs#L21-L28).
 Spec 002 R1.3. Confirmed; narrow.
@@ -637,7 +638,7 @@ ends. Unit test with a slow fake load.
 
 ### BR-31 `Publish-Release.ps1` empties any folder it is given
 
-- [ ] Reviewed
+- [ ] Reviewed. *2026-11-12, fix approved as proposed. Code waits until the whole review is read.*
 
 **Where:** [Publish-Release.ps1:27-30](../tools/Publish-Release.ps1#L27-L30). Developer tool only. Confirmed.
 
@@ -651,7 +652,7 @@ use an empty folder or pass -Force". The VM build folders are new and empty each
 
 ### BR-32 A restart on the Settings page may open it with nothing selected in the navigation
 
-- [ ] Reviewed
+- [ ] Reviewed. *2026-11-12, fix approved as proposed. Code waits until the whole review is read.*
 
 **Where:** [MainWindow.xaml.cs:82-84](../src/CartonStash.App/MainWindow.xaml.cs#L82-L84). Spec 004 R6.3.
 Plausible; cosmetic.
@@ -665,7 +666,7 @@ VM: restart from Settings.
 
 ### BR-33 Small gaps
 
-- [ ] Reviewed
+- [ ] Reviewed. *2026-11-12, fix approved as proposed. Code waits until the whole review is read.*
 
 Five small ones, each with its fix:
 
@@ -693,6 +694,23 @@ Five small ones, each with its fix:
    date for another day, but it's only re-read when the start time changes. A card from 23:50 still reads "23:50" the
    next morning instead of the date and time. *Fix:* raise `TimeText` again for every card when the Activity pane
    opens, and at midnight while it's open. `FormatTime` already has a test for another day; add one for the refresh.
+
+### BR-34 Update all asks for a confirmation (added 2026-11-12)
+
+- [ ] Reviewed. *2026-11-12, maintainer's request, approved: constitution P2 and 004 R2.3 amended (004 amendment
+  R9). Code waits until the whole review is read.*
+
+**Where:** [UpdatesViewModel.cs:85-88](../src/CartonStash.Core/ViewModels/UpdatesViewModel.cs#L85-L88)
+(`UpdateManyAsync(..., confirm: true)`). Spec 004 R2.3, constitution P2. Not a bug: specified behaviour the maintainer
+no longer wants.
+
+**What happens:** pressing **Update all** opens a dialog, "Update *n* packages?", that must be confirmed before
+anything is queued. The button already says what it does, the list it acts on is on screen, and each queued update can
+still be cancelled from the Activity pane until its installer starts.
+
+**Fix:** **Update all** queues every listed package that offers Update at once, with no dialog. Unchanged: excluded
+packages stay out (010 R5.9), App Installer is queued last (004 R6.5), and license agreements still ask per package
+(004 R7), because accepting them is the user's call. Uninstall keeps its confirmation.
 
 ---
 
