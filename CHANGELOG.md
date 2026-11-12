@@ -2,6 +2,18 @@
 
 What's new in each version of CartonStash. Get it from the [Microsoft Store](https://apps.microsoft.com/detail/9MT37M7DBZRK).
 
+## 1.4.0
+
+### New
+
+- **The updates count on the taskbar.** CartonStash's taskbar icon shows how many updates are waiting, the same number as on the Updates page, leaving out excluded packages. It changes as updates finish, and a background check sets it while the app is closed. With no updates, the badge goes away.
+- **Find an operation in the Activity pane.** Filter the pane by package name, ID or action, and switch between **All**, **Active**, **Done** and **Failed**, each with its count. In **All**, operations are grouped under a heading for each. A **Sort** button orders them by default (the running operation, then the queued ones in the order they'll run), newest or oldest first, or by name, and the app remembers your choice.
+- **The window opens the way you left it.** CartonStash remembers the window's size and position, whether it was maximized, and whether the navigation pane was open. If the window was on a screen that's no longer there, it keeps its size and Windows places it.
+
+### Fixed
+
+- **Pressing Tab no longer closes the app.** After a list got shorter, pressing Tab to move into it could close CartonStash at once. This happened on the Updates page after updates finished, on the Search page after a new search with fewer results, and on the Installed page after filtering. Updated packages that are still listed now keep their check mark too.
+
 ## 1.3.0
 
 ### New
