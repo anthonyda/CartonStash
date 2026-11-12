@@ -1,6 +1,6 @@
 # 006 – Settings: Design
 
-**Status:** Approved (2026-10-29), amended during implementation. Amendment R4.3 approved 2026-10-30. Amendment R3.4 approved 2026-11-01
+**Status:** Approved (2026-10-29), amended during implementation. Amendment R4.3 approved 2026-10-30. Amendment R3.4 approved 2026-11-01. Amendment R6 approved 2026-11-12
 **Requirements:** [requirements.md](requirements.md)
 
 ## Overview
@@ -195,6 +195,16 @@ T11 tested this in clean Sandboxes, unelevated: a test exe and a test MSIX with 
 - **The agreement text can change often:** each change asks accepted users again, by design (R3.9).
 - **A GitHub release could lack the expected file names:** setup fails with the link as fallback, and nothing else depends on it.
 - **Withdrawing leaves Store packages without update information:** this is the same as Decline, and the requirements state that effect.
+
+## Amendment R6: window layout (approved 2026-11-12)
+
+- `AppSettings.Window` (`WindowLayout?`: X, Y, Width, Height in physical pixels, `Maximized`) and `AppSettings.NavPaneOpen`
+  (default true). Both missing in older files, which keep today's defaults (R6.4).
+- `MainWindow` tracks the last *restored* bounds through `AppWindow.Changed`, so a maximized window still saves its normal
+  size (R6.2). It saves through `ISettings.Update` in `AppWindow.Closing`, only when the close goes ahead (not when 003 R6.2
+  cancels it).
+- On start: `DisplayArea.GetFromRect(rect, DisplayAreaFallback.None)`; null → resize only (R6.3). Sizes under 500 × 400 are
+  ignored. Then `OverlappedPresenter.Maximize()` if saved maximized, and `Nav.IsPaneOpen` from settings.
 
 ## Testing strategy
 

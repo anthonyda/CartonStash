@@ -1,6 +1,6 @@
 # 006 – Settings: Requirements
 
-**Status:** Approved (2026-10-29). Amendment R5 (start page) approved 2026-10-30. Amendment R4.3 (safe diagnostics) approved 2026-10-30. Amendment R3.4 (startup check and source agreements) approved 2026-11-01
+**Status:** Approved (2026-10-29). Amendment R5 (start page) approved 2026-10-30. Amendment R4.3 (safe diagnostics) approved 2026-10-30. Amendment R3.4 (startup check and source agreements) approved 2026-11-01. Amendment R6 (window layout) approved 2026-11-12
 **Depends on:** 002, 003
 
 ## Problem
@@ -119,3 +119,17 @@ Open questions for this amendment:
 - **Start page: offer Settings as a choice?** **Decided 2026-10-30: no.** Nobody needs to land on Settings every day.
 
 - Settings storage? **Decided: JSON in `%LOCALAPPDATA%\CartonStash\settings.json` behind `ISettingsStore`; `ApplicationData` comes with 007.**
+
+## Amendment R6: window layout (approved 2026-11-12)
+
+**Maintainer's request, 2026-11-12:** the app layout and window size should stay the same after closing and reopening the app.
+
+**US7.** As a user, I want the window to reopen the way I left it, so I don't resize it every time.
+
+| ID   | Story | Criterion |
+|------|-------|-----------|
+| R6.1 | US7   | When the main window closes, the app shall save its size, position, whether it is maximized, and whether the navigation pane is expanded. |
+| R6.2 | US7   | When the app starts, it shall restore the saved size, position, maximized state and navigation pane. A maximized window shall restore to its last normal size when un-maximized. |
+| R6.3 | –     | If the saved position is no longer on any display (a monitor was removed), then the app shall keep the saved size and let Windows place the window. |
+| R6.5 | US7   | The pinned Activity pane shall come back with the window (009 R3.4 already saves the pin): pinned and wide enough (009 R3.5), it shall open beside the page at start. |
+| R6.4 | –     | If nothing is saved (first start, or settings from an older version), the app shall open at 1200 × 780 with the navigation pane as before, without reporting a reset. |

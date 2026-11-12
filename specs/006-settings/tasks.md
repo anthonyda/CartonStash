@@ -13,6 +13,8 @@
   - Verify: unit tests.
 - [x] **T5.** `SettingsPage`, `ThemeService` (incl. title bar), clipboard. *(R1.1, R2.2)*
   - Verify: manual in light / dark (done) / high contrast (pending), see log.
+- [x] **T20.** Window layout: `WindowLayout` and `NavPaneOpen` in `AppSettings`; save on close and restore on start in `MainWindow`. *(R6.1 to R6.5)*
+  - Verify: `SettingsTests.Window_layout_survives_a_restart`, `File_from_before_window_layout_keeps_defaults`; manual in the VM (resize, move, maximize, collapse the pane, pin Activity, restart).
 - [ ] **T6.** Mark `Done`.
 
 ### Amendment R5: start page (approved 2026-10-30)
@@ -78,3 +80,8 @@ Starts after 011 is merged. T12 to T16 and T18 don't depend on T11's result.
 | Q5, R3.5, R3.10 | 2026-11-01 | Pass | Final portable build, keyboard: dialog opens on the Terms link, Tab reaches Accept, Enter accepts. From the Search box, Tab reaches Read and accept, Enter opens the dialog. Dark and high contrast (High Contrast Black, confirmed on): notice, dialog and Settings are readable (screenshots) |
 | R3.12 | 2026-11-01 | Pass | Portable: after Accept in the app, `winget search --source msstore` still prompted |
 | R1.1 (high contrast) | – | **Pending** | Check the app with a Windows contrast theme on (constitution Q5) |
+| R6.4 | 2026-11-12 | Pass | VM, Store MSIX 1.3.99: first start at 1200 × 780, navigation expanded |
+| R6.1, R6.2, R6.5 | 2026-11-12 | Pass | Set to 300,100 1400 × 900, navigation collapsed, Activity pinned → restart restored all three, pane beside the page (screenshot) |
+| R6.2 | 2026-11-12 | Pass | Maximized → restart opens maximized; un-maximize returns to 300,100 1400 × 900 |
+| R6.3 | 2026-11-12 | Pass | Saved position set to 6000,3000 → window on screen at 156,156, still 1400 × 900 |
+| R6.1 | 2026-11-12 | Pass | Navigation expanded again → restart keeps it expanded. No crashes during the run |
