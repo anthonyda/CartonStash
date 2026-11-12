@@ -1,6 +1,6 @@
 # 010 – Background update checks: Requirements
 
-**Status:** Approved (2026-10-31), including the R3.8 change from T1's results. Amendment R3.14 (missed check at sign-in through a startup entry): approved 2026-11-02. Amendment R3.18 (two triggers in one process, bug review BR-06): approved 2026-11-12
+**Status:** Approved (2026-10-31), including the R3.8 change from T1's results. Amendment R3.14 (missed check at sign-in through a startup entry): approved 2026-11-02. Amendment R3.18 (two triggers in one process, bug review BR-06): approved 2026-11-12. Amendment R3.13 (failure reasons keep their paths, bug review BR-09): approved 2026-11-12
 **Depends on:** 002, 003, 004, 006, 007
 **Issues:** [#14](https://github.com/anthonyda/CartonStash/issues/14)
 
@@ -54,7 +54,7 @@ background work.
 | R3.7 | –     | When the app is updated, the chosen schedule shall keep working. |
 | R3.11 | US6  | Settings shall offer **Check history**, listing each background check of the last 7 days, newest first, with its date and time, what started it (schedule, or a missed check at sign-in), and its result: updates found with their number and names, no updates, skipped (operations running, or metered connection), or failed with a readable reason. |
 | R3.12 | US6  | The app shall delete history entries older than 7 days, whether or not checks are still running. Turning checks off shall keep the history until it ages out. |
-| R3.13 | US6  | The history shall stay on the PC, hold no user name or file paths, and be plain text in the UI. A failure to write it shall never fail a check (009 R2.5). |
+| R3.13 | US6  | The history shall stay on the PC, hold no user name or file paths, and be plain text in the UI. *(Amended 2026-11-12, BR-09: a failure reason may hold file paths; see below.)* A failure to write it shall never fail a check (009 R2.5). |
 | R4.1 | US4   | In the portable app, the setting shall be unavailable, with a short note that it needs the Microsoft Store version. *(Reworded by 007 R9.)* |
 | R5.1 | US5  | Each row on the Updates page shall offer **Exclude from update checks**, keyboard reachable with an accessible name (constitution Q5). |
 | R5.2 | US5  | A background check shall leave excluded packages out of the notification's count and names (R2.1), and the message shall state how many were ignored ("3 updates available, 1 ignored"). If only excluded packages have updates, then it shall show no notification. |
@@ -150,6 +150,23 @@ likely case: the late timer and "user present" fire seconds apart, and a check t
 
 Plausible, not yet seen: the check in the VM comes first (daily time, sleep past it, wake and unlock, read Check
 history).
+
+## Amendment R3.13: failure reasons keep their paths (bug review BR-09, approved 2026-11-12)
+
+R3.13 says the history holds no user name or file paths. `CheckHistoryStore` tries to keep that promise by replacing
+paths in a failure's reason with `[path]`, but its pattern stops at the first space: `C:\Users\Jean Dupont\AppData\…`
+becomes `[path] Dupont\AppData\…`, so part of the user name stays, and a path written with `/` isn't found at all. The
+reason is the error's own message, so any path can appear in it.
+
+**Maintainer's choice, 2026-11-12:** keep full paths, and say so in `PRIVACY.md`, as operation logs already do (009).
+A failure is easier to understand with the file it names, and the history never leaves the PC.
+
+| ID     | Story | Criterion |
+|--------|-------|-----------|
+| R3.13a | US6   | The history shall stay on the PC and be plain text in the UI. A failure's reason shall be saved as the error reported it, file paths included, without any part removed. A path can hold the Windows user name. A failure to write the history shall never fail a check (009 R2.5). |
+| R3.13b | –     | `PRIVACY.md` shall say that the check history can include the user name and file paths, in the same words as for operation logs. The change ships with the code that keeps the paths, so the document is never wrong. |
+
+R3.13a replaces R3.13. The history is still never sent anywhere, and "Copy diagnostic info" doesn't include it (006 R4.2).
 
 ## Changes to other specs, if approved
 

@@ -238,7 +238,7 @@ start when the mode is Off.
 
 ### BR-09 Check history can keep part of a file path
 
-- [ ] Reviewed
+- [ ] Reviewed. *2026-11-12, decided otherwise than proposed: keep full paths in failure reasons and say so in `PRIVACY.md`, as for operation logs. Spec change approved (010 R3.13a, R3.13b). Code waits until the whole review is read.*
 
 **Where:** [CheckHistoryStore.cs:45-48](../src/CartonStash.Core/Services/CheckHistoryStore.cs#L45-L48),
 [BackgroundCheckRunner.cs:95](../src/CartonStash.Core/Services/BackgroundCheckRunner.cs#L95). Spec 010 R3.13, and
