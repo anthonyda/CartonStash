@@ -30,8 +30,22 @@ public static class CheckSchedule
     }
 
     /// <summary>True from <see cref="MinimumTimer"/> before the next due time, so several missed checks count as one (R3.10).</summary>
-    public static bool IsDue(AppSettings settings, DateTimeOffset since, DateTimeOffset now, TimeZoneInfo zone) =>
-        NextDue(settings, since, zone) is { } next && now >= next - MinimumTimer;
+    /// <param name="fromTimer">
+    /// BR-27: the interval timer itself fired. It repeats on its own rhythm, which drifts from the last check's, so it
+    /// counts from a quarter of the interval early (never less than <see cref="MinimumTimer"/>). Unlock keeps 15 minutes.
+    /// </param>
+    public static bool IsDue(AppSettings settings, DateTimeOffset since, DateTimeOffset now, TimeZoneInfo zone, bool fromTimer = false) =>
+        NextDue(settings, since, zone) is { } next && now >= next - EarlyWindow(settings, fromTimer);
+
+    internal static TimeSpan EarlyWindow(AppSettings settings, bool fromTimer)
+    {
+        if (!fromTimer || settings.CheckMode != CheckMode.Interval)
+        {
+            return MinimumTimer;
+        }
+        var quarter = TimeSpan.FromHours(settings.CheckIntervalHours) / 4;
+        return quarter > MinimumTimer ? quarter : MinimumTimer;
+    }
 
     /// <summary>The whole minutes for a one-time timer to <paramref name="next"/>, never below Windows' minimum.</summary>
     public static uint TimerMinutes(DateTimeOffset next, DateTimeOffset now)

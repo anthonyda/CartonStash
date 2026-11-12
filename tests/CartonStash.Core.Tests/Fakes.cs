@@ -104,8 +104,11 @@ internal sealed class FakePackageService : IPackageService
 
     public void InvalidateCache() => Invalidations++;
 
+    /// <summary>Thrown by <see cref="GetSourcesAsync"/> when set.</summary>
+    public Exception? SourcesError { get; set; }
+
     public Task<IReadOnlyList<SourceInfo>> GetSourcesAsync(CancellationToken cancellationToken = default) =>
-        Task.FromResult<IReadOnlyList<SourceInfo>>(Sources.ToList());
+        SourcesError is { } error ? Task.FromException<IReadOnlyList<SourceInfo>>(error) : Task.FromResult<IReadOnlyList<SourceInfo>>(Sources.ToList());
 
     public Task<string?> RefreshSourceAsync(string sourceName, CancellationToken cancellationToken = default)
     {

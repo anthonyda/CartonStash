@@ -44,6 +44,41 @@ public sealed class BackgroundCheckRunnerTests : IDisposable
 
     private Task<CheckRecord?> Run() => _runner.RunAsync(CheckTrigger.Schedule);
 
+    [Fact] // BR-18 (R1.9): any refresh failure falls back to the data WinGet already has
+    public async Task Any_refresh_failure_uses_the_data_WinGet_has_R1_9()
+    {
+        _packages.SourcesError = new InvalidCastException("Interface not registered");
+        Installed(Pkg.Installed("A", update: true));
+
+        var record = await Run();
+
+        Assert.Equal(CheckResult.Updates, record!.Result);
+    }
+
+    [Fact] // BR-18 (R1.6): an error in the skip tests is recorded, never thrown
+    public async Task An_error_before_the_check_is_recorded_R1_6()
+    {
+        _network.Throws = true;
+
+        var record = await Run();
+
+        Assert.Equal(CheckResult.Failed, record!.Result);
+        Assert.Equal("no network cost", record.Reason);
+        Assert.Single(_history.Read());
+    }
+
+    [Fact] // BR-18: a notification that fails doesn't add a second, Failed entry
+    public async Task A_notification_that_fails_leaves_one_entry_R1_6()
+    {
+        _notifier.Throws = true;
+        Installed(Pkg.Installed("A", update: true));
+
+        var record = await Run();
+
+        Assert.Equal(CheckResult.Updates, record!.Result);
+        Assert.Equal([CheckResult.Updates], _history.Read().Select(r => r.Result));
+    }
+
     [Fact]
     public async Task Not_due_does_nothing_and_records_nothing() // R3.10
     {
@@ -344,7 +379,16 @@ public sealed class BackgroundCheckRunnerTests : IDisposable
     {
         public List<(string Title, string Body)> Shown { get; } = [];
 
-        public void ShowUpdates(string title, string body) => Shown.Add((title, body));
+        public bool Throws { get; set; }
+
+        public void ShowUpdates(string title, string body)
+        {
+            if (Throws)
+            {
+                throw new InvalidOperationException("notifications are off");
+            }
+            Shown.Add((title, body));
+        }
     }
 
     private sealed class FakeActivity : IAppActivity
@@ -356,6 +400,8 @@ public sealed class BackgroundCheckRunnerTests : IDisposable
 
     private sealed class FakeNetwork : INetworkState
     {
-        public bool IsMetered { get; set; }
+        public bool Throws { get; set; }
+
+        public bool IsMetered { get => Throws ? throw new InvalidOperationException("no network cost") : field; set; }
     }
 }
