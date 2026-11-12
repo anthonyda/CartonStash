@@ -1,6 +1,6 @@
 # 006 – Settings: Requirements
 
-**Status:** Approved (2026-10-29). Amendment R5 (start page) approved 2026-10-30. Amendment R4.3 (safe diagnostics) approved 2026-10-30. Amendment R3.4 (startup check and source agreements) approved 2026-11-01. Amendment R6 (window layout) approved 2026-11-12
+**Status:** Approved (2026-10-29). Amendment R5 (start page) approved 2026-10-30. Amendment R4.3 (safe diagnostics) approved 2026-10-30. Amendment R3.4 (startup check and source agreements) approved 2026-11-01. Amendment R6 (window layout) approved 2026-11-12. Amendment R3.14, R3.15 (explicit sources, bug review BR-01): **Draft** 2026-11-12
 **Depends on:** 002, 003
 
 ## Problem
@@ -104,6 +104,31 @@ Open questions for this amendment:
   check that the Store edition of the app is allowed to do this.
 - **Should the amendment stay general or name `msstore`?** Recommended: general, since any source can have agreements. R3.6 needs
   fixed text per known source, because the COM API exposes only the agreement list.
+
+## Amendment R3.14, R3.15: explicit sources (2026-11-12, Draft)
+
+**Found in the bug review of 2026-11-10 (BR-01).** R3.1 lists a source as "explicit (excluded from default searches)",
+and `winget` leaves such a source out of `search`, `list` and `upgrade` unless it is named with `--source`. The app
+doesn't: `CatalogConnection` puts every source into its catalogs, so search results, the Installed list's matches, the
+Updates list and the background check all include explicit sources. `Info.Explicit` is read for the Settings text only.
+`winget-font` is such a source on the maintainer's PC (R3.1's manual check), so font packages show up in searches that
+`winget search` doesn't return. The text on the Settings page is therefore wrong today.
+
+| ID    | Story | Criterion |
+|-------|-------|-----------|
+| R3.14 | US3   | The app shall leave a source WinGet marks as explicit out of search, the Installed and Updates lists' matches with sources, the details pane and the background check (010), as `winget` does when no source is named. It shall not read such a source's agreements (R3.8) or test it after a failure (011 R1.3). |
+| R3.15 | US3   | The Settings page shall keep listing explicit sources (R3.1) and say that CartonStash, like `winget`, doesn't use them unless named. **Refresh sources** shall leave them out, as the background check already does (010 R1.2). |
+
+A program installed from an explicit source then has no source match, so it lists as not from a WinGet source (002 R6),
+as `winget list` shows it. Adding or removing sources stays out of scope.
+
+### Open question (amendment R3.14)
+
+- **Q1. Leave explicit sources out, or use them and change the text?** *Proposed: leave them out (R3.14, R3.15).*
+  P1: the app shows what `winget` shows, and a source is made explicit precisely to keep it out of everyday results.
+  The alternative is to keep using them and change R3.1's text to "explicit: `winget` uses it only when named;
+  CartonStash always uses it". That keeps fonts searchable in the app, but its Search and Updates would then differ
+  from `winget`'s. A picker for explicit sources would be a feature of its own.
 
 ## Out of scope
 

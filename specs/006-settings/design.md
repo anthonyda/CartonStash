@@ -206,6 +206,16 @@ T11 tested this in clean Sandboxes, unelevated: a test exe and a test MSIX with 
 - On start: `DisplayArea.GetFromRect(rect, DisplayAreaFallback.None)`; null → resize only (R6.3). Sizes under 500 × 400 are
   ignored. Then `OverlappedPresenter.Maximize()` if saved maximized, and `Nav.IsPaneOpen` from settings.
 
+## Amendment R3.14, R3.15: explicit sources (2026-11-12, Draft)
+
+- `CatalogConnection.ConnectAsync` skips a reference whose `Info.Explicit` is true, before reading its agreements
+  (R3.14). `SourcesInUse` leaves it out too, so source isolation never tests it (011 R1.3).
+- The decision is a small static rule next to `IsInUse`, so it is unit tested without COM.
+- `SourceInfo.DetailText` says `explicit: not used unless named, as in winget` (R3.15).
+- Refresh sources skips explicit sources (R3.15), as `BackgroundCheckRunner` already does.
+- Tests: the rule and the text (unit). Manual check on the maintainer's PC, where `winget-font` exists: a font that only
+  `winget-font` has isn't found, as with `winget search`.
+
 ## Testing strategy
 
 | Criteria | How |

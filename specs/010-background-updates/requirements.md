@@ -1,6 +1,6 @@
 # 010 – Background update checks: Requirements
 
-**Status:** Approved (2026-10-31), including the R3.8 change from T1's results. Amendment R3.14 (missed check at sign-in through a startup entry): approved 2026-11-02
+**Status:** Approved (2026-10-31), including the R3.8 change from T1's results. Amendment R3.14 (missed check at sign-in through a startup entry): approved 2026-11-02. Amendment R3.18 (two triggers in one process, bug review BR-06): **Draft** 2026-11-12
 **Depends on:** 002, 003, 004, 006, 007
 **Issues:** [#14](https://github.com/anthonyda/CartonStash/issues/14)
 
@@ -134,6 +134,22 @@ The portable app has no startup entry (R4.1).
   window, no splash screen, no tray icon.
 - **Run a missed check when the user opens the app, too?** **Decided 2026-11-02: no.** The app's own Updates page already refreshes when it
   opens, so a background check then would only duplicate it.
+
+## Amendment R3.18: two triggers in one process (2026-11-12, Draft, bug review BR-06)
+
+R3.17 was checked with the startup entry and "user present", which are two processes. The timer task and the
+"check on return" task are both served by the background COM server, one process. When the second fires while the
+first check runs, its `Run` finds the mutex, returns, completes its deferral and signals the server to stop. `Main`
+returns and the process ends with the first check still running: no history entry, no notification, and in daily mode
+the next timer isn't set until an unlock or the app's start repairs it. Waking the PC after a missed daily time is the
+likely case: the late timer and "user present" fire seconds apart, and a check takes longer than that.
+
+| ID    | Story | Criterion |
+|-------|-------|-----------|
+| R3.18 | –     | When a second trigger arrives in the same process while a check is running, the running check shall finish and be recorded as if the second hadn't come (R3.17's "at most one check" unchanged). The background process shall end only when every trigger it served is done, or at its time limit. |
+
+Plausible, not yet seen: the check in the VM comes first (daily time, sleep past it, wake and unlock, read Check
+history).
 
 ## Changes to other specs, if approved
 
