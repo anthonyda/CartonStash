@@ -181,7 +181,8 @@ Pane: select version → action button
 ```
 
 R2.5 reuses 013's `AfterUpdate` unchanged: it warns when WinGet still lists the version from before and still reports
-an update. After going back an update is available again, so the check fits. For an upgrade it already runs. The only
+an update. After going back an update is available again, so the check fits. *(Wrong when going back starts from the
+newest version, the usual case: see amendment R2.8.)* For an upgrade it already runs. The only
 change is that it now also runs for a version-chosen install over an installed package.
 
 ## Operation wording (R2.1)
@@ -396,6 +397,18 @@ today. With R2.6 in place this is rare: it covers changes made outside the app s
 | Core/ViewModels | `PackageActions` | `ReadInstalledAsync`; R2.7's check in `InstallVersionAsync` |
 
 `IPackageInstaller.RunAsync` gains an optional explicit scope, only for the R3.5 chain and R3.7 (see above). `OperationOutcome` and `PackageOperation` gain `Scope` and `ScopeFromInstalled`.
+
+## Amendment R2.8: going back from the newest version (approved 2026-11-12)
+
+- `AfterUpdate` gains the chosen version when going back. Going back: warn when `after.Version == versionBefore`,
+  ignoring `UpdateAvailable`. Message: "WinGet finished without an error, but Windows still lists {name} {before}.
+  Going back to {chosen} may not have worked." A read that fails stays "no warning" (013 R2.3).
+- `RunAsync` passes it where it calls `AfterUpdate` today (`CheckAfterOperation.InstalledVersion` after going back).
+- `PackageOperation.StatusText` for `SucceededUnconfirmed`: "Update not confirmed" for an update, "Not confirmed" for an
+  install.
+- Tests in `AfterUpdateTests`: going back with `("2.0", UpdateAvailable: false)` after `"2.0"` warns; after going back
+  to `"1.0"` with `"1.0"` listed it doesn't; an update with `("2.0", false)` after `"2.0"` still doesn't (013). The
+  status text per kind.
 
 ## Testing
 

@@ -27,6 +27,10 @@ public sealed partial class PackageRowViewModel : ObservableObject
     private readonly ISettings? _exclusions;
     private Task? _iconLoad;
 
+    // BR-04: a success hides its button only between the operation ending and the row showing WinGet's data again. Set
+    // when this row sees its operation succeed; a row built later, or refreshed by a reload, follows the package alone.
+    private bool _successHidesButtons;
+
     /// <param name="exclusions">Given where a row can be excluded from update checks: the Updates page (010 R5.1).</param>
     public PackageRowViewModel(PackageInfo package, PackageActions actions, RowActions allowed, ISettings? exclusions = null)
     {
@@ -46,8 +50,14 @@ public sealed partial class PackageRowViewModel : ObservableObject
     /// </summary>
     public void Refresh(PackageInfo package)
     {
+        var hidden = _successHidesButtons;
+        _successHidesButtons = false; // BR-04: the list shows WinGet's data again
         if (package == Package)
         {
+            if (hidden)
+            {
+                NotifyButtons();
+            }
             return;
         }
         Package = package;
@@ -176,10 +186,11 @@ public sealed partial class PackageRowViewModel : ObservableObject
     [RelayCommand]
     private void IncludeAgain() => _exclusions?.Update(s => s.WithoutExcluded(Id));
 
-    private bool Succeeded(OperationKind kind) => Operation is { IsSuccess: true } op && op.Kind == kind;
+    private bool Succeeded(OperationKind kind) => _successHidesButtons && Operation is { IsSuccess: true } op && op.Kind == kind;
 
     partial void OnOperationChanged(PackageOperation? oldValue, PackageOperation? newValue)
     {
+        _successHidesButtons = false;
         if (oldValue is not null)
         {
             oldValue.PropertyChanged -= OnOperationPropertyChanged;
@@ -190,17 +201,26 @@ public sealed partial class PackageRowViewModel : ObservableObject
         }
     }
 
+    private void NotifyButtons()
+    {
+        OnPropertyChanged(nameof(IsBusy));
+        OnPropertyChanged(nameof(ShowInstall));
+        OnPropertyChanged(nameof(ShowUpdate));
+        OnPropertyChanged(nameof(ShowRestart));
+        OnPropertyChanged(nameof(ShowUninstall));
+        OnPropertyChanged(nameof(ResultText));
+        OnPropertyChanged(nameof(HasResult));
+    }
+
     private void OnOperationPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName is nameof(PackageOperation.Phase) or nameof(PackageOperation.Result))
         {
-            OnPropertyChanged(nameof(IsBusy));
-            OnPropertyChanged(nameof(ShowInstall));
-            OnPropertyChanged(nameof(ShowUpdate));
-            OnPropertyChanged(nameof(ShowRestart));
-            OnPropertyChanged(nameof(ShowUninstall));
-            OnPropertyChanged(nameof(ResultText));
-            OnPropertyChanged(nameof(HasResult));
+            if (sender == Operation && Operation is { IsActive: false, IsSuccess: true })
+            {
+                _successHidesButtons = true; // this row saw it run
+            }
+            NotifyButtons();
         }
         if (e.PropertyName == nameof(PackageOperation.Result) && sender is PackageOperation { IsActive: false, IsSuccess: true } op && op == Operation)
         {

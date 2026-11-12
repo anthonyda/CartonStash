@@ -342,7 +342,7 @@ public sealed partial class PackageOperation : ObservableObject
         (_, OperationResult.Succeeded) => DoneText,
         (_, OperationResult.SucceededRestartRequired) => $"{DoneText} · restart required",
         (_, OperationResult.SucceededAppRestartRequired) => $"{DoneText} · restart CartonStash",
-        (_, OperationResult.SucceededUnconfirmed) => "Update not confirmed",
+        (_, OperationResult.SucceededUnconfirmed) => Kind == OperationKind.Upgrade ? "Update not confirmed" : "Not confirmed", // 014 R2.8
         (_, OperationResult.Cancelled) => "Cancelled",
         _ => "Failed",
     };

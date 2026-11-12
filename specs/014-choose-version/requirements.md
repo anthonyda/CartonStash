@@ -1,6 +1,6 @@
 # 014 – Install a chosen version: Requirements
 
-**Status:** Done (2026-11-09). Approved 2026-11-08, with the proposed answers to Q1, Q2 and Q4; Q3 and Q5 decided after T1 (amendments R2.5, R3.3 to R3.7). **Amendment R1.6, R1.7 (2026-11-09): Done**, approved with the proposed answer to Q6. **Amendment R2.6, R2.7, R3.8, R3.9 (2026-11-10): Done**, approved 2026-11-10, Q7 with a notice to the user, Q8 as proposed
+**Status:** Done (2026-11-09). Approved 2026-11-08, with the proposed answers to Q1, Q2 and Q4; Q3 and Q5 decided after T1 (amendments R2.5, R3.3 to R3.7). **Amendment R1.6, R1.7 (2026-11-09): Done**, approved with the proposed answer to Q6. **Amendment R2.6, R2.7, R3.8, R3.9 (2026-11-10): Done**, approved 2026-11-10, Q7 with a notice to the user, Q8 as proposed. **Amendment R2.8 (going back from the newest version, bug review BR-02): approved 2026-11-12**
 **Depends on:** 003 (operation queue, agreements, results), 004 (updates), 005 (details pane, R2.1 version list),
 010 (R5 exclusions from update checks)
 **Replaces:** 005's out-of-scope line "Installing a specific (older) version. The version list is information only in v1."
@@ -124,6 +124,35 @@ version: one for the current user (`Scope: user`, `ALLUSERS=2`) and one for all 
 Not in this amendment, seen in the same runs: an update whose UAC prompt nobody answers shows "Updating…" with no
 hint about the prompt, and WinGet has by then uninstalled the old version (Pandoc's `UpgradeBehavior:
 uninstallPrevious`). That's WinGet's behaviour for any update, not 014's.
+
+## Amendment R2.8 (2026-11-12, bug review BR-02, approved 2026-11-12)
+
+R2.5 is not met when going back starts from the newest version.
+
+**Example:** VLC 3.0.21 is installed, the newest version WinGet has, so the Updates page doesn't list it. In its
+details you choose **Go back to this version** for 3.0.20. When the installer ends, the app checks whether it worked.
+That check, `AfterUpdate`, was written for updates (013) and warns only when both are true:
+
+1. Windows still lists the version from before, **and**
+2. WinGet still offers an update.
+
+- **Going back worked:** Windows lists 3.0.20 and WinGet offers 3.0.21. Condition 1 is false, so no warning. Correct.
+- **The installer did nothing:** Windows still lists 3.0.21, so condition 1 is true. But VLC is still on the newest
+  version, so WinGet offers no update and condition 2 is false. No warning: the app says "Installed successfully", and
+  with **Leave this package out of update checks** ticked (the default) it also excludes VLC. Wrong.
+
+So when going back starts from the newest version, the usual case, the check can never warn. R2.5 says it should: if
+WinGet still lists the version from before, the result shall say so and not claim success.
+
+And when the warning does fire for a go-back (going back from a version that isn't the newest), its words are about
+updating: "Update not confirmed" and "may update itself the next time it starts".
+
+| ID   | Story | Criterion |
+|------|-------|-----------|
+| R2.8 | US1   | After going back (an install of a chosen version over an installed package), R2.5's check shall compare the installed version alone: if WinGet still lists the version from before, the result shall be a warning, whether or not WinGet offers an update. Its card status shall read **Not confirmed**, and its message shall say that Windows still lists {name} {version before} and that going back to {chosen version} may not have worked. R3.2's exclusion isn't added, as for any warning. |
+
+Updates keep 013's rule unchanged: there, an unchanged version with no update offered can be a good update whose
+installer lists another version.
 
 ## Out of scope
 

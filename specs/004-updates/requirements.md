@@ -1,6 +1,6 @@
 # 004 – Updates: Requirements
 
-**Status:** Approved (2026-10-29, R3 deferred). Amendment R6 (updating App Installer): approved 2026-11-04. Amendment R7 (license agreements on update): approved 2026-11-05. Amendment R8 (rows stay in place on reload): approved and done 2026-11-12
+**Status:** Approved (2026-10-29, R3 deferred). Amendment R6 (updating App Installer): approved 2026-11-04. Amendment R7 (license agreements on update): approved 2026-11-05. Amendment R8 (rows stay in place on reload): approved and done 2026-11-12. Amendment R9 (Update all without a confirmation, maintainer's request): approved 2026-11-12
 **Depends on:** 002, 003
 
 ## Problem
@@ -23,7 +23,7 @@ Keeping software current with `winget upgrade` means reading a table, then runni
 | R1.2 | US1   | The list shall come from the same cached data as the Installed page (002), and refresh with it. |
 | R2.1 | US2   | Each row shall offer **Update**, which upgrades that package through the operation queue (003). |
 | R2.2 | US2   | The user shall be able to select rows with checkboxes and press **Update selected**. |
-| R2.3 | US2   | When the user presses **Update all**, the app shall show a confirmation listing the number of packages, then queue them (constitution P2). Excluded packages are left out (010 R5.9). |
+| R2.3 | US2   | ~~When the user presses **Update all**, the app shall show a confirmation listing the number of packages, then queue them (constitution P2).~~ *Replaced by R9.1 (2026-11-12).* Excluded packages are left out (010 R5.9). |
 | R2.4 | US2   | When an update finishes successfully, the package shall leave the Updates list after the refresh. |
 | R3.1 | US3   | **Deferred, see Open questions.** ~~When WinGet requires explicit targeting for a package (pinned, or a version scheme it can't compare), its row shall show "Manual update only" with the reason.~~ |
 | R3.2 | US3   | **Deferred.** ~~"Update all" shall exclude "Manual update only" packages. They can still be updated individually.~~ |
@@ -124,6 +124,17 @@ in the list (more rows before the reload), not on a VM where App Installer had a
 |------|-------|-----------|
 | R8.1 | US2   | When the list reloads (R1.2, R2.4, R6.2, 010 R5.5), rows that are still listed shall stay as they are, in name order; the app shall only remove the rows that left and insert the new ones. Tab and the arrow keys into the list after rows left shall never close the app. |
 | R8.2 | US2   | A checked row (R2.2) that is still listed after the reload shall stay checked and stay in **Update selected**. Before R8 every reload unchecked all rows. |
+
+## Amendment R9: Update all without a confirmation (approved 2026-11-12)
+
+**Maintainer's request, 2026-11-12:** no dialog when pressing **Update all**. The button says what it does, the list it
+acts on is on screen, and a queued update can be cancelled from the Activity pane until its installer starts (003
+R3.2). Constitution P2 is amended the same day.
+
+| ID   | Story | Criterion |
+|------|-------|-----------|
+| R9.1 | US2   | When the user presses **Update all**, the app shall queue at once, without a confirmation, every package on the Updates list that offers **Update**. Excluded packages are left out (010 R5.9) and App Installer is queued last (R6.5). |
+| R9.2 | US2   | License agreements shall still be shown for each package that has them before it is queued (R7), and Uninstall keeps its confirmation (003 R2.2). |
 
 ## Out of scope
 

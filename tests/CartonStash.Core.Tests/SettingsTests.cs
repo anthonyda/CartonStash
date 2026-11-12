@@ -412,3 +412,73 @@ public sealed class SettingsTests : IDisposable
     private static SourceInfo Source(string name, params Agreement[] agreements) =>
         new(name, name, "Microsoft.PreIndexed.Package", "https://cdn.winget.microsoft.com/cache", true, false, DateTimeOffset.Now, agreements);
 }
+
+/// <summary>006 R3.14 to R3.17 (BR-01): explicit sources.</summary>
+public class ExplicitSourceTests
+{
+    [Theory]
+    [InlineData(false, false, false, true)]  // not explicit: always
+    [InlineData(false, true, false, true)]
+    [InlineData(true, false, false, false)]  // explicit, box off: never (R3.14)
+    [InlineData(true, true, false, false)]
+    [InlineData(true, false, true, true)]    // box on: search only (R3.15)
+    [InlineData(true, true, true, false)]    // installed list, updates, background checks: never
+    public void An_explicit_source_counts_only_for_search_with_its_box_R3_14_R3_15(bool isExplicit, bool localFirst, bool searched, bool counts)
+    {
+        var settings = new AppSettings().WithSearched("winget-font", searched);
+
+        Assert.Equal(counts, CartonStash.Core.Services.CatalogConnection.Counts(isExplicit, "winget-font", localFirst, settings));
+    }
+
+    [Fact] // R3.17: per source ID, case-insensitive; unchecking removes it
+    public void The_box_is_saved_per_source_ID_R3_17()
+    {
+        var on = new AppSettings().WithSearched("winget-font", true).WithSearched("WINGET-FONT", true);
+        Assert.Equal(["winget-font"], on.SearchedExplicitSources);
+        Assert.True(on.IsSearched("Winget-Font"));
+        Assert.Empty(on.WithSearched("winget-font", false).SearchedExplicitSources);
+        Assert.NotEqual(new AppSettings(), on); // a change is saved
+    }
+
+    [Fact] // older files: every box off, no reset (as R5.4)
+    public void A_file_without_the_setting_leaves_explicit_sources_out_R3_14()
+    {
+        var settings = System.Text.Json.JsonSerializer.Deserialize<AppSettings>("""{ "Theme": "Dark" }""",
+            new System.Text.Json.JsonSerializerOptions { Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() } })!;
+
+        Assert.Empty(settings.SearchedExplicitSources);
+    }
+
+    [Fact]
+    public void A_source_that_isnt_explicit_is_always_used_in_searches_R3_15()
+    {
+        Assert.True(new SourceInfo("winget", "winget", "t", "a", true, false, null, []).UsedInSearches);
+        Assert.False(new SourceInfo("winget-font", "winget-font", "t", "a", true, true, null, []).UsedInSearches);
+        Assert.Equal("t · a · explicit", new SourceInfo("winget-font", "winget-font", "t", "a", true, true, null, []).DetailText);
+    }
+
+    [Fact] // R3.15, R3.16, R3.17
+    public async Task Checking_the_box_saves_it_reconnects_and_refresh_follows_it_R3_15_R3_17()
+    {
+        var app = new TestApp();
+        SourceInfo Font() => new("winget-font", "winget-font", "t", "a", true, true, null, []) { UsedInSearches = app.Settings.Current.IsSearched("winget-font") };
+        app.Packages.Sources.AddRange([new("winget", "winget", "t", "a", true, false, null, []), Font()]);
+        var vm = new SettingsViewModel(app.Settings, app.Packages, app.Agreements, new FakeClipboard());
+        await vm.LoadCommand.ExecuteAsync(null);
+        Assert.True(vm.HasExplicitSources);
+
+        await vm.RefreshSourcesCommand.ExecuteAsync(null);
+        Assert.DoesNotContain("winget-font", app.Packages.Refreshed);
+
+        var invalidations = app.Packages.Invalidations;
+        await vm.SetUsedInSearchesAsync(vm.Sources[1], true);
+        Assert.True(app.Settings.Current.IsSearched("winget-font"));
+        Assert.True(app.Packages.Invalidations > invalidations);
+        app.Packages.Sources[1] = Font(); // as WinGetPackageService reads it now
+        await vm.LoadCommand.ExecuteAsync(null);
+        Assert.True(vm.Sources[1].UsedInSearches);
+
+        await vm.RefreshSourcesCommand.ExecuteAsync(null);
+        Assert.Contains("winget-font", app.Packages.Refreshed);
+    }
+}

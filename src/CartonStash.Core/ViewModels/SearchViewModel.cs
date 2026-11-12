@@ -128,6 +128,7 @@ public sealed partial class SearchViewModel : ObservableObject
             {
                 _currentSearch = null;
                 IsSearching = false;
+                Details.FollowRows(Results); // BR-03: the old rows are gone
             }
         }
     }

@@ -54,6 +54,17 @@ Starts after 011 is merged. T12 to T16 and T18 don't depend on T11's result.
 - [x] **T19.** Manual in Windows Sandbox: agreements unanswered with the Store endpoint blocked or captured, then each answer; `winget search` still prompts after Accept; clean Sandbox setup with portable and MSIX, including a failed download; keyboard, light, dark and high contrast. *(R3.4 to R3.12, Q5)*
   - Verify: results recorded in the log below.
 
+## Amendment R3.14 to R3.17: explicit sources (2026-11-12, bug review BR-01)
+
+- [x] **T20.** `AppSettings.SearchedExplicitSources`; `CatalogConnection.Counts` in `ConnectAsync` and `SourcesInUse`;
+  `GetSourcesAsync` doesn't read an unused explicit source's agreements; Settings: a **Use in searches** box per
+  explicit source, the paragraph, Refresh sources follows the box. *(R3.14 to R3.17)*
+  - Verify: `ExplicitSourceTests`.
+- [x] **T21.** Manual in the test VM with an explicit source (`winget-font`, or one added with `--explicit`): box off,
+  a font only it has isn't found, as with `winget search`; box on, it is found and installs; Installed and Updates the
+  same either way; the paragraph; keyboard and Narrator read the box with the source name. *(R3.14 to R3.17)* Done 2026-11-12 except installing a
+  font and Narrator: see the log.
+
 ## Manual verification log
 
 | Criterion | Date | Result | Notes |
@@ -85,3 +96,4 @@ Starts after 011 is merged. T12 to T16 and T18 don't depend on T11's result.
 | R6.2 | 2026-11-12 | Pass | Maximized → restart opens maximized; un-maximize returns to 300,100 1400 × 900 |
 | R6.3 | 2026-11-12 | Pass | Saved position set to 6000,3000 → window on screen at 156,156, still 1400 × 900 |
 | R6.1 | 2026-11-12 | Pass | Navigation expanded again → restart keeps it expanded. No crashes during the run |
+| R3.14 to R3.17 (T21) | 2026-11-12 | Pass | VM, Store MSIX 1.4.1 from the bug-review branch. `winget-font` is explicit; `winget search --source winget-font CaskaydiaCove` finds ryanoasis.CaskaydiaCove, the `winget` source doesn't. Box off: no result from `winget-font` on Search. Paragraph shown; the box is found by UI Automation as "Use winget-font in searches"; ticked, settings hold its ID. Box on: the result comes from `winget-font`. Installed lists nothing from it. No crash. Installing a font and Narrator not checked |

@@ -51,3 +51,45 @@ public class AfterUpdateTests
         Assert.Equal(CheckAfterOperation.None, CheckAfter(kind, new OperationOutcome(result, "x"), Pkg.Installed("Autodesk.Fusion", update: true)));
     }
 }
+
+/// <summary>014 R2.8 (BR-02): going back compares the installed version alone, with its own words.</summary>
+public class AfterGoingBackVersionTests
+{
+    private static readonly OperationOutcome Ok = new(OperationResult.Succeeded, "Installed successfully.", "WinGet status: Ok");
+
+    [Theory] // from the newest version no update is offered before or after: it still warns
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Going_back_with_the_old_version_still_listed_is_a_warning_R2_8(bool updateAvailable)
+    {
+        var outcome = AfterUpdate(Ok, "3.0.21", new InstalledAfterUpdate("3.0.21", updateAvailable), "VLC", goingBackTo: "3.0.20");
+
+        Assert.Equal(OperationResult.SucceededUnconfirmed, outcome.Result);
+        Assert.Equal("WinGet finished without an error, but Windows still lists VLC 3.0.21. Going back to 3.0.20 may not have worked.", outcome.Message);
+    }
+
+    [Theory]
+    [InlineData("3.0.20", true)] // went back
+    [InlineData(null, false)]    // couldn't read (013 R2.3)
+    public void Going_back_that_changed_the_version_stays_a_success_R2_8(string? after, bool readable)
+    {
+        Assert.Same(Ok, AfterUpdate(Ok, "3.0.21", readable ? new InstalledAfterUpdate(after, true) : null, "VLC", goingBackTo: "3.0.20"));
+    }
+
+    [Fact] // updates keep 013's rule: no update offered, same version, is a success
+    public void An_update_keeps_013s_rule_R2_8()
+    {
+        var ok = new OperationOutcome(OperationResult.Succeeded, "Updated successfully.");
+        Assert.Same(ok, AfterUpdate(ok, "2.0", new InstalledAfterUpdate("2.0", UpdateAvailable: false), "X"));
+    }
+
+    [Theory] // the card's status names what was not confirmed
+    [InlineData(OperationKind.Upgrade, "Update not confirmed")]
+    [InlineData(OperationKind.Install, "Not confirmed")]
+    public void The_status_text_follows_the_kind_R2_8(OperationKind kind, string text)
+    {
+        var operation = new PackageOperation(kind, Pkg.Installed("X"), false, _ => { }, _ => { }, _ => { }, () => { }) { Phase = OperationPhase.Done, Result = OperationResult.SucceededUnconfirmed };
+
+        Assert.Equal(text, operation.StatusText);
+    }
+}

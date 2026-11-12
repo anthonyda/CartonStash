@@ -167,6 +167,22 @@ The app also applies this table each time it opens, packaged only, without touch
 
 One behavior the design didn't expect: when `RequestEnableAsync` turns the entry on, Windows starts the exe through it right away, with kind `StartupTask` (5 seconds later in the probe). Turning it on from Startup apps didn't do this. The check path handles it unchanged: `IsDue` decides, and right after the user turns checks on, no check is due, so the process exits. T16 confirms that turning checks on shows nothing.
 
+## Amendment R3.18: two triggers in one process (approved 2026-11-12)
+
+- A small Core class, `ActiveTasks`, counts the tasks the COM server runs: `Begin()`, and `End()` that returns true
+  for the last one. `BackgroundCheckTask.Run` calls `Begin()` before it starts and `End()` after `deferral.Complete()`;
+  only the last `End()` calls `Program.SignalBackgroundDone()`. The 12-minute limit stays the backstop.
+- A second `Run` still finds the mutex and records nothing (R3.17).
+- Tests: `ActiveTasks` (unit): two begins and one end don't signal, the second end does. Manual check in the VM as in
+  the requirements: one history entry, and the next daily timer set.
+
+## Amendment R3.13: failure reasons keep their paths (approved 2026-11-12)
+
+- `CheckHistoryStore.Append` saves the reason unchanged; `RemovePaths` and its pattern go.
+- `PRIVACY.md`, history line: "It can include your user name and file paths", as for logs (R3.13b), in the same commit.
+- Tests: `CheckHistoryStoreTests`, a reason with `C:\Users\Jean Dupont\AppData\…` and one with `C:/Users/…` read back
+  unchanged (replaces the "no paths" test).
+
 ## Risks and alternatives considered
 
 - **If sign-in after a shutdown fails (T11):** a hidden check through the MSIX's startup task, as the requirements say. It covers sign-in only, and unlock already works. **It failed on 2026-11-02**, so this is amendment R3.14 above.

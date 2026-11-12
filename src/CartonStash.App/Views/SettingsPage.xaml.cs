@@ -34,6 +34,14 @@ public sealed partial class SettingsPage : Page
     }
 
     // Item templates can't reach the page's view model with x:Bind; forward the clicked source.
+    private async void UseInSearches_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is CheckBox { Tag: SourceInfo source } box)
+        {
+            await ViewModel.SetUsedInSearchesAsync(source, box.IsChecked == true); // 006 R3.15
+        }
+    }
+
     private void ReviewAgreements_Click(object sender, RoutedEventArgs e)
     {
         if (sender is FrameworkElement { Tag: SourceInfo source })

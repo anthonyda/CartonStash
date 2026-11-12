@@ -35,7 +35,7 @@ investigation task before the design is final.
 ## Data flow
 
 `InstalledPackagesStore.Changed` → `UpdatesViewModel` rebuilds `Updates = all.Where(HasUpdate)` (sorted by name)
-→ `ShellViewModel.UpdatesCount`. Update all → confirm (n packages) → `queue.EnqueueMany`
+→ `ShellViewModel.UpdatesCount`. Update all → `queue.EnqueueMany` (no confirmation since amendment R9)
 → each completion triggers a store reload (debounced to once per queue drain, so updating 20 packages doesn't reload 20 times).
 
 ## UI
@@ -263,3 +263,10 @@ change sets that index back to 0 when it falls past the end; a `Reset` doesn't. 
 The Installed page (`InstalledViewModel.ApplyFilter`) and Search results also refill their lists with `Clear`; not changed
 here.
 
+## Amendment R9: Update all without a confirmation (approved 2026-11-12)
+
+- `UpdatesViewModel.UpdateAll` calls `PackageActions.UpdateManyAsync(..., confirm: false)`, as **Update selected**
+  already does. The confirmation code stays for nothing else, so it goes if nothing else uses it.
+- Agreements (R7) are still asked inside `UpdateManyAsync`, per package.
+- Tests: `UpdatesViewModelTests`: Update all shows no dialog and queues every row with `ShowUpdate`; one with an
+  agreement still asks.

@@ -63,6 +63,9 @@ public sealed class CatalogConnection(ISettings settings)
 
     internal SourceAgreementAnswer? AnswerFor(string sourceId) => settings.Current.SourceAgreementAnswers.GetValueOrDefault(sourceId);
 
+    /// <summary>006 R3.15: the explicit source's <b>Use in searches</b> box.</summary>
+    internal bool IsSearched(string sourceId) => settings.Current.IsSearched(sourceId);
+
     /// <summary>The source's agreements, read by index (W2).</summary>
     internal static List<Agreement> ReadAgreements(PackageCatalogReference reference)
     {
@@ -136,6 +139,13 @@ public sealed class CatalogConnection(ISettings settings)
 
     private bool IsInUse(string sourceName) => !_failedSources.ContainsKey(sourceName) && !_leftOutSources.ContainsKey(sourceName);
 
+    /// <summary>
+    /// 006 R3.14, R3.15: an explicit source counts only for search (the remote-first catalog), and only with its
+    /// <b>Use in searches</b> box checked. The installed list, updates and background checks leave it out, as <c>winget</c>.
+    /// </summary>
+    internal static bool Counts(bool isExplicit, string sourceId, bool localFirst, AppSettings settings) =>
+        !isExplicit || (!localFirst && settings.IsSearched(sourceId));
+
     private async Task<PackageCatalog?> ConnectAsync(bool localFirst, Func<string, bool> include, CancellationToken cancellationToken)
     {
         var options = new CreateCompositePackageCatalogOptions
@@ -151,9 +161,9 @@ public sealed class CatalogConnection(ISettings settings)
             for (var i = 0; i < catalogs.Count; i++)
             {
                 var reference = catalogs[i];
-                if (!include(reference.Info.Name))
+                if (!include(reference.Info.Name) || !Counts(reference.Info.Explicit, reference.Info.Id, localFirst, settings.Current))
                 {
-                    continue;
+                    continue; // R3.14: an explicit source not used here isn't even read
                 }
                 var name = reference.Info.Name;
                 if (AnswerFor(reference.Info.Id) is { Accepted: false })
@@ -215,20 +225,21 @@ public sealed class CatalogConnection(ISettings settings)
             async () => await GetAsync(localFirst, cancellationToken) is { } catalog
                 ? await FindMatchesAsync(catalog, options(), cancellationToken)
                 : [],
-            SourcesInUse,
+            () => SourcesInUse(localFirst),
             () => SourceFailures,
             source => Task.Run(() => ProbeAsync(source, localFirst, options, cancellationToken), cancellationToken),
             (source, code) => new SourceFailure(source, SourceFailureMessages.Describe(source, code, WindowsRegion.IsCountry()), code),
             LeaveOut);
 
-    private List<string> SourcesInUse()
+    private List<string> SourcesInUse(bool localFirst)
     {
         var catalogs = Manager.GetPackageCatalogs();
         var names = new List<string>(catalogs.Count);
         for (var i = 0; i < catalogs.Count; i++)
         {
-            var name = catalogs[i].Info.Name;
-            if (IsInUse(name))
+            var info = catalogs[i].Info;
+            var name = info.Name;
+            if (IsInUse(name) && Counts(info.Explicit, info.Id, localFirst, settings.Current)) // 011 R1.3: never test a source not used
             {
                 names.Add(name);
             }
