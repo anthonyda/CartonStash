@@ -42,3 +42,17 @@ public class VersionCacheTests
         Assert.Equal("installed", cache.Any("X"));
     }
 }
+
+/// <summary>BR-29: the same ID from two sources keeps two entries.</summary>
+public class CacheKeyTests
+{
+    [Fact]
+    public void Two_sources_with_one_ID_have_two_keys()
+    {
+        var cache = new VersionCache<string>();
+        cache.SetSearch([new(WinGetPackageService.CacheKey("winget", "VideoLAN.VLC"), "public"), new(WinGetPackageService.CacheKey("corp", "VideoLAN.VLC"), "mirror")]);
+
+        Assert.Equal("public", cache.Any(WinGetPackageService.CacheKey("winget", "VideoLAN.VLC")));
+        Assert.Equal("mirror", cache.Any(WinGetPackageService.CacheKey("CORP", "videolan.vlc"))); // case-insensitive, as before
+    }
+}

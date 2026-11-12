@@ -123,7 +123,7 @@ public sealed class WinGetPackageService(CatalogConnection connection, IInstallC
             var available = package.DefaultInstallVersion;
             if (available is not null)
             {
-                _versions.SetInstalled(package.Id, available); // 005 R5 icons
+                _versions.SetInstalled(CacheKey(available.PackageCatalog.Info.Name, package.Id), available); // 005 R5 icons
             }
             packages.Add(new MatchedPackage(
                 package.Id,
@@ -140,7 +140,10 @@ public sealed class WinGetPackageService(CatalogConnection connection, IInstallC
 
     /// <summary>WinGet decides how an installed version compares with a package's available version (002 R7.1, P1).</summary>
     private VersionStatus CompareWithAvailable(MatchedPackage package, string installedVersion) =>
-        _versions.Installed(package.Id) is { } available ? Compare(available, installedVersion) : VersionStatus.Unknown;
+        _versions.Installed(CacheKey(package.Source, package.Id)) is { } available ? Compare(available, installedVersion) : VersionStatus.Unknown;
+
+    /// <summary>BR-29: two sources can list the same ID; each keeps its own icon and version.</summary>
+    internal static string CacheKey(string? source, string id) => $"{source}{id}";
 
     internal static VersionStatus ToVersionStatus(CompareResult availableComparedToInstalled) => availableComparedToInstalled switch
     {
@@ -257,11 +260,12 @@ public sealed class WinGetPackageService(CatalogConnection connection, IInstallC
 
     public async Task<string?> GetIconUrlAsync(PackageInfo package, CancellationToken cancellationToken = default)
     {
-        if (_iconUrls.TryGetValue(package.Id, out var cached))
+        var key = CacheKey(package.Source, package.Id);
+        if (_iconUrls.TryGetValue(key, out var cached))
         {
             return cached;
         }
-        if (_versions.Any(package.Id) is not { } version)
+        if (_versions.Any(key) is not { } version)
         {
             return null;
         }
@@ -270,7 +274,7 @@ public sealed class WinGetPackageService(CatalogConnection connection, IInstallC
         try
         {
             var url = await Task.Run(() => PickIcon(version.GetCatalogPackageMetadata().Icons), cancellationToken);
-            _iconUrls[package.Id] = url;
+            _iconUrls[key] = url;
             return url;
         }
         finally
@@ -378,7 +382,7 @@ public sealed class WinGetPackageService(CatalogConnection connection, IInstallC
             var info = ToPackageInfo(package);
             if (package.DefaultInstallVersion is { } version)
             {
-                versions.Add(new(info.Id, version));
+                versions.Add(new(CacheKey(info.Source, info.Id), version));
             }
             packages.Add(info);
         }
