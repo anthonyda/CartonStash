@@ -20,19 +20,25 @@ public sealed partial class MainWindow : Window
         ["settings"] = typeof(SettingsPage),
     };
 
+    /// <summary>Smaller saved sizes are ignored (006 R6).</summary>
+    private const int MinRestoreWidth = 500, MinRestoreHeight = 400;
+
+    private readonly ISettings _settings;
     private bool _closeConfirmed;
     private bool _checkedAgreements;
+    private Windows.Graphics.RectInt32 _normalBounds;
 
     public MainWindow(ShellViewModel shell, ActivityViewModel activity, DialogService dialogs, ThemeService theme,
         SourceAgreementCheck agreements, ISettings settings)
     {
         Shell = shell;
         Activity = activity;
+        _settings = settings;
         InitializeComponent();
 
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
-        AppWindow.Resize(new Windows.Graphics.SizeInt32(1200, 780));
+        RestoreLayout(settings.Current);
         AppWindow.SetIcon(Path.Combine(AppContext.BaseDirectory, "Assets", "AppIcon.ico")); // taskbar + Alt+Tab
         AppWindow.Closing += AppWindow_Closing;
 
@@ -152,17 +158,73 @@ public sealed partial class MainWindow : Window
 
     private void CloseActivity_Click(object sender, RoutedEventArgs e) => ActivitySplit.IsPaneOpen = false;
 
+    // 006 R6.2–R6.4: saved size, position, maximized state and navigation pane, or the defaults.
+    private void RestoreLayout(AppSettings saved)
+    {
+        Nav.IsPaneOpen = saved.NavPaneOpen;
+
+        if (saved.Window is not { Width: >= MinRestoreWidth, Height: >= MinRestoreHeight } w)
+        {
+            AppWindow.Resize(new Windows.Graphics.SizeInt32(1200, 780));
+        }
+        else
+        {
+            var rect = new Windows.Graphics.RectInt32(w.X, w.Y, w.Width, w.Height);
+            if (DisplayArea.GetFromRect(rect, DisplayAreaFallback.None) is null)
+            {
+                AppWindow.Resize(new Windows.Graphics.SizeInt32(w.Width, w.Height)); // R6.3: off every display
+            }
+            else
+            {
+                AppWindow.MoveAndResize(rect);
+            }
+        }
+
+        _normalBounds = CurrentBounds();
+        if (saved.Window?.Maximized == true && AppWindow.Presenter is OverlappedPresenter presenter)
+        {
+            presenter.Maximize();
+        }
+
+        // Track the normal bounds so a maximized window still saves its restore size (R6.2).
+        AppWindow.Changed += (sender, args) =>
+        {
+            if ((args.DidSizeChange || args.DidPositionChange) && sender.Presenter is OverlappedPresenter { State: OverlappedPresenterState.Restored })
+            {
+                _normalBounds = CurrentBounds();
+            }
+        };
+    }
+
+    private Windows.Graphics.RectInt32 CurrentBounds() =>
+        new(AppWindow.Position.X, AppWindow.Position.Y, AppWindow.Size.Width, AppWindow.Size.Height);
+
+    // 006 R6.1
+    private void SaveLayout()
+    {
+        var maximized = AppWindow.Presenter is OverlappedPresenter { State: OverlappedPresenterState.Maximized };
+        var b = _normalBounds;
+        _settings.Update(s => s with
+        {
+            Window = new WindowLayout(b.X, b.Y, b.Width, b.Height, maximized),
+            // Compact and minimal modes close the pane on their own; keep the user's choice from expanded mode.
+            NavPaneOpen = Nav.DisplayMode == NavigationViewDisplayMode.Expanded ? Nav.IsPaneOpen : s.NavPaneOpen,
+        });
+    }
+
     // 003 R6.2: warn before quitting with operations queued or running.
     private async void AppWindow_Closing(AppWindow sender, AppWindowClosingEventArgs args)
     {
         if (_closeConfirmed || !Shell.HasPendingWork)
         {
+            SaveLayout();
             return;
         }
 
         args.Cancel = true;
         if (await Shell.ConfirmCloseAsync())
         {
+            SaveLayout();
             _closeConfirmed = true;
             Close();
         }

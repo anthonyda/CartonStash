@@ -47,6 +47,12 @@ public sealed record AppSettings
     /// <summary>Keep the Activity pane open beside the page (009 R3.4).</summary>
     public bool ActivityPinned { get; init; }
 
+    /// <summary>The main window's last size and position (006 R6.1). Null until the window first closes (R6.4).</summary>
+    public WindowLayout? Window { get; init; }
+
+    /// <summary>Whether the navigation pane was expanded (006 R6.1). Missing in older files, which keep it expanded.</summary>
+    public bool NavPaneOpen { get; init; } = true;
+
     /// <summary>Missing in files saved before 010, which then keep checks off (R3.5).</summary>
     public CheckMode CheckMode { get; init; } = CheckMode.Off;
 
@@ -78,6 +84,7 @@ public sealed record AppSettings
         other is not null
         && (Theme, InstallScope, StartPage, ActivityPinned) == (other.Theme, other.InstallScope, other.StartPage, other.ActivityPinned)
         && (CheckMode, CheckIntervalHours, CheckTime, CheckScheduleSetAt) == (other.CheckMode, other.CheckIntervalHours, other.CheckTime, other.CheckScheduleSetAt)
+        && (Window, NavPaneOpen) == (other.Window, other.NavPaneOpen)
         && ExcludedPackageIds.SequenceEqual(other.ExcludedPackageIds, StringComparer.OrdinalIgnoreCase)
         && SourceAgreementAnswers.Count == other.SourceAgreementAnswers.Count
         && SourceAgreementAnswers.All(a => other.SourceAgreementAnswers.TryGetValue(a.Key, out var answer) && a.Value == answer);
@@ -85,6 +92,9 @@ public sealed record AppSettings
     public override int GetHashCode() =>
         HashCode.Combine(Theme, InstallScope, StartPage, ActivityPinned, CheckMode, CheckIntervalHours, CheckTime, SourceAgreementAnswers.Count);
 }
+
+/// <summary>The main window's normal (not maximized) bounds in physical pixels, and whether it was maximized (006 R6).</summary>
+public sealed record WindowLayout(int X, int Y, int Width, int Height, bool Maximized);
 
 /// <summary>What the user answered for a source's agreements, and which text they saw (006 R3.9).</summary>
 public sealed record SourceAgreementAnswer(bool Accepted, string TextHash);

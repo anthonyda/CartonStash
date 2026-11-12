@@ -34,6 +34,32 @@ public sealed class SettingsTests : IDisposable
     }
 
     [Fact]
+    public void Window_layout_survives_a_restart() // R6.1, R6.2
+    {
+        var saved = new AppSettings { Window = new WindowLayout(-1500, 120, 1400, 900, Maximized: true), NavPaneOpen = false };
+        new JsonSettingsStore(SettingsPath).Save(saved);
+
+        var (loaded, reset) = new JsonSettingsStore(SettingsPath).Load();
+
+        Assert.Equal(saved, loaded);
+        Assert.NotEqual(new AppSettings(), loaded);
+        Assert.False(reset);
+    }
+
+    [Fact]
+    public void File_from_before_window_layout_keeps_defaults() // R6.4
+    {
+        Directory.CreateDirectory(_dir);
+        File.WriteAllText(SettingsPath, """{ "Theme": "Dark" }""");
+
+        var (loaded, reset) = new JsonSettingsStore(SettingsPath).Load();
+
+        Assert.Null(loaded.Window);
+        Assert.True(loaded.NavPaneOpen);
+        Assert.False(reset);
+    }
+
+    [Fact]
     public void Source_agreement_answers_survive_a_restart() // R3.9
     {
         var saved = new AppSettings
