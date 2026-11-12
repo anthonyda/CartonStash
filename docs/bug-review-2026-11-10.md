@@ -283,7 +283,7 @@ being skipped. The log store only catches `IOException` and `UnauthorizedAccessE
 
 ### BR-11 A failed App Installer setup may end the app instead of showing the reason
 
-- [ ] Reviewed. *2026-11-12, fix approved as proposed: catch any error from Windows' package install in App Installer setup and show its message ("Windows couldn't install App Installer: …") instead of ending the app. Unit test with an `addPackage` that throws. Code waits until the whole review is read.*
+- [x] Reviewed. *2026-11-12, fixed: an exception from Windows' package install is caught and its message shown ("Windows couldn't install App Installer: …"). `Passes_on_the_reason_when_windows_throws`.*
 
 **Where:** [AppInstallerSetup.cs:122-131](../src/CartonStash.Core/Services/AppInstallerSetup.cs#L122-L131),
 [AppInstallerSetup.cs:58](../src/CartonStash.Core/Services/AppInstallerSetup.cs#L58),
@@ -299,7 +299,7 @@ has no catch, so "Windows couldn't install App Installer: …" would never show.
 
 ### BR-12 "WinGet couldn't start" only handles one exception type
 
-- [ ] Reviewed. *2026-11-12, fix approved as proposed: at start, any error from WinGet (not only `COMException`) opens the "WinGet couldn't start" window instead of ending the app. Code waits until the whole review is read.*
+- [x] Reviewed. *2026-11-12, fixed: at start any exception from activating WinGet opens the setup window; the row badge's comparison catches any type too.*
 
 **Where:** [App.xaml.cs:27-59](../src/CartonStash.App/App.xaml.cs#L27-L59). Spec 011 R3.5 (still pending in the roadmap).
 
@@ -313,7 +313,7 @@ narrow filter is in [SourceAgreementCheck.cs:24](../src/CartonStash.Core/Service
 
 ### BR-13 Copy can end the app when the clipboard is busy
 
-- [ ] Reviewed. *2026-11-12, fix approved as proposed: when Windows refuses the clipboard (another program holds it), wait a moment and retry once; if it still fails, say "Couldn't copy: another program is using the clipboard. Try again." instead of ending the app. Covers the Log dialog's Copy and Settings' Copy diagnostic info. Code waits until the whole review is read.*
+- [x] Reviewed. *2026-11-12, fixed: the clipboard is tried twice; then the Log dialog's button reads "Couldn't copy, try again" and Settings says so. `A_busy_clipboard_says_so`.*
 
 **Where:** [PlatformServices.cs:188-197](../src/CartonStash.App/Services/PlatformServices.cs#L188-L197), called from
 [PlatformServices.cs:157-161](../src/CartonStash.App/Services/PlatformServices.cs#L157-L161) and
@@ -422,7 +422,7 @@ happen today.
 
 ### BR-19 A failed icon download leaves an empty square
 
-- [ ] Reviewed. *2026-11-12: reproduced in the test VM (1.4.0 Store build, the app's downloads blocked by a firewall rule): rows with an icon address show nothing. Fix approved: on `ImageFailed`, show the generic package glyph again. Code waits until the whole review is read.*
+- [x] Reviewed. *2026-11-12, fixed: on `ImageFailed` the control shows the generic glyph again. Reproduced in the test VM on 1.4.0; the fix still to see in the VM.*
 
 **Where:** [PackageIcon.xaml.cs:83-90](../src/CartonStash.App/Controls/PackageIcon.xaml.cs#L83-L90). Spec 005 R5.1.
 Confirmed.
@@ -589,7 +589,7 @@ Unit tests in `CheckScheduleTests` with the example above.
 
 ### BR-28 GitHub notes that can't be parsed break the pane for that package
 
-- [ ] Reviewed. *2026-11-12, fix approved as proposed. Code waits until the whole review is read.*
+- [x] Reviewed. *2026-11-12, fixed: a GitHub body or WinGet notes the parser can't read cost the notes only ("Couldn't read the notes from GitHub…"), never the details. `Cached_notes_that_cant_be_parsed_leave_the_details_R2_9`.*
 
 **Where:** [GitHubReleaseNotesService.cs:72-75](../src/CartonStash.Core/Services/GitHubReleaseNotesService.cs#L72-L75),
 [PackageDetailsViewModel.cs:279-282](../src/CartonStash.Core/ViewModels/PackageDetailsViewModel.cs#L279-L282).
@@ -638,7 +638,7 @@ ends. Unit test with a slow fake load.
 
 ### BR-31 `Publish-Release.ps1` empties any folder it is given
 
-- [ ] Reviewed. *2026-11-12, fix approved as proposed. Code waits until the whole review is read.*
+- [x] Reviewed. *2026-11-12, fixed: only the default folders, or folders holding build files alone, are emptied; otherwise the script stops unless `-Force`. Checked by hand with a folder holding a text file.*
 
 **Where:** [Publish-Release.ps1:27-30](../tools/Publish-Release.ps1#L27-L30). Developer tool only. Confirmed.
 
@@ -652,7 +652,7 @@ use an empty folder or pass -Force". The VM build folders are new and empty each
 
 ### BR-32 A restart on the Settings page may open it with nothing selected in the navigation
 
-- [ ] Reviewed. *2026-11-12, fix approved as proposed. Code waits until the whole review is read.*
+- [x] Reviewed. *2026-11-12, fixed: when the navigation has no Settings item yet, it's selected once the navigation has loaded. Not checked in the VM.*
 
 **Where:** [MainWindow.xaml.cs:82-84](../src/CartonStash.App/MainWindow.xaml.cs#L82-L84). Spec 004 R6.3.
 Plausible; cosmetic.
@@ -666,7 +666,7 @@ VM: restart from Settings.
 
 ### BR-33 Small gaps
 
-- [ ] Reviewed. *2026-11-12, fix approved as proposed. Code waits until the whole review is read.*
+- [x] Reviewed. *2026-11-12, fixed, all five: an unreadable settings file is left as it is; one history writer at a time with a unique temp file; the background server exits when its COM registration fails; Open folder can't end the app; cards re-read their time when the Activity pane opens or the window comes back.*
 
 Five small ones, each with its fix:
 
