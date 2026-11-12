@@ -268,7 +268,7 @@ being skipped. The log store only catches `IOException` and `UnauthorizedAccessE
 
 ### BR-11 A failed App Installer setup may end the app instead of showing the reason
 
-- [ ] Reviewed
+- [ ] Reviewed. *2026-11-12, fix approved as proposed: catch any error from Windows' package install in App Installer setup and show its message ("Windows couldn't install App Installer: …") instead of ending the app. Unit test with an `addPackage` that throws. Code waits until the whole review is read.*
 
 **Where:** [AppInstallerSetup.cs:122-131](../src/CartonStash.Core/Services/AppInstallerSetup.cs#L122-L131),
 [AppInstallerSetup.cs:58](../src/CartonStash.Core/Services/AppInstallerSetup.cs#L58),
