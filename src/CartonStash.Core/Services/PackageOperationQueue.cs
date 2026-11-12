@@ -47,13 +47,14 @@ public sealed class PackageOperationQueue(IPackageInstaller installer, IOperatio
 
     /// <summary>
     /// The newest operation for this installed program (or package, for search results), if any. Matched by
-    /// <see cref="PackageInfo.Key"/>: programs sharing a WinGet ID don't share operations (002 R6.5).
+    /// <see cref="PackageInfo.IsSamePackage"/>: programs sharing a WinGet ID don't share operations (002 R6.5), and a
+    /// Search row sees one queued from Installed or Updates (BR-07).
     /// </summary>
     public PackageOperation? Find(PackageInfo package)
     {
         for (var i = 0; i < Operations.Count; i++)
         {
-            if (string.Equals(Operations[i].Package.Key, package.Key, StringComparison.OrdinalIgnoreCase))
+            if (Operations[i].Package.IsSamePackage(package)) // BR-07
             {
                 return Operations[i];
             }

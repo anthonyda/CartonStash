@@ -47,6 +47,17 @@ public sealed record PackageInfo(
     /// <summary>Identity of the row: several installed programs can share one WinGet ID (002 R6.5).</summary>
     public string Key => InstalledId ?? Id;
 
+    /// <summary>
+    /// 003 R4.2 (BR-07): the same package for the queue and the rows. Two installed programs compare by installed entry
+    /// ID (002 R6.5). When either side has none (a Search row), the WinGet ID and the source decide, so an update queued
+    /// from Updates is seen from Search, and the same ID from two sources stays two packages.
+    /// </summary>
+    public bool IsSamePackage(PackageInfo other) =>
+        InstalledId is not null && other.InstalledId is not null
+            ? string.Equals(InstalledId, other.InstalledId, StringComparison.OrdinalIgnoreCase)
+            : string.Equals(Id, other.Id, StringComparison.OrdinalIgnoreCase)
+              && (string.IsNullOrEmpty(Source) || string.IsNullOrEmpty(other.Source) || string.Equals(Source, other.Source, StringComparison.OrdinalIgnoreCase));
+
     public bool IsInstalled => InstalledVersion is not null;
 
     public bool HasUpdate => IsInstalled && UpdateAvailable;
