@@ -1,6 +1,6 @@
 # 016 – Updates count on the taskbar icon: Requirements
 
-**Status:** Approved (2026-11-12), with the proposed answers to Q1 and Q2.
+**Status:** Approved (2026-11-12), with the proposed answers to Q1 and Q2. **Done** 2026-11-12
 **Depends on:** 004 (R4.1 Updates count badge), 010 (background checks; R5.7 excluded packages don't count)
 
 ## Problem

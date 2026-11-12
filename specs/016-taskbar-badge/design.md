@@ -1,6 +1,6 @@
 # 016 – Updates count on the taskbar icon: Design
 
-**Status:** Approved (2026-11-12). In progress
+**Status:** Approved (2026-11-12). Done 2026-11-12
 **Requirements:** [requirements.md](requirements.md)
 
 ## Overview
