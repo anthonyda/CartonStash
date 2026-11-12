@@ -89,8 +89,63 @@
                 PaneBackground="{ThemeResource SolidBackgroundFillColorBaseBrush}"
                 PanePlacement="Right">
                 <SplitView.Pane>
-                    <Grid Padding="16" RowSpacing="12">
+                    <Grid Padding="16" RowSpacing="8">
+                        <Grid.Resources>
+                            <!-- 009 R4.4, R4.10: dividers are headings with the count in words; Failed has its own word and color -->
+                            <DataTemplate x:Key="ActivityHeaderTemplate" x:DataType="models:ActivityHeader">
+                                <Grid
+                                    Margin="0,8,0,0"
+                                    AutomationProperties.HeadingLevel="Level3"
+                                    AutomationProperties.Name="{x:Bind AccessibleName}"
+                                    ColumnSpacing="8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Foreground="{ThemeResource TextFillColorSecondaryBrush}" Style="{StaticResource CaptionTextBlockStyle}">
+                                        <Run FontWeight="SemiBold" Text="{x:Bind Name}" />
+                                        <Run Text="{x:Bind CountText}" />
+                                    </TextBlock>
+                                    <Rectangle
+                                        Grid.Column="1"
+                                        Height="1"
+                                        VerticalAlignment="Center"
+                                        Fill="{ThemeResource DividerStrokeColorDefaultBrush}" />
+                                </Grid>
+                            </DataTemplate>
+                            <DataTemplate x:Key="ActivityFailedHeaderTemplate" x:DataType="models:ActivityHeader">
+                                <Grid
+                                    Margin="0,8,0,0"
+                                    AutomationProperties.HeadingLevel="Level3"
+                                    AutomationProperties.Name="{x:Bind AccessibleName}"
+                                    ColumnSpacing="8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Foreground="{ThemeResource SystemFillColorCriticalBrush}" Style="{StaticResource CaptionTextBlockStyle}">
+                                        <Run FontWeight="SemiBold" Text="{x:Bind Name}" />
+                                        <Run Text="{x:Bind CountText}" />
+                                    </TextBlock>
+                                    <Rectangle
+                                        Grid.Column="1"
+                                        Height="1"
+                                        VerticalAlignment="Center"
+                                        Fill="{ThemeResource SystemFillColorCriticalBrush}" />
+                                </Grid>
+                            </DataTemplate>
+                            <DataTemplate x:Key="ActivityOperationTemplate" x:DataType="models:PackageOperation">
+                                <controls:OperationCard Operation="{x:Bind}" />
+                            </DataTemplate>
+                            <controls:ActivityEntryTemplateSelector
+                                x:Key="ActivityEntrySelector"
+                                FailedHeader="{StaticResource ActivityFailedHeaderTemplate}"
+                                Header="{StaticResource ActivityHeaderTemplate}"
+                                Operation="{StaticResource ActivityOperationTemplate}" />
+                        </Grid.Resources>
                         <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="*" />
                         </Grid.RowDefinitions>
@@ -103,6 +158,20 @@
                                 HorizontalAlignment="Right"
                                 Orientation="Horizontal"
                                 Spacing="4">
+                                <!-- 009 R4.5 -->
+                                <DropDownButton
+                                    AutomationProperties.Name="{x:Bind Activity.SortText, Mode=OneWay}"
+                                    ToolTipService.ToolTip="{x:Bind Activity.SortText, Mode=OneWay}">
+                                    <FontIcon FontSize="12" Glyph="&#xE8CB;" />
+                                    <DropDownButton.Flyout>
+                                        <MenuFlyout Opening="ActivitySort_Opening" Placement="BottomEdgeAlignedRight">
+                                            <RadioMenuFlyoutItem Click="ActivitySort_Click" GroupName="ActivitySort" Tag="Default" Text="Default" />
+                                            <RadioMenuFlyoutItem Click="ActivitySort_Click" GroupName="ActivitySort" Tag="Newest" Text="Newest first" />
+                                            <RadioMenuFlyoutItem Click="ActivitySort_Click" GroupName="ActivitySort" Tag="Oldest" Text="Oldest first" />
+                                            <RadioMenuFlyoutItem Click="ActivitySort_Click" GroupName="ActivitySort" Tag="Name" Text="Name A to Z" />
+                                        </MenuFlyout>
+                                    </DropDownButton.Flyout>
+                                </DropDownButton>
                                 <Button Command="{x:Bind Activity.ClearFinishedCommand}" Content="Clear finished" />
                                 <!-- 009 R3.1 -->
                                 <ToggleButton
@@ -120,16 +189,47 @@
                                 </Button>
                             </StackPanel>
                         </Grid>
-                        <TextBlock
+                        <!-- 009 R4.1; Esc clears it (R4.10) -->
+                        <TextBox
                             Grid.Row="1"
+                            AutomationProperties.Name="Filter activity by name or ID"
+                            KeyDown="ActivityFilter_KeyDown"
+                            PlaceholderText="Filter by name or ID"
+                            Text="{x:Bind Activity.FilterText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        <!-- 009 R4.2, R4.3 -->
+                        <SelectorBar
+                            x:Name="ActivityTabs"
+                            Grid.Row="2"
+                            AutomationProperties.Name="Show"
+                            SelectionChanged="ActivityTabs_SelectionChanged">
+                            <SelectorBarItem IsSelected="True" Tag="All" Text="{x:Bind Activity.AllTabText, Mode=OneWay}" />
+                            <SelectorBarItem Tag="Active" Text="{x:Bind Activity.ActiveTabText, Mode=OneWay}" />
+                            <SelectorBarItem Tag="Done" Text="{x:Bind Activity.DoneTabText, Mode=OneWay}" />
+                            <SelectorBarItem Tag="Failed" Text="{x:Bind Activity.FailedTabText, Mode=OneWay}" />
+                        </SelectorBar>
+                        <TextBlock
+                            Grid.Row="3"
                             Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                             Text="Nothing yet. Installs, updates and uninstalls show up here."
                             TextWrapping="Wrap"
                             Visibility="{x:Bind Activity.IsEmpty, Mode=OneWay}" />
+                        <!-- 009 R4.7 -->
+                        <StackPanel
+                            Grid.Row="3"
+                            Spacing="4"
+                            Visibility="{x:Bind Activity.HasNoMatch, Mode=OneWay}">
+                            <TextBlock Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="No operations match." />
+                            <HyperlinkButton
+                                Padding="0"
+                                Command="{x:Bind Activity.ClearFilterCommand}"
+                                Content="Clear filter" />
+                        </StackPanel>
                         <ListView
-                            Grid.Row="1"
+                            Grid.Row="3"
                             AutomationProperties.Name="Operations"
-                            ItemsSource="{x:Bind Activity.Operations}"
+                            ContainerContentChanging="ActivityList_ContainerContentChanging"
+                            ItemTemplateSelector="{StaticResource ActivityEntrySelector}"
+                            ItemsSource="{x:Bind Activity.Entries}"
                             SelectionMode="None">
                             <ListView.ItemContainerStyle>
                                 <Style BasedOn="{StaticResource DefaultListViewItemStyle}" TargetType="ListViewItem">
@@ -138,11 +238,6 @@
                                     <Setter Property="Margin" Value="0,0,0,8" />
                                 </Style>
                             </ListView.ItemContainerStyle>
-                            <ListView.ItemTemplate>
-                                <DataTemplate x:DataType="models:PackageOperation">
-                                    <controls:OperationCard Operation="{x:Bind}" />
-                                </DataTemplate>
-                            </ListView.ItemTemplate>
                         </ListView>
                     </Grid>
                 </SplitView.Pane>
