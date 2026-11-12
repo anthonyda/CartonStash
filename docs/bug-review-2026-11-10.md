@@ -231,7 +231,7 @@ sources with the same package ID share one key.
 
 ### BR-08 A reset settings file is never rewritten
 
-- [x] Reviewed. *2026-11-12, fixed: a corrupt file is replaced by the defaults at once (the old one kept as `.bak`), so the notice shows once and background checks see good settings; at start, tasks left registered while the mode is Off are removed. `A_corrupt_file_is_replaced_by_the_defaults_once`.*
+- [x] Reviewed. *2026-11-12, fixed: a corrupt file is replaced by the defaults at once (the old one kept as `.bak`), so the notice shows once and background checks see good settings; at start, tasks left registered while the mode is Off are removed. `A_corrupt_file_is_replaced_by_the_defaults_once`. VM (1.4.2 test package): corrupt file → notice at the first start, `.bak` kept, no notice at the second start.*
 
 **Where:** [Settings.cs:102-113](../src/CartonStash.Core/Services/Settings.cs#L102-L113),
 [Settings.cs:130-134](../src/CartonStash.Core/Services/Settings.cs#L130-L134),
@@ -422,7 +422,7 @@ happen today.
 
 ### BR-19 A failed icon download leaves an empty square
 
-- [x] Reviewed. *2026-11-12, fixed: on `ImageFailed` the control shows the generic glyph again. Reproduced in the test VM on 1.4.0; the fix still to see in the VM.*
+- [x] Reviewed. *2026-11-12, fixed: on `ImageFailed` the control shows the generic glyph again. Reproduced in the test VM on 1.4.0 and checked fixed on the bug-review build (1.4.2 test package): with the app's downloads blocked, rows with an icon address show the glyph.*
 
 **Where:** [PackageIcon.xaml.cs:83-90](../src/CartonStash.App/Controls/PackageIcon.xaml.cs#L83-L90). Spec 005 R5.1.
 Confirmed.
@@ -529,7 +529,7 @@ tests with a package service whose `GetSourcesAsync` throws.
 
 ### BR-25 No recovery when WinGet's server goes away
 
-- [x] Reviewed. *2026-11-12, fixed: on RPC server unavailable, disconnected or call failed, the connection makes a new package manager, drops the catalogs and retries once (search, installed list, details, sources, an operation's first lookup); then "WinGet stopped responding. Restart CartonStash." `ReconnectTests`.*
+- [x] Reviewed. *2026-11-12, fixed: on RPC server unavailable, disconnected or call failed, the connection makes a new package manager, drops the catalogs and retries once (search, installed list, details, sources, an operation's first lookup); then "WinGet stopped responding. Restart CartonStash." `ReconnectTests`. VM (1.4.2 test package): WinGet's server process killed while the app was open; the next search started a new server and listed results, no crash.*
 
 **Where:** [CatalogConnection.cs:22](../src/CartonStash.Core/Services/CatalogConnection.cs#L22). Plausible.
 
