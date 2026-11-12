@@ -163,6 +163,13 @@
                     Content="{x:Bind Operation.InstallPreviousText, Mode=OneWay}"
                     Style="{StaticResource AccentButtonStyle}"
                     Visibility="{x:Bind Operation.CanInstallPrevious, Mode=OneWay}" />
+                <!-- 017 R1.3 -->
+                <Button
+                    AutomationProperties.Name="{x:Bind Operation.RetryAsAdminName, Mode=OneWay}"
+                    Command="{x:Bind Operation.RetryAsAdminCommand, Mode=OneWay}"
+                    Content="Retry as administrator"
+                    Style="{StaticResource AccentButtonStyle}"
+                    Visibility="{x:Bind Operation.CanRetryAsAdmin, Mode=OneWay}" />
                 <Button
                     AutomationProperties.Name="{x:Bind ui:Ui.Format('Retry {0}', Operation.Title), Mode=OneWay}"
                     Command="{x:Bind Operation.RetryCommand, Mode=OneWay}"
