@@ -383,7 +383,7 @@ happen today.
 
 ### BR-18 Background check: three gaps in "use old data" and "never throws"
 
-- [ ] Reviewed
+- [ ] Reviewed. *2026-11-12, fix approved, restores 010 R1.6 and R1.9: (1) any refresh failure falls back to the data WinGet already has, not only `WinGetException` and the timeout; (2) the due test and the two skip tests move inside the `try`, so an error there is recorded and a daily timer is still set again; (3) showing the notification gets its own catch, so it can't add a second, Failed entry. Unit tests for each. Code waits until the whole review is read.*
 
 **Where:** [BackgroundCheckRunner.cs:63-97](../src/CartonStash.Core/Services/BackgroundCheckRunner.cs#L63-L97),
 [BackgroundCheckRunner.cs:128](../src/CartonStash.Core/Services/BackgroundCheckRunner.cs#L128),
