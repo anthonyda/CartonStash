@@ -25,19 +25,22 @@ dotnet build                                            # whole solution (RID de
 dotnet test                                             # all tests, incl. live WinGet
 dotnet test --filter "Category!=Integration"            # unit tests only
 dotnet run --project src/CartonStash.App             # run the app
-.\tools\Publish-Release.ps1 -Version 1.2.3            # portable zip in artifacts\, Store MSIX in store\ (spec 007)
+.\tools\Publish-Release.ps1 -Version 1.2.3 -StoreOutput artifacts\store\1.2.3   # portable zip in artifacts\, Store MSIX in artifacts\store\1.2.3\ (spec 007)
 .\tools\Get-Changelog.ps1 -Version 1.2.3              # that version's CHANGELOG.md section: the GitHub Release notes
 ```
 
 ## Where build files go
 
-Always these folders, in the main checkout `C:\dev\CartonStash`. Never make up another one. Both are git-ignored, and
-`Publish-Release.ps1` empties them at the start of each build.
+Always these folders, in the main checkout `C:\dev\CartonStash`. Never make up another one. `artifacts\` is
+git-ignored.
 
-- **Store MSIX packages for Partner Center:** `store\`. That's where a local `Publish-Release.ps1` writes them, and
-  where a release's packages are downloaded to: `gh run download <release run id> --name store --dir store`. Empty
-  the folder first, so it only holds the version to upload. Give the user the full paths.
-- **Portable zips:** `artifacts\`.
+- **Store MSIX packages for Partner Center:** `artifacts\store\<version>\` (e.g. `artifacts\store\1.4.2\`), one folder
+  per version, like the Store screenshots. A release's packages are downloaded there:
+  `gh run download <release run id> --name store --dir artifacts\store\<version>`. A local build writes there with
+  `-StoreOutput artifacts\store\<version>`. Give the user the full paths. (`store\` is only the script's default output,
+  which the release workflow uploads; don't hand packages to the user from it.)
+- **Portable zips:** `artifacts\` (top level). `Publish-Release.ps1` empties the files at the top of `artifacts\` and the
+  Store output folder at the start of each build, never the subfolders.
 - **Test builds for the VM:** `C:\VMs\CartonStash-Test\builds\<run name>\` (see `TEST-ENV.local.md`), never inside the repo.
 
 ## Screenshots (README and Store listing)
