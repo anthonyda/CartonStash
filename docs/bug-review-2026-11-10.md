@@ -200,7 +200,7 @@ check takes longer than that. R3.17 was tested for the startup entry plus "user 
 
 ### BR-07 The same package can be queued twice from different pages
 
-- [ ] Reviewed
+- [ ] Reviewed. *2026-11-12, fix approved, no spec change (restores 003 R4.2): when either side has no installed entry ID (a Search row), the queue also matches on WinGet ID plus source. Separate installed copies with the same WinGet ID (002 R6.5) stay separate. Code waits until the whole review is read.*
 
 **Where:** [PackageInfo.cs:42](../src/CartonStash.Core/Models/PackageInfo.cs#L42),
 [PackageOperationQueue.cs:51-69](../src/CartonStash.Core/Services/PackageOperationQueue.cs#L51-L69),
