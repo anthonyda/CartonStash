@@ -311,7 +311,7 @@ and remote sessions do that, the Hyper-V enhanced session included. Neither call
 
 ### BR-14 A superseded load that fails for a real reason escapes the catch filters
 
-- [ ] Reviewed
+- [ ] Reviewed. *2026-11-12, fix approved as proposed: any error from a load that a newer one replaced is ignored, since the newer load shows its own result. In the installed list's store, Search and the details pane, with a unit test where an old load fails with a real error. Code waits until the whole review is read.*
 
 **Where:** [InstalledPackagesStore.cs:72-78](../src/CartonStash.Core/Services/InstalledPackagesStore.cs#L72-L78),
 [SearchViewModel.cs:117-124](../src/CartonStash.Core/ViewModels/SearchViewModel.cs#L117-L124),
