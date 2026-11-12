@@ -36,6 +36,13 @@ public static class Program
     {
         WinRT.ComWrappersSupport.InitializeComWrappers();
 
+        // 017 R1.4: a copy started with administrator rights for one operation. No window; it ends with the operation.
+        if (args.Length == 3 && args[0] == ElevatedProtocol.Argument)
+        {
+            Environment.ExitCode = ElevatedProcessRunner.RunHere(args[1], args[2]);
+            return;
+        }
+
         if (args.Contains("-RegisterForBGTaskServer"))
         {
             RunBackgroundServer();

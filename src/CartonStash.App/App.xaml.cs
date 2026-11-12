@@ -162,6 +162,7 @@ public partial class App : Application
             .AddSingleton<IReleaseNotesService>(_ => new GitHubReleaseNotesService(AppInfo.UserAgent))
             .AddSingleton<IWinGetRecordReader, WinGetRecordReader>()
             .AddSingleton<IOperationLogStore, OperationLogStore>()
+            .AddSingleton<IElevatedRunner, ElevatedProcessRunner>() // 017
             .AddSingleton<PackageOperationQueue>()
             .AddSingleton<InstalledPackagesStore>()
             .AddSingleton<SourceAgreementCheck>()

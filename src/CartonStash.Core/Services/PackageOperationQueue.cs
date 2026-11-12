@@ -8,7 +8,7 @@ namespace CartonStash.Core.Services;
 /// never the same package twice (R4.2). Create it and call its members on the UI thread; the worker's
 /// continuations come back to that thread, so <see cref="Operations"/> is only touched there.
 /// </summary>
-public sealed class PackageOperationQueue(IPackageInstaller installer, IOperationLogStore? logs = null)
+public sealed class PackageOperationQueue(IPackageInstaller installer, IOperationLogStore? logs = null, IElevatedRunner? elevated = null)
 {
     private readonly Queue<PackageOperation> _pending = new();
     private PackageOperation? _running;
@@ -223,8 +223,20 @@ public sealed class PackageOperationQueue(IPackageInstaller installer, IOperatio
                     operation.Percent = p.Percent;
                 });
                 var (scope, scopeSource) = ExplicitScope(operation);
-                outcome = await installer.RunAsync(operation.Kind, operation.Package, operation.AcceptAgreements, operation.Version, operation.LogFilePath, progress, cancellation.Token,
-                    scope, scopeSource);
+                if (operation.Options.Elevated && elevated is not null)
+                {
+                    // 017 R1.4, R1.5: another process runs it with administrator rights; Windows asks first. No percentage
+                    // comes back from there.
+                    operation.MayAskPermission = true;
+                    operation.Phase = OperationPhase.Running;
+                    outcome = await elevated.RunAsync(new ElevatedRequest(operation.Kind, operation.Package, operation.AcceptAgreements, operation.Version,
+                        operation.LogFilePath, scope, scopeSource), cancellation.Token);
+                }
+                else
+                {
+                    outcome = await installer.RunAsync(operation.Kind, operation.Package, operation.AcceptAgreements, operation.Version, operation.LogFilePath, progress, cancellation.Token,
+                        scope, scopeSource);
+                }
             }
             catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
             {
@@ -323,6 +335,7 @@ public sealed class PackageOperationQueue(IPackageInstaller installer, IOperatio
         operation.Phase = OperationPhase.Done;
         operation.Retryable = outcome.Retryable; // before Result, which notifies CanRetry
         operation.OffersUninstallFirst = outcome.OffersUninstallFirst;
+        operation.OffersRetryAsAdmin = outcome.OffersRetryAsAdmin;
         operation.Scope = outcome.Scope;
         operation.ScopeSource = outcome.ScopeSource;
         operation.Mode = outcome.Mode;

@@ -727,6 +727,10 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
             // 003 R8.4: WinGet's removal of the installed version failed, not the new version's installer.
             InstallResultStatus.InstallError when extendedError == UninstallCommandFailed =>
                 Failed(UninstallCommandFailedMessage(packageName, installedVersion, installerErrorCode, mode)),
+            // 017 R1.1, R1.2: the installer lacked administrator rights and didn't ask for them.
+            InstallResultStatus.InstallError when AdminRightsCodes.Lacks(installerErrorCode, extendedError) =>
+                Failed($"{(string.IsNullOrWhiteSpace(packageName) ? "The package" : packageName)}'s installer needs administrator rights and didn't ask for them.")
+                    with { OffersRetryAsAdmin = true },
             InstallResultStatus.InstallError when goingBackTo is not null =>
                 Failed(GoingBackFailedMessage(packageName, goingBackTo)) with { OffersUninstallFirst = true }, // R3.5
             InstallResultStatus.InstallError when installerErrorCode == 0 && extendedError != 0 =>

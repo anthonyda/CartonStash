@@ -112,6 +112,9 @@ public sealed record OperationOptions
 
     /// <summary>The scope the user chose for this install, from the details pane's split button (015 R1.5). Null: none chosen.</summary>
     public InstallScope? Scope { get; init; }
+
+    /// <summary>017 R1.4: run with administrator rights, after the user pressed Retry as administrator.</summary>
+    public bool Elevated { get; init; }
 }
 
 /// <summary>The buttons a finished card may offer after going back failed (014 R3.5, R3.7).</summary>
@@ -119,6 +122,9 @@ public enum OperationFollowUp
 {
     UninstallThenInstall,
     InstallPrevious,
+
+    /// <summary>017 R1.3: the same operation again, with administrator rights.</summary>
+    RetryAsAdmin,
 }
 
 /// <summary>How an operation ended, with a message the user can read (003 R5.2).</summary>
@@ -133,6 +139,9 @@ public sealed record OperationOutcome(OperationResult Result, string Message, st
 
     /// <summary>Going back failed at the installer: the card offers Uninstall, then install (014 R3.5).</summary>
     public bool OffersUninstallFirst { get; init; }
+
+    /// <summary>017 R1.1: the installer lacked administrator rights; the card and row offer Retry as administrator.</summary>
+    public bool OffersRetryAsAdmin { get; init; }
 
     /// <summary>The scope the installer asked WinGet for (014 R3.8); <see cref="InstallScope.Any"/> lets WinGet decide.</summary>
     public InstallScope Scope { get; init; }
@@ -215,6 +224,9 @@ public sealed partial class PackageOperation : ObservableObject
     /// <summary>From the outcome: going back failed at the installer (014 R3.5). Set before <see cref="Result"/>.</summary>
     public bool OffersUninstallFirst { get; internal set; }
 
+    /// <summary>From the outcome: the installer lacked administrator rights (017 R1.1). Set before <see cref="Result"/>.</summary>
+    public bool OffersRetryAsAdmin { get; internal set; }
+
     /// <summary>From the outcome: the scope asked for, and whether it's the installed one (014 R3.8).</summary>
     public InstallScope Scope { get; internal set; }
 
@@ -229,8 +241,8 @@ public sealed partial class PackageOperation : ObservableObject
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(StatusText), nameof(IsSuccess), nameof(IsFailure), nameof(CanRetry), nameof(State), nameof(CanRestartApp),
-        nameof(CanUninstallThenInstall), nameof(CanInstallPrevious))]
-    [NotifyCanExecuteChangedFor(nameof(RetryCommand))]
+        nameof(CanUninstallThenInstall), nameof(CanInstallPrevious), nameof(CanRetryAsAdmin))]
+    [NotifyCanExecuteChangedFor(nameof(RetryCommand), nameof(RetryAsAdminCommand))]
     public partial OperationResult? Result { get; internal set; }
 
     /// <summary>The outcome message once finished (success, failure reason, restart note).</summary>
@@ -298,6 +310,12 @@ public sealed partial class PackageOperation : ObservableObject
 
     /// <summary>014 R3.5: going back failed at the installer, not because the program was running (003 R7).</summary>
     public bool CanUninstallThenInstall => Result is OperationResult.Failed && Options.GoingBack && OffersUninstallFirst && Version is not null;
+
+    /// <summary>017 R1.3: offered after a failure for lack of administrator rights; never after a run that already had them.</summary>
+    public bool CanRetryAsAdmin => Result is OperationResult.Failed && OffersRetryAsAdmin && !Options.Elevated;
+
+    /// <summary>The button's accessible name, with the package (Q5).</summary>
+    public string RetryAsAdminName => $"Retry {Package.Name} as administrator";
 
     /// <summary>"Uninstall, then install 2.56.0.3".</summary>
     public string UninstallThenInstallText => $"Uninstall, then install {Version}";
@@ -381,4 +399,7 @@ public sealed partial class PackageOperation : ObservableObject
 
     [RelayCommand]
     private void InstallPrevious() => _followUp(this, OperationFollowUp.InstallPrevious);
+
+    [RelayCommand(CanExecute = nameof(CanRetryAsAdmin))]
+    private void RetryAsAdmin() => _followUp(this, OperationFollowUp.RetryAsAdmin);
 }

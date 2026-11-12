@@ -92,7 +92,7 @@ public sealed partial class PackageRowViewModel : ObservableObject
     public string Name => Package.Name;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsBusy), nameof(ShowInstall), nameof(ShowUpdate), nameof(ShowRestart), nameof(ShowUninstall), nameof(ResultText), nameof(HasResult))]
+    [NotifyPropertyChangedFor(nameof(IsBusy), nameof(ShowInstall), nameof(ShowUpdate), nameof(ShowRestart), nameof(ShowUninstall), nameof(ResultText), nameof(HasResult), nameof(ShowRetryAsAdmin))]
     public partial PackageOperation? Operation { get; set; }
 
     /// <summary>Badge color: WinGet's comparison, and amber only when WinGet also offers the update (R7.1, R7.2).</summary>
@@ -161,6 +161,12 @@ public sealed partial class PackageRowViewModel : ObservableObject
 
     public bool HasResult => ResultText is not null;
 
+    /// <summary>017 R1.3: next to the result, after a failure for lack of administrator rights.</summary>
+    public bool ShowRetryAsAdmin => Operation?.CanRetryAsAdmin == true;
+
+    [RelayCommand]
+    private void RetryAsAdmin() => Operation?.RetryAsAdminCommand.Execute(null);
+
     [RelayCommand]
     private Task InstallAsync() => _actions.InstallAsync(Package);
 
@@ -210,6 +216,7 @@ public sealed partial class PackageRowViewModel : ObservableObject
         OnPropertyChanged(nameof(ShowUninstall));
         OnPropertyChanged(nameof(ResultText));
         OnPropertyChanged(nameof(HasResult));
+        OnPropertyChanged(nameof(ShowRetryAsAdmin));
     }
 
     private void OnOperationPropertyChanged(object? sender, PropertyChangedEventArgs e)

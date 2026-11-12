@@ -81,6 +81,10 @@ public sealed class PackageActions(PackageOperationQueue queue, IPackageInstalle
                         });
                     }
                     break;
+                case OperationFollowUp.RetryAsAdmin when operation.CanRetryAsAdmin:
+                    // 017 R1.4: the same operation, version and scope, now with administrator rights (P2: the user's press).
+                    queue.Enqueue(operation.Kind, operation.Package, operation.AcceptAgreements, operation.Options with { Elevated = true });
+                    break;
                 case OperationFollowUp.InstallPrevious when operation.CanInstallPrevious:
                     var previous = operation.Options.PreviousVersion!;
                     if (await AskAgreementsAsync(installer, dialogs, operation.Package, previous) is { } accepted)
