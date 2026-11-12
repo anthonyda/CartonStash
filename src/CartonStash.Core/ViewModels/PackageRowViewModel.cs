@@ -54,6 +54,13 @@ public sealed partial class PackageRowViewModel : ObservableObject
         OnPropertyChanged(string.Empty);
     }
 
+    /// <summary>
+    /// Re-reads everything that doesn't come from <see cref="Package"/>: App Installer's restart state (004 R6.2) and the
+    /// exclusion (010 R5.5). The Updates page keeps its rows across reloads (004 R8.1), so it calls this instead of
+    /// making new rows.
+    /// </summary>
+    public void NotifyStateChanged() => OnPropertyChanged(string.Empty);
+
     /// <summary>014 R2.6: after a success, read the package again; a failed read leaves the row as it is.</summary>
     private async Task RefreshAfterSuccessAsync()
     {
@@ -122,7 +129,7 @@ public sealed partial class PackageRowViewModel : ObservableObject
     public bool ShowUpdate => _allowed.HasFlag(RowActions.Update) && Package.HasUpdate && !IsBusy && !Succeeded(OperationKind.Upgrade)
         && !IsRestartPending;
 
-    /// <summary>App Installer updated, but the new version starts with CartonStash (004 R6.2). Rows are rebuilt when it changes.</summary>
+    /// <summary>App Installer updated, but the new version starts with CartonStash (004 R6.2). The Updates page re-notifies its rows when it changes.</summary>
     public bool IsRestartPending => _actions.Host.IsPending(Package);
 
     /// <summary>Offered where Update would be (004 R6.2, R6.3).</summary>

@@ -107,20 +107,36 @@ public sealed partial class UpdatesViewModel : ObservableObject
     }
 
     // Updated packages drop out here after the store reloads (R2.4).
+    // R8.1: rows still listed stay the same objects in place; only rows that left are removed and new ones inserted.
+    // Never Clear (see RowListSync).
     private void Rebuild()
     {
-        Updates.Clear();
-        Excluded.Clear();
         _excludedIds = _settings.Current.ExcludedPackageIds;
+        var existing = Updates.Concat(Excluded)
+            .GroupBy(r => r.Package.Key, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => new Queue<PackageRowViewModel>(g), StringComparer.OrdinalIgnoreCase);
+        List<PackageRowViewModel> updates = [], excluded = [];
         foreach (var package in _store.Packages
                      .Where(p => p.HasUpdate && p.IsManaged)
                      .OrderBy(p => p.Name, StringComparer.CurrentCultureIgnoreCase))
         {
-            var row = new PackageRowViewModel(package, _actions, RowActions.Update, _settings);
-            (row.IsExcluded ? Excluded : Updates).Add(row);
+            PackageRowViewModel row;
+            if (existing.TryGetValue(package.Key, out var same) && same.Count > 0)
+            {
+                row = same.Dequeue();
+                row.Refresh(package);
+                row.NotifyStateChanged(); // App Installer's restart state and the exclusion aren't part of the package (R6.2)
+            }
+            else
+            {
+                row = new PackageRowViewModel(package, _actions, RowActions.Update, _settings);
+            }
+            (row.IsExcluded ? excluded : updates).Add(row);
         }
+        RowListSync.Sync(Updates, updates);
+        RowListSync.Sync(Excluded, excluded);
         OnPropertyChanged(nameof(HasExcluded));
-        SetSelection([]);
+        SetSelection(_selected.Where(Updates.Contains).ToList()); // R8.2: checked rows that stay keep their check
         NotifyCount();
     }
 

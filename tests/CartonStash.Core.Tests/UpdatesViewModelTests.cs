@@ -153,6 +153,69 @@ public class UpdatesViewModelTests
     }
 
     [Fact]
+    public async Task Finished_updates_leave_by_removal_never_by_reset() // R8.1: a reset crashed Tab into the list (E_BOUNDS)
+    {
+        var (app, vm) = await CreateLoaded(
+            Pkg.Installed("AI", "App Installer", update: true), Pkg.Installed("F", "fzf", update: true),
+            Pkg.Installed("J", "jq", update: true), Pkg.Installed("Z", "zoxide", update: true));
+        var kept = vm.Updates.Where(r => r.Id is "AI" or "J").ToList();
+        var changes = new List<System.Collections.Specialized.NotifyCollectionChangedAction>();
+        vm.Updates.CollectionChanged += (_, e) => changes.Add(e.Action);
+
+        app.SetInstalled(
+            Pkg.Installed("AI", "App Installer", update: true), Pkg.Installed("F", "fzf"),
+            Pkg.Installed("J", "jq", update: true), Pkg.Installed("Z", "zoxide"));
+        await app.Store.ReloadAsync();
+
+        Assert.Equal(["AI", "J"], vm.Updates.Select(r => r.Id));
+        Assert.Equal(kept, vm.Updates); // the same row objects
+        Assert.All(changes, a => Assert.Equal(System.Collections.Specialized.NotifyCollectionChangedAction.Remove, a));
+        Assert.Equal(2, changes.Count);
+    }
+
+    [Fact]
+    public async Task New_updates_are_inserted_in_name_order() // R8.1, R1.1
+    {
+        var (app, vm) = await CreateLoaded(Pkg.Installed("A", "alpha", update: true), Pkg.Installed("C", "gamma", update: true));
+        var changes = new List<System.Collections.Specialized.NotifyCollectionChangedAction>();
+        vm.Updates.CollectionChanged += (_, e) => changes.Add(e.Action);
+
+        app.SetInstalled(Pkg.Installed("A", "alpha", update: true), Pkg.Installed("B", "beta", update: true), Pkg.Installed("C", "gamma", update: true));
+        await app.Store.ReloadAsync();
+
+        Assert.Equal(["alpha", "beta", "gamma"], vm.Updates.Select(r => r.Name));
+        Assert.Equal([System.Collections.Specialized.NotifyCollectionChangedAction.Add], changes);
+    }
+
+    [Fact]
+    public async Task A_reload_keeps_the_checked_rows_that_stay() // R8.2
+    {
+        var (app, vm) = await CreateLoaded(Pkg.Installed("A", update: true), Pkg.Installed("B", update: true), Pkg.Installed("C", update: true));
+        vm.SetSelection([vm.Updates[0], vm.Updates[1]]);
+
+        app.SetInstalled(Pkg.Installed("A"), Pkg.Installed("B", update: true), Pkg.Installed("C", update: true));
+        await app.Store.ReloadAsync();
+
+        await vm.UpdateSelectedCommand.ExecuteAsync(null);
+        Assert.Equal(["B"], app.Installer.Calls.Select(c => c.Id));
+    }
+
+    [Fact]
+    public void Sync_handles_a_row_whose_place_changed() // R8.1: a renamed package moves without a reset
+    {
+        var app = new TestApp();
+        var rows = new[] { "a", "b", "c" }.Select(n => new PackageRowViewModel(Pkg.Installed(n), app.Actions, RowActions.Update)).ToArray();
+        var target = new System.Collections.ObjectModel.ObservableCollection<PackageRowViewModel>(rows);
+        var changes = new List<System.Collections.Specialized.NotifyCollectionChangedAction>();
+        target.CollectionChanged += (_, e) => changes.Add(e.Action);
+
+        RowListSync.Sync(target, [rows[1], rows[2], rows[0]]);
+
+        Assert.Equal([rows[1], rows[2], rows[0]], target);
+        Assert.DoesNotContain(System.Collections.Specialized.NotifyCollectionChangedAction.Reset, changes);
+    }
+
+    [Fact]
     public async Task App_Installer_waiting_for_a_restart_offers_the_restart_instead() // R6.2, R6.4 decision: still counted
     {
         var appInstaller = WinGetHostTests.AppInstaller();

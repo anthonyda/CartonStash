@@ -27,6 +27,39 @@ public class InstalledViewModelTests
     }
 
     [Fact]
+    public async Task Filtering_keeps_rows_in_place_without_a_reset() // R9.1: a reset crashed Tab into the list (E_BOUNDS)
+    {
+        var (_, vm) = Create(Pkg.Installed("A", "App Installer"), Pkg.Installed("B", "Beta"), Pkg.Installed("C", "Gamma"));
+        await vm.LoadAsync();
+        var appInstaller = vm.Visible[0];
+        var changes = new List<System.Collections.Specialized.NotifyCollectionChangedAction>();
+        vm.Visible.CollectionChanged += (_, e) => changes.Add(e.Action);
+
+        vm.Filter = "app";
+        Assert.Equal([appInstaller], vm.Visible);
+        vm.Filter = "";
+
+        Assert.Equal(["A", "B", "C"], vm.Visible.Select(r => r.Id));
+        Assert.Same(appInstaller, vm.Visible[0]);
+        Assert.DoesNotContain(System.Collections.Specialized.NotifyCollectionChangedAction.Reset, changes);
+    }
+
+    [Fact]
+    public async Task Reload_replaces_rows_without_a_reset() // R9.2
+    {
+        var (app, vm) = Create(Pkg.Installed("A"), Pkg.Installed("B"), Pkg.Installed("C"));
+        await vm.LoadAsync();
+        var changes = new List<System.Collections.Specialized.NotifyCollectionChangedAction>();
+        vm.Visible.CollectionChanged += (_, e) => changes.Add(e.Action);
+
+        app.SetInstalled(Pkg.Installed("B"));
+        await vm.RefreshCommand.ExecuteAsync(null);
+
+        Assert.Equal(["B"], vm.Visible.Select(r => r.Id));
+        Assert.DoesNotContain(System.Collections.Specialized.NotifyCollectionChangedAction.Reset, changes);
+    }
+
+    [Fact]
     public async Task Refresh_reloads_with_fresh_catalogs() // R1.3
     {
         var (app, vm) = Create(Pkg.Installed("Git.Git"));

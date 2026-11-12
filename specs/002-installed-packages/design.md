@@ -141,3 +141,14 @@ It is still the session's single load.
 - **Loading time** for the local-first composite with remote correlation (a few seconds cold). Mitigation:
   load once and cache (R1.3). Alternative: local-only first, then correlate in the background. Rejected for v1 as too complex.
 - **Shell refactor touches spec 001's window.** Acceptable: SearchPage keeps the same view model and behaviour.
+
+## Amendment R9: the list changes in place (approved 2026-11-12)
+
+- `InstalledViewModel.ApplyFilter` computes the rows to show from `_all` as today, then syncs `Visible` to them with the
+  helper 004 R8 adds (`RemoveAt` and `Insert` only), moved out of `UpdatesViewModel` so Updates, Installed and Search share it.
+  Rows are the same objects in `_all`, so a row that stays isn't touched (R9.1).
+- A reload builds `_all` again with new rows, so the sync removes the old ones and inserts the new ones (R9.2). Reusing rows
+  by `Key`, as Updates does, isn't needed for the crash and is left out.
+- Testing: unit tests that filtering and reloading raise no `Reset` on `Visible` and keep the rows that stay; the VM repro
+  below (T20).
+

@@ -227,3 +227,39 @@ installs; Decline: nothing. Update all → confirm *n* → for each package: loo
 | R7.3 | Unit: Retry of a failed accepted update keeps `AcceptAgreements` |
 | R7.4 | Unit: agreements that throw → queued without acceptance |
 | R7.1, R7.2 live | Manual in the test VM: Power BI Desktop 2.158 → 2.159 with Update, then with Update all; Decline once, then Accept |
+
+## Amendment R8: rows stay in place when the list reloads (approved 2026-11-12)
+
+### Finding
+
+The stowed exception's managed half is two `ArgumentOutOfRangeException` from CsWinRT's
+`IList.ToAbiHelper.GetAt`, called by `Microsoft.UI.Xaml` while handling the Tab key. In WinUI's source (`Selector`),
+Tab into a list asks for the container at `m_lastFocusedIndex` (`GetFirstFocusableElementOverride`). An `ItemRemoved`
+change sets that index back to 0 when it falls past the end; a `Reset` doesn't. `UpdatesViewModel.Rebuild` did
+`Updates.Clear()` then added every row, a reset, so the index stayed where it was in the longer list.
+
+### Components
+
+- `UpdatesViewModel.Rebuild` builds the wanted rows, reusing the existing row for a package with the same `Key`
+  (`PackageRowViewModel.Refresh` with the new package, then `NotifyStateChanged`, since App Installer's restart state and
+  the exclusion aren't part of the package), and making rows only for new packages.
+- `RowListSync.Sync` (shared with 001 R4 and 002 R9) turns `Updates` and `Excluded` into the wanted lists with `RemoveAt` and `Insert` only: never
+  `Clear`, never `Move`. A row that changes place is removed and inserted.
+- The selection keeps the checked rows still in `Updates` (R8.2). The ListView already keeps them checked, and drops the
+  removed ones with a `SelectionChanged`.
+
+### Alternatives considered
+
+- Clamping or resetting the ListView's focus from the page after a reload: the remembered index is internal to WinUI,
+  and there is no public way to set it without moving focus.
+- Setting `ItemsSource` again (WinUI resets the index then): it also loses the scroll position and the checks.
+
+### Testing strategy
+
+- Unit: `UpdatesViewModelTests.Finished_updates_leave_by_removal_never_by_reset`, `New_updates_are_inserted_in_name_order`,
+  `A_reload_keeps_the_checked_rows_that_stay`, `Sync_handles_a_row_whose_place_changed`.
+- Manual in the test VM: the crash's repro (T19).
+
+The Installed page (`InstalledViewModel.ApplyFilter`) and Search results also refill their lists with `Clear`; not changed
+here.
+

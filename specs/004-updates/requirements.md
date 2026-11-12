@@ -1,6 +1,6 @@
 # 004 – Updates: Requirements
 
-**Status:** Approved (2026-10-29, R3 deferred). Amendment R6 (updating App Installer): approved 2026-11-04. Amendment R7 (license agreements on update): approved 2026-11-05
+**Status:** Approved (2026-10-29, R3 deferred). Amendment R6 (updating App Installer): approved 2026-11-04. Amendment R7 (license agreements on update): approved 2026-11-05. Amendment R8 (rows stay in place on reload): approved and done 2026-11-12
 **Depends on:** 002, 003
 
 ## Problem
@@ -108,6 +108,22 @@ accepted, so WinGet refuses every update of such a package. The `winget` command
   the version, and a new version can bring new terms.
 - **Check the Update all confirmation count?** Recommended: the confirmation comes first and counts every package (R2.3), then
   the agreements. A declined package doesn't get queued, and the Activity pane shows what really runs.
+
+## Amendment R8: rows stay in place when the list reloads (approved 2026-11-12)
+
+**Why.** The app crashed. In the test VM on 2026-11-12, released 1.3.0 and the current build alike: after five updates
+finished (four succeeded, jq failed because it was running), the Updates list went from 11 rows to 7. Pressing Tab from
+**Refresh** into the list closed the app: stowed exception `E_BOUNDS` (`0x8000000b`), WER `0xc000027b` in
+`Microsoft.UI.Xaml.dll`. The dump shows WinUI asking the list's collection for a row past its end
+(`IList.GetAt` → `ArgumentOutOfRangeException`) while it looked for the row to focus. Each reload emptied the list and
+filled it again (a reset). WinUI's ListView remembers the index of the row it would focus, and a reset doesn't bring that
+index back in range; removing a row does. It needs a remembered index past the new end, so it showed with App Installer
+in the list (more rows before the reload), not on a VM where App Installer had already updated.
+
+| ID   | Story | Criterion |
+|------|-------|-----------|
+| R8.1 | US2   | When the list reloads (R1.2, R2.4, R6.2, 010 R5.5), rows that are still listed shall stay as they are, in name order; the app shall only remove the rows that left and insert the new ones. Tab and the arrow keys into the list after rows left shall never close the app. |
+| R8.2 | US2   | A checked row (R2.2) that is still listed after the reload shall stay checked and stay in **Update selected**. Before R8 every reload unchecked all rows. |
 
 ## Out of scope
 

@@ -35,6 +35,13 @@ Tick a task only when its verification passes. Keep tasks small enough for one c
   - Verify: names via UI Automation + human keyboard/Narrator check (see log).
 - [x] **T11.** Mark the spec `Done` once all criteria are verified.
 
+### Amendment R4: Tab into new results never closes the app (approved 2026-11-12)
+
+- [x] **T12.** `SearchAsync` empties `Results` by removals, through the shared helper. *(R4.1)*
+  - Verify: `SearchViewModelTests.New_search_removes_old_results_without_a_reset`.
+- [x] **T13.** Manual in the test VM, Store build: search `microsoft`, focus the 13th result, search `jqlang.jq`, Tab from the box into the results. *(R4.1)*
+  - Verify: logged below. Before the fix (1.3.96, 2026-11-12): the app closed, 2 of 2. Done 2026-11-12 with 1.3.95: no crash, 2 of 2.
+
 ## Manual verification log
 
 | Criterion | Date | Result | Notes |
@@ -47,3 +54,4 @@ Tick a task only when its verification passes. Keep tasks small enough for one c
 | R3.5 (names) | 2026-10-29 | Pass | UIA: Edit "Search packages", List "Search results" found by name |
 | R3.1 | 2026-10-29 | Pass | Human: progress bar visible during search (user confirmed) |
 | R3.5 (keyboard) | 2026-10-29 | Pass | Human: Tab order box → Search → results; Narrator reads names (user confirmed) |
+| R4.1 (T13) | 2026-11-12 | Pass | Test VM, fresh `clean`, Store test builds. 1.3.96 (before): search `microsoft` (42 to 50 results), focus the 13th, search `jqlang.jq`, Tab from the box: the app closed, 2 of 2 (`0xc000027b`, `Microsoft.UI.Xaml.dll+0x3d1699`). 1.3.95 (R4): same steps, Tab went Search > jq's row > Install jq > on; no crash, 2 of 2 |

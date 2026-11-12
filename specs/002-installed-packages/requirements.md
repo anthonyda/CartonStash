@@ -1,6 +1,6 @@
 # 002 – Installed packages: Requirements
 
-**Status:** Done (2026-10-29). Amendment R6 (one row per installed program) done 2026-10-30. Amendment R7 (version badge colors) done 2026-10-30. Amendment R8 (status filter chips) done 2026-10-30
+**Status:** Done (2026-10-29). Amendment R6 (one row per installed program) done 2026-10-30. Amendment R7 (version badge colors) done 2026-10-30. Amendment R8 (status filter chips) done 2026-10-30. Amendment R9 (the list changes in place): done 2026-11-12
 **Depends on:** 001
 
 ## Problem
@@ -53,6 +53,18 @@ Seen live: WSL 3.0.4.0 and the old "Windows Subsystem for Linux Update" 5.10.102
 `Microsoft.WSL`. WinGet's composite catalog (COM API 1.29) merges them into one package and reports only the old
 version, so the app showed "Windows Subsystem for Linux 5.10.102.1", which matches neither program. `winget list` shows
 both. WinGet's installed-only catalog returns both separately (362 entries vs. 330 merged packages on the dev machine).
+
+## Amendment R9: the list changes in place (approved 2026-11-12)
+
+**Why.** In the test VM on 2026-11-12, Store test build 1.3.96, 2 runs of 2: focus the 13th of 21 rows, type
+`App Installer` in the filter (1 row left), then Tab from the filter box through the chips into the list: the app closed.
+WinUI's ListView remembers the index of the row it last focused, and Tab into the list goes back to it. Removing rows brings that index back in range; emptying the list in one go (a reset) doesn't, so Tab asks for a row past the end and the app closes: stowed `E_BOUNDS`, WER `0xc000027b` in `Microsoft.UI.Xaml.dll` at offset `0x3d1699`. Found on the Updates page (004 amendment R8, PR #42), where the full dump shows it. Each change of the filter, a chip or the unmanaged option, and each reload, empties `Visible` with `Clear()`
+and fills it again.
+
+| ID   | Story | Criterion |
+|------|-------|-----------|
+| R9.1 | US2   | When the text filter, a chip or the unmanaged option changes (R2.1, R2.4, R8.2), rows still shown shall stay as they are, in order; the app shall only remove the rows that are filtered out and insert the ones that come back. Tab and the arrow keys into the list afterwards shall never close the app. |
+| R9.2 | US1   | When the installed list reloads (R1.3), rows shall be replaced by removals and inserts, never by emptying the list, with the same guarantee for Tab. |
 
 ## Out of scope
 

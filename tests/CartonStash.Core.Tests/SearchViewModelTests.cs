@@ -29,6 +29,22 @@ public class SearchViewModelTests
     }
 
     [Fact]
+    public async Task New_search_removes_old_results_without_a_reset() // R4.1: a reset crashed Tab into the results (E_BOUNDS)
+    {
+        var vm = Create(q => q == "many" ? [.. Enumerable.Range(0, 20).Select(i => Pkg($"P{i}"))] : [Pkg("jqlang.jq")]);
+        vm.Query = "many";
+        await vm.SearchCommand.ExecuteAsync(null);
+        var changes = new List<System.Collections.Specialized.NotifyCollectionChangedAction>();
+        vm.Results.CollectionChanged += (_, e) => changes.Add(e.Action);
+
+        vm.Query = "jq";
+        await vm.SearchCommand.ExecuteAsync(null);
+
+        Assert.Equal(["jqlang.jq"], vm.Results.Select(r => r.Id));
+        Assert.DoesNotContain(System.Collections.Specialized.NotifyCollectionChangedAction.Reset, changes);
+    }
+
+    [Fact]
     public async Task Search_populates_results()
     {
         var vm = Create(_ => [Pkg("Git.Git"), Pkg("GitHub.cli")]);
