@@ -1,6 +1,6 @@
 # 001 – Package search: Requirements
 
-**Status:** Done (2026-10-29). Amendment R4 (Tab into new results never closes the app): Draft, 2026-11-12
+**Status:** Done (2026-10-29). Amendment R4 (Tab into new results never closes the app): done 2026-11-12
 **Depends on:** none
 
 ## Problem
@@ -37,7 +37,7 @@ copying exact IDs. Users want to type a few letters and see clear, readable resu
 - Package details pane (spec 005).
 - Filtering by source, or search-as-you-type (possible later spec).
 
-## Amendment R4: Tab into new results never closes the app (Draft, 2026-11-12)
+## Amendment R4: Tab into new results never closes the app (approved 2026-11-12)
 
 **Why.** In the test VM on 2026-11-12, Store test build 1.3.96, 2 runs of 2: search `microsoft` (42 to 50 results), focus
 the 13th result, search `jqlang.jq` (1 result), then Tab from the search box: the app closed. WinUI's ListView remembers the index of the row it last focused, and Tab into the list goes back to it. Removing rows brings that index back in range; emptying the list in one go (a reset) doesn't, so Tab asks for a row past the end and the app closes: stowed `E_BOUNDS`, WER `0xc000027b` in `Microsoft.UI.Xaml.dll` at offset `0x3d1699`. Found on the Updates page (004 amendment R8, PR #42), where the full dump shows it. Each search

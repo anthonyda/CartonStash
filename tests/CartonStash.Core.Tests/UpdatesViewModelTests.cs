@@ -209,7 +209,7 @@ public class UpdatesViewModelTests
         var changes = new List<System.Collections.Specialized.NotifyCollectionChangedAction>();
         target.CollectionChanged += (_, e) => changes.Add(e.Action);
 
-        UpdatesViewModel.Sync(target, [rows[1], rows[2], rows[0]]);
+        RowListSync.Sync(target, [rows[1], rows[2], rows[0]]);
 
         Assert.Equal([rows[1], rows[2], rows[0]], target);
         Assert.DoesNotContain(System.Collections.Specialized.NotifyCollectionChangedAction.Reset, changes);

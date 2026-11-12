@@ -243,7 +243,7 @@ change sets that index back to 0 when it falls past the end; a `Reset` doesn't. 
 - `UpdatesViewModel.Rebuild` builds the wanted rows, reusing the existing row for a package with the same `Key`
   (`PackageRowViewModel.Refresh` with the new package, then `NotifyStateChanged`, since App Installer's restart state and
   the exclusion aren't part of the package), and making rows only for new packages.
-- `UpdatesViewModel.Sync` turns `Updates` and `Excluded` into the wanted lists with `RemoveAt` and `Insert` only: never
+- `RowListSync.Sync` (shared with 001 R4 and 002 R9) turns `Updates` and `Excluded` into the wanted lists with `RemoveAt` and `Insert` only: never
   `Clear`, never `Move`. A row that changes place is removed and inserted.
 - The selection keeps the checked rows still in `Updates` (R8.2). The ListView already keeps them checked, and drops the
   removed ones with a `SelectionChanged`.

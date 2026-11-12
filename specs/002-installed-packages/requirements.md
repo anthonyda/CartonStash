@@ -1,6 +1,6 @@
 # 002 – Installed packages: Requirements
 
-**Status:** Done (2026-10-29). Amendment R6 (one row per installed program) done 2026-10-30. Amendment R7 (version badge colors) done 2026-10-30. Amendment R8 (status filter chips) done 2026-10-30. Amendment R9 (the list changes in place): Draft, 2026-11-12
+**Status:** Done (2026-10-29). Amendment R6 (one row per installed program) done 2026-10-30. Amendment R7 (version badge colors) done 2026-10-30. Amendment R8 (status filter chips) done 2026-10-30. Amendment R9 (the list changes in place): done 2026-11-12
 **Depends on:** 001
 
 ## Problem
@@ -54,7 +54,7 @@ Seen live: WSL 3.0.4.0 and the old "Windows Subsystem for Linux Update" 5.10.102
 version, so the app showed "Windows Subsystem for Linux 5.10.102.1", which matches neither program. `winget list` shows
 both. WinGet's installed-only catalog returns both separately (362 entries vs. 330 merged packages on the dev machine).
 
-## Amendment R9: the list changes in place (Draft, 2026-11-12)
+## Amendment R9: the list changes in place (approved 2026-11-12)
 
 **Why.** In the test VM on 2026-11-12, Store test build 1.3.96, 2 runs of 2: focus the 13th of 21 rows, type
 `App Installer` in the filter (1 row left), then Tab from the filter box through the chips into the list: the app closed.

@@ -142,7 +142,7 @@ It is still the session's single load.
   load once and cache (R1.3). Alternative: local-only first, then correlate in the background. Rejected for v1 as too complex.
 - **Shell refactor touches spec 001's window.** Acceptable: SearchPage keeps the same view model and behaviour.
 
-## Amendment R9: the list changes in place (Draft, 2026-11-12)
+## Amendment R9: the list changes in place (approved 2026-11-12)
 
 - `InstalledViewModel.ApplyFilter` computes the rows to show from `_all` as today, then syncs `Visible` to them with the
   helper 004 R8 adds (`RemoveAt` and `Insert` only), moved out of `UpdatesViewModel` so Updates, Installed and Search share it.

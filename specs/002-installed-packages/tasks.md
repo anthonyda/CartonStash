@@ -50,12 +50,12 @@
 - [x] **T18.** Chip row on `InstalledPage` with dots, labels, counts, tooltips; shared badge brushes. *(R8.1, R8.4)*
   - Verify: manual (UIA: names and counts; screenshots dark + light; click each chip).
 
-### Amendment R9: the list changes in place (Draft, 2026-11-12)
+### Amendment R9: the list changes in place (approved 2026-11-12)
 
-- [ ] **T19.** `ApplyFilter` syncs `Visible` with the shared helper instead of `Clear()` and refilling. *(R9.1, R9.2)*
+- [x] **T19.** `ApplyFilter` syncs `Visible` with the shared helper instead of `Clear()` and refilling. *(R9.1, R9.2)*
   - Verify: `InstalledViewModelTests.Filtering_keeps_rows_in_place_without_a_reset`, `Reload_replaces_rows_without_a_reset`.
-- [ ] **T20.** Manual in the test VM, Store build: focus the 13th row, filter to `App Installer`, Tab from the filter box into the list. *(R9.1)*
-  - Verify: logged below. Before the fix (1.3.96, 2026-11-12): the app closed, 2 of 2.
+- [x] **T20.** Manual in the test VM, Store build: focus the 13th row, filter to `App Installer`, Tab from the filter box into the list. *(R9.1)*
+  - Verify: logged below. Before the fix (1.3.96, 2026-11-12): the app closed, 2 of 2. Done 2026-11-12 with 1.3.95: no crash, 2 of 2.
 
 ## Manual verification log
 
@@ -82,3 +82,4 @@
 | R8.3 | 2026-10-30 | Pass | Text "microsoft" → chips 39 / 0 (dimmed) / 11 / 25 |
 | R8 selected style | 2026-10-30 | Fixed | First build filled the selected chip with the accent color (green here), clashing with the dots; and light theme showed white text after a live theme switch. Now neutral fill + outline from per-theme dictionaries; checked dark, light after live switch |
 | R1.4 | 2026-10-29 | Pass (unit) | `IsLoading` covered by tests; not seen live because the list now preloads at startup (004 badge) and was ready in 0.35 s |
+| R9.1 (T20) | 2026-11-12 | Pass | Test VM, fresh `clean`, Store test builds. 1.3.96 (before): focus the 13th of 21 rows, filter `App Installer` (1 row), Tab from the filter box through the chips: the app closed at the list, 2 of 2 (`0xc000027b`, `Microsoft.UI.Xaml.dll+0x3d1699`). 1.3.95 (R9): same steps, Tab went through the chips and the checkbox to App Installer's row and its Uninstall button; no crash, 2 of 2. R9.2 by unit test only |

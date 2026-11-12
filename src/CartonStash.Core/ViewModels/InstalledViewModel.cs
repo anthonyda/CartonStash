@@ -151,7 +151,7 @@ public sealed partial class InstalledViewModel : ObservableObject
     {
         var text = Filter.Trim();
         int same = 0, update = 0, newer = 0, other = 0;
-        Visible.Clear();
+        var shown = new List<PackageRowViewModel>();
         foreach (var row in _all)
         {
             if (!ShowUnmanaged && !row.Package.IsManaged)
@@ -177,9 +177,10 @@ public sealed partial class InstalledViewModel : ObservableObject
 
             if (StatusFilter is null || StatusFilter == state)
             {
-                Visible.Add(row);
+                shown.Add(row);
             }
         }
+        RowListSync.Sync(Visible, shown); // R9.1, R9.2: in place, never Clear()
         (SameCount, UpdateCount, NewerCount, OtherCount) = (same, update, newer, other);
         OnPropertyChanged(nameof(CountText));
     }

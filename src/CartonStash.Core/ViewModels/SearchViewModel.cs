@@ -93,7 +93,7 @@ public sealed partial class SearchViewModel : ObservableObject
         ErrorMessage = null;
         EmptyMessage = null;
         SourceNotice = null;
-        Results.Clear();
+        RowListSync.RemoveAll(Results); // R4.1: not Clear(), see RowListSync
         IsSearching = true;
 
         try
