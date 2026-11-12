@@ -298,7 +298,7 @@ narrow filter is in [SourceAgreementCheck.cs:24](../src/CartonStash.Core/Service
 
 ### BR-13 Copy can end the app when the clipboard is busy
 
-- [ ] Reviewed
+- [ ] Reviewed. *2026-11-12, fix approved as proposed: when Windows refuses the clipboard (another program holds it), wait a moment and retry once; if it still fails, say "Couldn't copy: another program is using the clipboard. Try again." instead of ending the app. Covers the Log dialog's Copy and Settings' Copy diagnostic info. Code waits until the whole review is read.*
 
 **Where:** [PlatformServices.cs:188-197](../src/CartonStash.App/Services/PlatformServices.cs#L188-L197), called from
 [PlatformServices.cs:157-161](../src/CartonStash.App/Services/PlatformServices.cs#L157-L161) and
