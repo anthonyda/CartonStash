@@ -79,6 +79,21 @@ public sealed record AppSettings
         ExcludedPackageIds = ExcludedPackageIds.Where(id => !string.Equals(id, packageId, StringComparison.OrdinalIgnoreCase)).ToList(),
     };
 
+    /// <summary>
+    /// 006 R3.15, R3.17: the IDs of explicit sources whose **Use in searches** box is checked. Missing in older files,
+    /// which then leave every explicit source out (R3.14).
+    /// </summary>
+    public IReadOnlyList<string> SearchedExplicitSources { get; init; } = [];
+
+    public bool IsSearched(string sourceId) => SearchedExplicitSources.Contains(sourceId, StringComparer.OrdinalIgnoreCase);
+
+    public AppSettings WithSearched(string sourceId, bool searched) => this with
+    {
+        SearchedExplicitSources = searched
+            ? IsSearched(sourceId) ? SearchedExplicitSources : [.. SearchedExplicitSources, sourceId]
+            : SearchedExplicitSources.Where(id => !string.Equals(id, sourceId, StringComparison.OrdinalIgnoreCase)).ToList(),
+    };
+
     /// <summary>The user's answer per source ID. Missing in files saved before 006 R3.8, which then count as unanswered.</summary>
     public IReadOnlyDictionary<string, SourceAgreementAnswer> SourceAgreementAnswers { get; init; } = new Dictionary<string, SourceAgreementAnswer>();
 
@@ -89,6 +104,7 @@ public sealed record AppSettings
         && (CheckMode, CheckIntervalHours, CheckTime, CheckScheduleSetAt) == (other.CheckMode, other.CheckIntervalHours, other.CheckTime, other.CheckScheduleSetAt)
         && (Window, NavPaneOpen, ActivitySort) == (other.Window, other.NavPaneOpen, other.ActivitySort)
         && ExcludedPackageIds.SequenceEqual(other.ExcludedPackageIds, StringComparer.OrdinalIgnoreCase)
+        && SearchedExplicitSources.SequenceEqual(other.SearchedExplicitSources, StringComparer.OrdinalIgnoreCase)
         && SourceAgreementAnswers.Count == other.SourceAgreementAnswers.Count
         && SourceAgreementAnswers.All(a => other.SourceAgreementAnswers.TryGetValue(a.Key, out var answer) && a.Value == answer);
 
@@ -127,12 +143,18 @@ public sealed record SourceInfo(
     IReadOnlyList<Agreement> Agreements,
     AgreementStatus AgreementStatus = AgreementStatus.None)
 {
+    /// <summary>
+    /// 006 R3.14, R3.15: Search uses the source. Always true for a source that isn't explicit; for an explicit one, its
+    /// <b>Use in searches</b> box.
+    /// </summary>
+    public bool UsedInSearches { get; init; } = !IsExplicit;
+
     public string TrustText => IsTrusted ? "Trusted" : "Not trusted";
 
     public string LastUpdatedText => LastUpdated is { } t ? $"updated {t.LocalDateTime:g}" : "never updated";
 
     /// <summary>"Microsoft.PreIndexed.Package · https://… · explicit"</summary>
-    public string DetailText => string.Join(" · ", new[] { Type, Argument, IsExplicit ? "explicit (excluded from default searches)" : null }
+    public string DetailText => string.Join(" · ", new[] { Type, Argument, IsExplicit ? "explicit" : null }
         .Where(s => !string.IsNullOrEmpty(s)));
 
     public bool HasAgreements => Agreements.Count > 0 || AgreementStatus == AgreementStatus.Declined; // a declined source isn't read (R3.8)

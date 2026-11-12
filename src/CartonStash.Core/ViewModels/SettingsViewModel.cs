@@ -46,6 +46,26 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     public ObservableCollection<SourceInfo> Sources { get; } = [];
 
+    /// <summary>006 R3.16: the paragraph that says what an explicit source is shows only when one exists.</summary>
+    [ObservableProperty]
+    public partial bool HasExplicitSources { get; private set; }
+
+    /// <summary>
+    /// 006 R3.15: an explicit source's <b>Use in searches</b> box. Saved per source ID (R3.17); the next search
+    /// reconnects with it.
+    /// </summary>
+    public async Task SetUsedInSearchesAsync(SourceInfo source, bool used)
+    {
+        if (!source.IsExplicit || source.UsedInSearches == used)
+        {
+            return;
+        }
+        _settings.Update(s => s.WithSearched(source.Id, used));
+        _packages.InvalidateCache();
+        SourcesStatus = used ? $"Search now uses {source.Name}." : $"Search no longer uses {source.Name}.";
+        await ReloadSourcesAsync();
+    }
+
     [ObservableProperty]
     public partial bool IsBusy { get; private set; }
 
@@ -91,7 +111,9 @@ public sealed partial class SettingsViewModel : ObservableObject
         IsBusy = true;
         SourcesError = null;
         // A source that isn't accepted stays out of this too (R3.8).
-        var names = Sources.Where(s => s.AgreementStatus is AgreementStatus.None or AgreementStatus.Accepted).Select(s => s.Name).ToList();
+        // R3.17: an explicit source only while its box is checked.
+        var names = Sources.Where(s => s.AgreementStatus is AgreementStatus.None or AgreementStatus.Accepted && (!s.IsExplicit || s.UsedInSearches))
+            .Select(s => s.Name).ToList();
         var errors = new List<string>();
         try
         {
@@ -209,6 +231,7 @@ public sealed partial class SettingsViewModel : ObservableObject
             {
                 Sources.Add(source);
             }
+            HasExplicitSources = sources.Any(s => s.IsExplicit);
         }
         catch (Exception ex)
         {

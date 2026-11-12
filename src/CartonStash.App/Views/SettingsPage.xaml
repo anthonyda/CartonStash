@@ -248,6 +248,21 @@
                 IsOpen="{x:Bind ViewModel.HasSourcesError, Mode=OneWay}"
                 Message="{x:Bind ViewModel.SourcesError, Mode=OneWay}"
                 Severity="Warning" />
+            <!-- 006 R3.16: what an explicit source is -->
+            <TextBlock
+                Margin="0,0,0,4"
+                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                TextWrapping="Wrap"
+                Visibility="{x:Bind ViewModel.HasExplicitSources, Mode=OneWay}">
+                <Run FontWeight="SemiBold">Explicit sources.</Run>
+                <Run>WinGet uses an explicit source only when you name it, so a large or specialised catalog, such as fonts, doesn't fill your everyday results. CartonStash does the same: it leaves an explicit source out unless you check</Run>
+                <Run FontWeight="SemiBold">Use in searches</Run>
+                <Run>for it. Even then, only Search uses it. The Installed and Updates lists and the background checks leave it out, as</Run>
+                <Run FontFamily="Consolas">winget list</Run>
+                <Run>and</Run>
+                <Run FontFamily="Consolas">winget upgrade</Run>
+                <Run>do.</Run>
+            </TextBlock>
             <ItemsControl ItemsSource="{x:Bind ViewModel.Sources}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="models:SourceInfo">
@@ -265,6 +280,14 @@
                                     Style="{StaticResource CaptionTextBlockStyle}"
                                     Text="{x:Bind DetailText}"
                                     TextWrapping="Wrap" />
+                                <!-- 006 R3.15: one box per explicit source -->
+                                <CheckBox
+                                    AutomationProperties.Name="{x:Bind ui:Ui.Format('Use {0} in searches', Name)}"
+                                    Click="UseInSearches_Click"
+                                    Content="Use in searches"
+                                    IsChecked="{x:Bind UsedInSearches}"
+                                    Tag="{x:Bind}"
+                                    Visibility="{x:Bind IsExplicit}" />
                             </StackPanel>
                             <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                 <TextBlock HorizontalAlignment="Right" Text="{x:Bind TrustText}" />

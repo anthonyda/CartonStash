@@ -284,9 +284,10 @@ public sealed class WinGetPackageService(CatalogConnection connection, IInstallC
                 var reference = catalogs[i];
                 var info = reference.Info;
                 var answer = connection.AnswerFor(info.Id);
-                var status = AgreementStatus.Declined;
+                var used = !info.Explicit || connection.IsSearched(info.Id); // 006 R3.14, R3.15
+                var status = used ? AgreementStatus.Declined : AgreementStatus.None;
                 List<Agreement> list = [];
-                if (answer is not { Accepted: false }) // a declined source isn't contacted (R3.8)
+                if (used && answer is not { Accepted: false }) // a declined source isn't contacted (R3.8), nor an unused explicit one (R3.14)
                 {
                     try
                     {
@@ -307,7 +308,7 @@ public sealed class WinGetPackageService(CatalogConnection connection, IInstallC
                     info.Explicit,
                     info.LastUpdateTime.Year > 1601 ? info.LastUpdateTime : null,
                     list,
-                    status));
+                    status) { UsedInSearches = used });
             }
             return sources;
         }, cancellationToken);
