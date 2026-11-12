@@ -2,6 +2,28 @@
 
 What's new in each version of CartonStash. Get it from the [Microsoft Store](https://apps.microsoft.com/detail/9MT37M7DBZRK).
 
+## 1.4.1
+
+A round of fixes from a review of the whole app, and two small changes.
+
+### Changed
+
+- **Update all starts at once.** It no longer asks "Update all?" first. Updates that are waiting can still be cancelled in the Activity pane until their installer starts, and license agreements are still shown.
+- **Explicit sources work as in `winget`.** A source marked explicit, such as `winget-font`, is no longer used everywhere. In Settings, each explicit source has a **Use in searches** box that adds it to Search, and a short paragraph explains what explicit sources are. The Installed and Updates lists and the background checks leave them out, as `winget list` and `winget upgrade` do.
+
+### Fixed
+
+- **Install and Update buttons no longer go missing.** After installing a package, uninstalling it and searching for it again, its row had no Install button. A package whose update ended as "Update not confirmed" stayed on the Updates page with no Update button, and **Update all** skipped it.
+- **Going back says when it didn't work.** Going back from the newest version to an older one reported "Installed successfully" even when the installer changed nothing. It now says "Not confirmed", and doesn't leave the package out of update checks.
+- **The details pane follows a new search.** After searching again, the open details pane stayed tied to the old result: pressing Install there showed no progress. It now follows the same package in the new results, or closes.
+- **Icons stay.** Search results lost their icons after an install or a refresh, and an icon that couldn't be downloaded left an empty space. The generic icon now shows instead.
+- **Background checks are recorded.** When the PC woke up after a missed daily check, two checks could start at once and the first was cut off: no history entry and no notification. A check is also no longer dropped for coming a little early after a late one.
+- **The same package can't be queued twice.** An update started on the Updates page now shows on the Search page too, which can no longer queue a second operation for it.
+- **Fewer ways for the app to close by itself.** Copy when another program holds the clipboard, a failed App Installer setup, Refresh pressed twice while a source fails, release notes that can't be read, and WinGet stopping while the app is open (it now reconnects) no longer close CartonStash. An error in one operation no longer stops the operations queued after it.
+- **Settings reset only once.** After a damaged settings file, the "Settings were reset" notice showed at every start and background checks kept failing. The defaults are now saved at once.
+- **Check history keeps the whole error.** A failed check's reason is now kept as reported, including file paths. The privacy policy says so.
+- **Smoother with big results.** Search results and long installer logs are handled without freezing the window.
+
 ## 1.4.0
 
 ### New
