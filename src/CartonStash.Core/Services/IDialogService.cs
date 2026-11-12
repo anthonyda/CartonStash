@@ -36,5 +36,6 @@ public interface IDialogService
 /// <summary>Puts text on the clipboard (006 R4.2).</summary>
 public interface IClipboardService
 {
-    void SetText(string text);
+    /// <summary>False when another program kept the clipboard, even after a second try (BR-13).</summary>
+    bool SetText(string text);
 }

@@ -97,9 +97,25 @@ public sealed partial class MainWindow : Window
         {
             return;
         }
-        Nav.SelectedItem = key == "settings"
-            ? Nav.SettingsItem
-            : Nav.MenuItems.OfType<NavigationViewItem>().First(i => (string)i.Tag == key);
+        if (key == "settings" && Nav.SettingsItem is null)
+        {
+            // BR-32: before the window is shown the navigation has no Settings item yet; select it once it has.
+            void SelectSettings(object sender, RoutedEventArgs e)
+            {
+                Nav.Loaded -= SelectSettings;
+                if (ContentFrame.CurrentSourcePageType == page)
+                {
+                    Nav.SelectedItem = Nav.SettingsItem;
+                }
+            }
+            Nav.Loaded += SelectSettings;
+        }
+        else
+        {
+            Nav.SelectedItem = key == "settings"
+                ? Nav.SettingsItem
+                : Nav.MenuItems.OfType<NavigationViewItem>().First(i => (string)i.Tag == key);
+        }
         if (ContentFrame.CurrentSourcePageType != page)
         {
             ContentFrame.Navigate(page);

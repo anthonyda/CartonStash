@@ -82,10 +82,24 @@ public sealed partial class PackageIcon : UserControl
 
     private void Show(Uri? uri)
     {
-        Picture.Source = uri is null
-            ? null
-            : new BitmapImage { UriSource = uri, DecodePixelWidth = (int)Math.Max(Width is > 0 ? Width : 32, 16), DecodePixelType = DecodePixelType.Logical };
+        BitmapImage? image = null;
+        if (uri is not null)
+        {
+            image = new BitmapImage { UriSource = uri, DecodePixelWidth = (int)Math.Max(Width is > 0 ? Width : 32, 16), DecodePixelType = DecodePixelType.Logical };
+            image.ImageFailed += OnImageFailed;
+        }
+        Picture.Source = image;
         Picture.Visibility = uri is null ? Visibility.Collapsed : Visibility.Visible;
         Glyph.Visibility = uri is null ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    // BR-19: a dead link, a format Windows can't decode or a blocked host: the generic glyph comes back.
+    private void OnImageFailed(object sender, ExceptionRoutedEventArgs e)
+    {
+        if (ReferenceEquals(sender, Picture.Source))
+        {
+            Picture.Visibility = Visibility.Collapsed;
+            Glyph.Visibility = Visibility.Visible;
+        }
     }
 }

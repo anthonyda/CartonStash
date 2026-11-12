@@ -284,7 +284,17 @@ internal sealed class FakeClipboard : IClipboardService
 {
     public string? Text { get; private set; }
 
-    public void SetText(string text) => Text = text;
+    public bool Busy { get; set; }
+
+    public bool SetText(string text)
+    {
+        if (Busy)
+        {
+            return false;
+        }
+        Text = text;
+        return true;
+    }
 }
 
 /// <summary>Everything a view model test needs, wired like the app.</summary>

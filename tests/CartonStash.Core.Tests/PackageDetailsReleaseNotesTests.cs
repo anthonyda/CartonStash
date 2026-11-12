@@ -150,6 +150,18 @@ public class PackageDetailsReleaseNotesTests
         Assert.Equal("H2: Fixes\n- Paging", Notes(vm));
     }
 
+    [Fact] // BR-28: kept notes that are very deeply nested never fail the rest of the pane
+    public async Task Cached_notes_that_cant_be_parsed_leave_the_details_R2_9()
+    {
+        var (app, vm) = Create();
+        app.ReleaseNotes.Cache[Bat] = BatNotes with { Body = string.Concat(Enumerable.Repeat("> - ", 20_000)) + "deep" };
+
+        await vm.LoadAsync(Row(app, "A"));
+
+        Assert.NotEqual(DetailsState.Error, vm.State);
+        Assert.Null(vm.ErrorMessage);
+    }
+
     [Fact]
     public async Task Another_package_cancels_the_request_and_drops_its_answer() // R2.10
     {
