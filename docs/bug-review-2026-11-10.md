@@ -404,6 +404,7 @@ happen today.
 ## Tier 3
 
 - [ ] **BR-19 A failed icon download leaves an empty square.**
+  *2026-11-12: reproduced in the test VM (1.4.0 Store build, the app's downloads blocked by a firewall rule): rows with an icon address show nothing. Fix approved: on `ImageFailed`, show the generic package glyph again. Code waits until the whole review is read.*
   [PackageIcon.xaml.cs:83-90](../src/CartonStash.App/Controls/PackageIcon.xaml.cs#L83-L90) hides the glyph as soon as
   it has an address, and nothing handles `ImageFailed`. A dead link or an unsupported format shows nothing. Confirmed.
 
