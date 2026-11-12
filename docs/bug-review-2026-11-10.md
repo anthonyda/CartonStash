@@ -231,7 +231,7 @@ sources with the same package ID share one key.
 
 ### BR-08 A reset settings file is never rewritten
 
-- [ ] Reviewed. *2026-11-12, fix approved as proposed: save the defaults right after a reset, and at start remove leftover background tasks when the mode is Off. Code waits until the whole review is read.*
+- [x] Reviewed. *2026-11-12, fixed: a corrupt file is replaced by the defaults at once (the old one kept as `.bak`), so the notice shows once and background checks see good settings; at start, tasks left registered while the mode is Off are removed. `A_corrupt_file_is_replaced_by_the_defaults_once`.*
 
 **Where:** [Settings.cs:102-113](../src/CartonStash.Core/Services/Settings.cs#L102-L113),
 [Settings.cs:130-134](../src/CartonStash.Core/Services/Settings.cs#L130-L134),
@@ -253,7 +253,7 @@ start when the mode is Off.
 
 ### BR-09 Check history can keep part of a file path
 
-- [x] Reviewed. *2026-11-12, decided otherwise than proposed: keep full paths in failure reasons and say so in `PRIVACY.md`, as for operation logs. Spec change approved (010 R3.13a, R3.13b). Code waits until the whole review is read.*
+- [x] Reviewed. *2026-11-12, fixed (010 R3.13a, R3.13b): the reason is kept whole, paths included, and `PRIVACY.md` says so. `Reasons_are_kept_as_the_error_gave_them_R3_13a`.*
 
 **Where:** [CheckHistoryStore.cs:45-48](../src/CartonStash.Core/Services/CheckHistoryStore.cs#L45-L48),
 [BackgroundCheckRunner.cs:95](../src/CartonStash.Core/Services/BackgroundCheckRunner.cs#L95). Spec 010 R3.13, and
@@ -380,7 +380,7 @@ and `GetPackageCatalogByName` in `RefreshSourceAsync`
 
 ### BR-17 The update check mode has no guard: a bad index would reset all settings
 
-- [ ] Reviewed. *2026-11-12, fix approved as a guard (not known to happen): ignore a mode index outside the list, as the three combo boxes and the interval already do, so an invalid mode is never saved. Unit test with index -1. Code waits until the whole review is read.*
+- [x] Reviewed. *2026-11-12, fixed: a mode index outside the list is ignored. `A_mode_index_outside_the_list_changes_nothing`.*
 
 **Where:** [CheckSettingsViewModel.cs:139](../src/CartonStash.Core/ViewModels/CheckSettingsViewModel.cs#L139) against
 [CheckSettingsViewModel.cs:141-147](../src/CartonStash.Core/ViewModels/CheckSettingsViewModel.cs#L141-L147) and
@@ -398,7 +398,7 @@ happen today.
 
 ### BR-18 Background check: three gaps in "use old data" and "never throws"
 
-- [ ] Reviewed. *2026-11-12, fix approved, restores 010 R1.6 and R1.9: (1) any refresh failure falls back to the data WinGet already has, not only `WinGetException` and the timeout; (2) the due test and the two skip tests move inside the `try`, so an error there is recorded and a daily timer is still set again; (3) showing the notification gets its own catch, so it can't add a second, Failed entry. Unit tests for each. Code waits until the whole review is read.*
+- [x] Reviewed. *2026-11-12, fixed: any refresh failure falls back to WinGet's data; the due and skip tests are inside the `try`; the badge and notification can't add a second entry. Three tests in `BackgroundCheckRunnerTests`.*
 
 **Where:** [BackgroundCheckRunner.cs:63-97](../src/CartonStash.Core/Services/BackgroundCheckRunner.cs#L63-L97),
 [BackgroundCheckRunner.cs:128](../src/CartonStash.Core/Services/BackgroundCheckRunner.cs#L128),
@@ -547,7 +547,7 @@ once. If it fails again, say "WinGet stopped responding. Restart CartonStash." C
 
 ### BR-26 The WinGet presence check doesn't prove WinGet can start, and background checks skip it
 
-- [ ] Reviewed. *2026-11-12, fix approved as proposed. Code waits until the whole review is read.*
+- [x] Reviewed. *2026-11-12, fixed: WinGet's package manager is made on first use, so a background check that isn't due never starts WinGet's server; when App Installer is missing it throws a `WinGetException` (recorded) instead of ending the process. At start, any activation failure opens the setup window (BR-12). Not done: a minimum App Installer version, as no minimum for the COM API is documented; an App Installer too old now opens the setup window through BR-12 instead.*
 
 **Where:** [WinGetAvailability.cs:13-18](../src/CartonStash.Core/Services/WinGetAvailability.cs#L13-L18),
 [BackgroundCheckTask.cs:62-71](../src/CartonStash.App/Services/BackgroundCheckTask.cs#L62-L71). Spec 011 R3.
@@ -566,7 +566,7 @@ it once a check is due and not skipped. Unit test: a check that isn't due never 
 
 ### BR-27 Interval mode: a timer tick can arrive "not yet due"
 
-- [ ] Reviewed. *2026-11-12, fix approved as proposed. Code waits until the whole review is read.*
+- [x] Reviewed. *2026-11-12, fixed: a check counts from when it started, and the interval timer's own tick counts from a quarter of the interval early (at least 15 minutes). `The_interval_timer_counts_a_quarter_early_R1_3`.*
 
 **Where:** [BackgroundCheckScheduler.cs:58](../src/CartonStash.App/Services/BackgroundCheckScheduler.cs#L58),
 [CheckSchedule.cs:33-34](../src/CartonStash.Core/Services/CheckSchedule.cs#L33-L34),
