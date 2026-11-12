@@ -47,13 +47,14 @@ public sealed class PackageOperationQueue(IPackageInstaller installer, IOperatio
 
     /// <summary>
     /// The newest operation for this installed program (or package, for search results), if any. Matched by
-    /// <see cref="PackageInfo.Key"/>: programs sharing a WinGet ID don't share operations (002 R6.5).
+    /// <see cref="PackageInfo.IsSamePackage"/>: programs sharing a WinGet ID don't share operations (002 R6.5), and a
+    /// Search row sees one queued from Installed or Updates (BR-07).
     /// </summary>
     public PackageOperation? Find(PackageInfo package)
     {
         for (var i = 0; i < Operations.Count; i++)
         {
-            if (string.Equals(Operations[i].Package.Key, package.Key, StringComparison.OrdinalIgnoreCase))
+            if (Operations[i].Package.IsSamePackage(package)) // BR-07
             {
                 return Operations[i];
             }
@@ -120,7 +121,7 @@ public sealed class PackageOperationQueue(IPackageInstaller installer, IOperatio
             Finish(operation, new OperationOutcome(OperationResult.Cancelled, "Cancelled before it started."));
             if (!HasPendingWork)
             {
-                Drained?.Invoke(this, EventArgs.Empty);
+                Raise(Drained, EventArgs.Empty);
             }
         }
     }
@@ -163,11 +164,43 @@ public sealed class PackageOperationQueue(IPackageInstaller installer, IOperatio
     {
         // Set before the first await: a Completed handler may enqueue while this loop runs synchronously.
         _isWorking = true;
-        while (_pending.TryDequeue(out var operation))
+        try
+        {
+            while (_pending.TryDequeue(out var operation))
+            {
+                try
+                {
+                    await RunOneAsync(operation);
+                }
+                catch (Exception ex)
+                {
+                    // BR-10 (009 R2.5): nothing around one operation stops the queue. It ends as failed if it hadn't ended.
+                    if (operation.IsActive)
+                    {
+                        ApplyOutcome(operation, new OperationOutcome(OperationResult.Failed, $"Something went wrong: {ex.Message}"));
+                        Announce(operation);
+                    }
+                }
+                finally
+                {
+                    _running = null;
+                    _runningCancellation = null;
+                }
+            }
+        }
+        finally
+        {
+            _isWorking = false;
+        }
+        Raise(Drained, EventArgs.Empty);
+    }
+
+    private async Task RunOneAsync(PackageOperation operation)
+    {
         {
             _running = operation;
             operation.StartedAt = DateTimeOffset.Now;
-            operation.LogFilePath = logs?.CreateLogPath(operation);
+            operation.LogFilePath = CreateLogPath(operation);
             using var cancellation = new CancellationTokenSource();
             _runningCancellation = cancellation;
 
@@ -205,14 +238,85 @@ public sealed class PackageOperationQueue(IPackageInstaller installer, IOperatio
 
             _running = null;
             _runningCancellation = null;
-            Finish(operation, outcome);
+            ApplyOutcome(operation, outcome);
+            if (logs is not null && operation.LogFilePath is not null)
+            {
+                // BR-20: an installer's log can be tens of MB; read and write it off the UI thread.
+                var written = await Task.Run(() => CompleteLog(operation));
+                if (!written)
+                {
+                    operation.LogFilePath = null; // the dialog falls back to the summary
+                }
+            }
+            Announce(operation);
         }
+    }
 
-        _isWorking = false;
-        Drained?.Invoke(this, EventArgs.Empty);
+    private string? CreateLogPath(PackageOperation operation)
+    {
+        try
+        {
+            return logs?.CreateLogPath(operation);
+        }
+        catch (Exception)
+        {
+            return null; // 009 R2.5: logging never affects an operation
+        }
+    }
+
+    private bool CompleteLog(PackageOperation operation)
+    {
+        try
+        {
+            return logs?.Complete(operation) ?? true;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>Raises an event to each handler in turn: one that throws doesn't stop the others or the queue (BR-10).</summary>
+    private void Raise<T>(EventHandler<T>? handlers, T args)
+    {
+        foreach (var handler in handlers?.GetInvocationList() ?? [])
+        {
+            try
+            {
+                ((EventHandler<T>)handler)(this, args);
+            }
+            catch (Exception)
+            {
+                // a handler's failure is its own (009 R2.5)
+            }
+        }
+    }
+
+    private void Raise(EventHandler? handlers, EventArgs args)
+    {
+        foreach (var handler in handlers?.GetInvocationList() ?? [])
+        {
+            try
+            {
+                ((EventHandler)handler)(this, args);
+            }
+            catch (Exception)
+            {
+            }
+        }
     }
 
     private void Finish(PackageOperation operation, OperationOutcome outcome)
+    {
+        ApplyOutcome(operation, outcome);
+        if (CompleteLog(operation) is false)
+        {
+            operation.LogFilePath = null;
+        }
+        Announce(operation);
+    }
+
+    private void ApplyOutcome(PackageOperation operation, OperationOutcome outcome)
     {
         outcome = AfterUninstallOutcome(outcome, operation);
         operation.Percent = null;
@@ -226,8 +330,10 @@ public sealed class PackageOperationQueue(IPackageInstaller installer, IOperatio
         operation.Message = outcome.Message;
         operation.Details = outcome.Details;
         operation.FinishedAt = DateTimeOffset.Now;
-        logs?.Complete(operation);
+    }
 
+    private void Announce(PackageOperation operation)
+    {
         // Active operations stay first, then finished ones, newest first (009 R1.5).
         var firstFinished = Operations.Count(o => o.IsActive);
         var index = Operations.IndexOf(operation);
@@ -235,7 +341,7 @@ public sealed class PackageOperationQueue(IPackageInstaller installer, IOperatio
         {
             Operations.Move(index, firstFinished);
         }
-        Completed?.Invoke(this, operation);
+        Raise(Completed, operation);
     }
 
     /// <summary>

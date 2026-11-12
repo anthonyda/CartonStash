@@ -212,6 +212,15 @@ public sealed partial class ActivityViewModel : ObservableObject
 
     private readonly HashSet<PackageOperation> _watched = [];
 
+    /// <summary>BR-33: when the pane opens or the window comes back, yesterday's cards show their date (009 R1.4).</summary>
+    public void RefreshTimes()
+    {
+        foreach (var operation in _queue.Operations)
+        {
+            operation.RefreshTimeText();
+        }
+    }
+
     /// <summary>What the list shows: an <see cref="ActivityHeader"/> or a <see cref="PackageOperation"/> (009 R4). Never replaced (R4.6).</summary>
     public System.Collections.ObjectModel.ObservableCollection<object> Entries { get; } = [];
 
@@ -377,6 +386,6 @@ public sealed partial class ActivityViewModel : ObservableObject
     private void ClearFinished() => _queue.ClearFinished();
 
     /// <summary>The Log button of a finished operation (R2.2).</summary>
-    public Task ShowLogAsync(PackageOperation operation) =>
-        _dialogs.ShowLogAsync(operation.Title, _logs.Read(operation), _logs.Folder);
+    public async Task ShowLogAsync(PackageOperation operation) =>
+        await _dialogs.ShowLogAsync(operation.Title, await Task.Run(() => _logs.Read(operation)), _logs.Folder); // BR-20: off the UI thread
 }

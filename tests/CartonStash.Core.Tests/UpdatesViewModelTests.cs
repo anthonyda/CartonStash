@@ -129,14 +129,29 @@ public class UpdatesViewModelTests
     }
 
     [Fact]
-    public async Task Update_all_confirms_then_queues_everything() // R2.3
+    public async Task Update_all_queues_everything_without_a_question_R9_1() // R9.1 (BR-34), was R2.3
     {
         var (app, vm) = await CreateLoaded(Pkg.Installed("A", update: true), Pkg.Installed("B", update: true));
 
         await vm.UpdateAllCommand.ExecuteAsync(null);
 
-        Assert.Single(app.Dialogs.Confirmations);
+        Assert.Empty(app.Dialogs.Confirmations);
         Assert.Equal(2, app.Queue.ActiveCount);
+    }
+
+    [Fact] // BR-21: Update selected follows the row's own rule, as Update all does (R6.2)
+    public async Task Update_selected_leaves_out_a_row_that_doesnt_offer_update_R6_2()
+    {
+        var (app, vm) = await CreateLoaded(Pkg.Installed("A", update: true), Pkg.Installed("B", update: true));
+        app.Packages.ReadInstalled = _ => null;
+        await vm.Updates[0].UpdateCommand.ExecuteAsync(null);
+        app.Installer.Complete("A"); // A's row: updated, its Update button gone until the reload
+        Assert.False(vm.Updates[0].ShowUpdate);
+
+        vm.SetSelection([.. vm.Updates]);
+        await vm.UpdateSelectedCommand.ExecuteAsync(null);
+
+        Assert.Equal(["A", "B"], app.Installer.Calls.Select(c => c.Id));
     }
 
     [Fact]

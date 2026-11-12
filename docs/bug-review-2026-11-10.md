@@ -215,7 +215,7 @@ check takes longer than that. R3.17 was tested for the startup entry plus "user 
 
 ### BR-07 The same package can be queued twice from different pages
 
-- [ ] Reviewed. *2026-11-12, fix approved, no spec change (restores 003 R4.2): when either side has no installed entry ID (a Search row), the queue also matches on WinGet ID plus source. Separate installed copies with the same WinGet ID (002 R6.5) stay separate. Code waits until the whole review is read.*
+- [x] Reviewed. *2026-11-12, fixed: `PackageInfo.IsSamePackage` matches on installed entry ID when both have one, else on WinGet ID and source; the queue and the rows use it. `SamePackageTests`.*
 
 **Where:** [PackageInfo.cs:42](../src/CartonStash.Core/Models/PackageInfo.cs#L42),
 [PackageOperationQueue.cs:51-69](../src/CartonStash.Core/Services/PackageOperationQueue.cs#L51-L69),
@@ -267,7 +267,7 @@ messages.
 
 ### BR-10 The queue stops for good if anything around an operation throws
 
-- [ ] Reviewed. *2026-11-12, fix approved as proposed: `try`/`finally` around the worker's loop body so the queue always moves on, and a catch-all around writing the log and around each `Completed` handler. Code waits until the whole review is read.*
+- [x] Reviewed. *2026-11-12, fixed: the worker's loop body runs in `try`/`finally`; the log store, each `Completed` and `Drained` handler are guarded one by one. `QueueKeepsGoingTests`.*
 
 **Where:** [PackageOperationQueue.cs:159-202](../src/CartonStash.Core/Services/PackageOperationQueue.cs#L159-L202),
 [PackageOperationQueue.cs:204-225](../src/CartonStash.Core/Services/PackageOperationQueue.cs#L204-L225),
@@ -437,7 +437,7 @@ so nothing asks again.
 
 ### BR-20 Operation logs are read and written on the UI thread, whole file
 
-- [ ] Reviewed. *2026-11-12, fix approved as proposed. Code waits until the whole review is read.*
+- [x] Reviewed. *2026-11-12, fixed: the log is written on a background thread before the card's Completed handlers run, and the Log dialog reads only the end of the file, off the UI thread (`OperationLogStore.ReadEnd`).*
 
 **Where:** [PackageOperationQueue.cs:215](../src/CartonStash.Core/Services/PackageOperationQueue.cs#L215) calls
 [OperationLogStore.cs:85-86](../src/CartonStash.Core/Services/OperationLogStore.cs#L85-L86) and
@@ -460,7 +460,7 @@ a large log in the VM before and after.
 
 ### BR-21 Update selected doesn't apply the row's own rules
 
-- [ ] Reviewed. *2026-11-12, fix approved as proposed. Code waits until the whole review is read.*
+- [x] Reviewed. *2026-11-12, fixed: Update selected takes the rows that offer Update (`ShowUpdate`). `Update_selected_leaves_out_a_row_that_doesnt_offer_update_R6_2`.*
 
 **Where:** [UpdatesViewModel.cs:81-83](../src/CartonStash.Core/ViewModels/UpdatesViewModel.cs#L81-L83). Spec 004
 R2.2, R6.2. Confirmed.
@@ -620,7 +620,7 @@ Since BR-05's fix, the Installed badge only reads the installed list's own entri
 
 ### BR-30 The first installed load and an operation finishing
 
-- [ ] Reviewed. *2026-11-12, fix approved as proposed. Code waits until the whole review is read.*
+- [x] Reviewed. *2026-11-12, fixed: operations that end while a load runs trigger one more load when it ends. `An_operation_ending_during_the_first_load_reloads_after_it_002_R1_3`.*
 
 **Where:** [InstalledPackagesStore.cs:21-28](../src/CartonStash.Core/Services/InstalledPackagesStore.cs#L21-L28).
 Spec 002 R1.3. Confirmed; narrow.
@@ -697,8 +697,7 @@ Five small ones, each with its fix:
 
 ### BR-34 Update all asks for a confirmation (added 2026-11-12)
 
-- [ ] Reviewed. *2026-11-12, maintainer's request, approved: constitution P2 and 004 R2.3 amended (004 amendment
-  R9). Code waits until the whole review is read.*
+- [x] Reviewed. *2026-11-12, done (004 R9): Update all queues at once; agreements still ask. `Update_all_queues_*_R9_1`.*
 
 **Where:** [UpdatesViewModel.cs:85-88](../src/CartonStash.Core/ViewModels/UpdatesViewModel.cs#L85-L88)
 (`UpdateManyAsync(..., confirm: true)`). Spec 004 R2.3, constitution P2. Not a bug: specified behaviour the maintainer

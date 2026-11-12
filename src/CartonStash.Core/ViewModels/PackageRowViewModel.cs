@@ -238,7 +238,7 @@ internal static class RowOperationTracker
         {
             foreach (var row in rows())
             {
-                if (string.Equals(row.Package.Key, operation.Package.Key, StringComparison.OrdinalIgnoreCase))
+                if (row.Package.IsSamePackage(operation.Package)) // BR-07
                 {
                     row.Operation = operation;
                 }

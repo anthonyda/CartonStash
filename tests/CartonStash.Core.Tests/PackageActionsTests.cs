@@ -62,10 +62,9 @@ public class PackageActionsTests
         app.Dialogs.AgreementAnswers.Enqueue(false); // Q
 
         await app.Actions.UpdateManyAsync(
-            [WinGetHostTests.AppInstaller(), Pkg.Installed("P", update: true), Pkg.Installed("A", update: true), Pkg.Installed("Q", update: true)],
-            confirm: true);
+            [WinGetHostTests.AppInstaller(), Pkg.Installed("P", update: true), Pkg.Installed("A", update: true), Pkg.Installed("Q", update: true)]);
 
-        Assert.Single(app.Dialogs.Confirmations);
+        Assert.Empty(app.Dialogs.Confirmations); // 004 R9.1
         Assert.Equal(["P: license agreement", "Q: license agreement"], app.Dialogs.AgreementPrompts.Select(p => p.Title));
         Assert.Equal(
             [(OperationKind.Upgrade, "P", true), (OperationKind.Upgrade, "A", false), (OperationKind.Upgrade, "Microsoft.AppInstaller", false)],
@@ -82,7 +81,7 @@ public class PackageActionsTests
         var dialogs = new BlockingAgreementDialogs(() => callsWhenAsked = app.Installer.Calls.Count);
         var actions = new PackageActions(app.Queue, app.Installer, dialogs, app.Packages);
 
-        await actions.UpdateManyAsync([Pkg.Installed("A", update: true), Pkg.Installed("B", update: true)], confirm: false);
+        await actions.UpdateManyAsync([Pkg.Installed("A", update: true), Pkg.Installed("B", update: true)]);
 
         Assert.Equal(0, callsWhenAsked);
         Assert.Equal(["A"], app.Installer.Calls.Select(c => c.Id)); // A runs, B waits its turn
@@ -117,8 +116,7 @@ public class PackageActionsTests
         app.Installer.AutoComplete = new OperationOutcome(OperationResult.Succeeded, "ok");
 
         await app.Actions.UpdateManyAsync(
-            [Pkg.Installed("B", update: true), WinGetHostTests.AppInstaller(), Pkg.Installed("A", update: true), Pkg.Installed("C", update: true)],
-            confirm: false);
+            [Pkg.Installed("B", update: true), WinGetHostTests.AppInstaller(), Pkg.Installed("A", update: true), Pkg.Installed("C", update: true)]);
 
         Assert.Equal(["B", "A", "C", "Microsoft.AppInstaller"], app.Installer.Calls.Select(c => c.Id));
     }
@@ -170,18 +168,13 @@ public class PackageActionsTests
     }
 
     [Fact]
-    public async Task Update_all_confirms_with_the_count() // 004 R2.3
+    public async Task Update_all_queues_without_a_confirmation_R9_1() // 004 R9.1 (BR-34), was R2.3
     {
         var app = new TestApp();
 
-        app.Dialogs.Answer = false;
-        await app.Actions.UpdateManyAsync([Pkg.Installed("A", update: true), Pkg.Installed("B", update: true)], confirm: true);
-        Assert.Empty(app.Installer.Calls);
+        await app.Actions.UpdateManyAsync([Pkg.Installed("A", update: true), Pkg.Installed("B", update: true)]);
 
-        app.Dialogs.Answer = true;
-        await app.Actions.UpdateManyAsync([Pkg.Installed("A", update: true), Pkg.Installed("B", update: true)], confirm: true);
-
-        Assert.Contains("2 packages will be updated", app.Dialogs.Confirmations[1]);
+        Assert.Empty(app.Dialogs.Confirmations);
         Assert.Equal(["A"], app.Installer.Calls.Select(c => c.Id)); // B waits its turn
         Assert.Equal(2, app.Queue.ActiveCount);
     }

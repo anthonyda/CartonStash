@@ -304,24 +304,12 @@ public sealed class PackageActions(PackageOperationQueue queue, IPackageInstalle
     /// Update several. With <paramref name="confirm"/>, asks first, naming the count (004 R2.3). Then asks for the agreements
     /// of each package that has them, and queues nothing until all are answered; declined packages are left out (R7.2).
     /// </summary>
-    public async Task<bool> UpdateManyAsync(IReadOnlyList<PackageInfo> packages, bool confirm)
+    public async Task<bool> UpdateManyAsync(IReadOnlyList<PackageInfo> packages)
     {
+        // 004 R9.1 (BR-34): no confirmation; a queued update can be cancelled until its installer starts.
         if (packages.Count == 0)
         {
             return false;
-        }
-
-        if (confirm)
-        {
-            var noun = packages.Count == 1 ? "package" : "packages";
-            var confirmed = await dialogs.ConfirmAsync(
-                "Update all?",
-                $"{packages.Count} {noun} will be updated. Installers run one after another and may show their own prompts.",
-                $"Update {packages.Count} {noun}");
-            if (!confirmed)
-            {
-                return false;
-            }
         }
 
         var kept = new List<(PackageInfo Package, bool Accepted)>();
