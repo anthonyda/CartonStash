@@ -1,6 +1,6 @@
 # 017 – Retry as administrator: Design
 
-**Status:** Draft (2026-11-12), written against the proposed answers; finished once Q1 is decided and T1 measured.
+**Status:** Approved (2026-11-12). Option (a) unless T1 shows WinGet refuses an elevated caller.
 **Requirements:** [requirements.md](requirements.md)
 
 ## Overview

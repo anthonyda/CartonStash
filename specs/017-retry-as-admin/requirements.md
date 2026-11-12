@@ -1,6 +1,6 @@
 # 017 – Retry as administrator: Requirements
 
-**Status:** Draft (2026-11-12)
+**Status:** Approved (2026-11-12), Q1 as answered by the maintainer (R1.8), Q2 and Q3 as proposed
 **Depends on:** 003, 004, 009, 013
 
 ## Problem
@@ -30,7 +30,7 @@ manifest has one installer and no scope, and the installer chooses all users by 
 | ID   | Story | Criterion |
 |------|-------|-----------|
 | R1.1 | US1   | If an install or update fails with a result that means the installer lacked administrator rights (R1.2), then the result shall say so in words: "{name}'s installer needs administrator rights and didn't ask for them." The installer's code stays in the log (013 R4.1). |
-| R1.2 | –     | A result counts as "lacked administrator rights" when the installer's exit code or WinGet's extended error is on a list kept in the design, built from measured cases. The first entries: 0x88A30033 (Microsoft 365 Copilot's installer), 0x80070005 and 5 (access denied), and MSI 1925 (insufficient privileges). Nothing else is guessed (P1). |
+| R1.2 | –     | A result counts as "lacked administrator rights" when the installer's exit code is on a list kept in the design, built from measured cases. *(Amended 2026-11-12 during T2: was "or WinGet's extended error". WinGet's own "access denied" with no exit code comes before any installer runs, and keeps 013 R1.1's message.)* The first entries: 0x88A30033 (Microsoft 365 Copilot's installer), 0x80070005 and 5 (access denied), and MSI 1925 (insufficient privileges). Nothing else is guessed (P1). |
 | R1.3 | US1   | Such a result shall offer **Retry as administrator** on its Activity card and on the row, next to Retry. |
 | R1.4 | US1   | When the user presses it, the app shall run the same operation again (same package, version and scope) with administrator rights, so that Windows shows its permission prompt once. The app itself keeps running without them (constitution A5). |
 | R1.5 | US1   | While it runs, the card and the row shall show progress as for any operation (P3), with "May ask for permission" (003 R8.3). If the user declines the prompt, the result shall be **Cancelled** with "Windows' permission prompt was declined." |

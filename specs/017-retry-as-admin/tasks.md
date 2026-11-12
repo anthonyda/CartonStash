@@ -1,6 +1,6 @@
 # 017 – Retry as administrator: Tasks
 
-**Status:** Draft (2026-11-12)
+**Status:** Approved (2026-11-12), Q1 as answered by the maintainer (R1.8), Q2 and Q3 as proposed
 
 ## Measure first
 
