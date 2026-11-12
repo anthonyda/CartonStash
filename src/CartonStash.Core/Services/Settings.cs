@@ -93,23 +93,31 @@ public sealed class JsonSettingsStore(string path) : ISettingsStore
             if (!Enum.IsDefined(settings.Theme) || !Enum.IsDefined(settings.InstallScope) || !Enum.IsDefined(settings.StartPage) || !Enum.IsDefined(settings.ActivitySort)
                 || settings.SourceAgreementAnswers is null
                 || !Enum.IsDefined(settings.CheckMode) || !AppSettings.CheckIntervals.Contains(settings.CheckIntervalHours)
-                || settings.ExcludedPackageIds is null)
+                || settings.ExcludedPackageIds is null || settings.SearchedExplicitSources is null)
             {
                 throw new JsonException("Unknown setting value.");
             }
             return (settings, false);
         }
-        catch (Exception ex) when (ex is JsonException or NotSupportedException or IOException)
+        catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
+        {
+            // BR-33: a file that can't be read now (permissions, held by security software): defaults for this run, the
+            // file left as it is, since it may be fine.
+            return (new AppSettings(), true);
+        }
+        catch (Exception ex) when (ex is JsonException or NotSupportedException)
         {
             // Keep the broken file for diagnosis, then start over with defaults.
+            var defaults = new AppSettings();
             try
             {
                 File.Copy(path, path + ".bak", overwrite: true);
+                Save(defaults); // BR-08: written at once, so the notice and the background checks see good settings from now on
             }
-            catch (IOException)
+            catch (Exception copy) when (copy is IOException or UnauthorizedAccessException)
             {
             }
-            return (new AppSettings(), true);
+            return (defaults, true);
         }
     }
 

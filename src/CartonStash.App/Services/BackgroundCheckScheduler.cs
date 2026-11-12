@@ -96,12 +96,10 @@ public sealed class BackgroundCheckScheduler : ICheckScheduler
     /// <summary>True when the chosen schedule has lost a task: repairs a broken daily chain (R3.7).</summary>
     public static bool IsMissing(AppSettings settings)
     {
-        if (settings.CheckMode == CheckMode.Off)
-        {
-            return false;
-        }
         var names = BackgroundTaskRegistration.AllTasks.Values.Select(t => t.Name).ToList();
-        return !names.Contains(TimerTaskName) || !names.Contains(ReturnTaskName);
+        return settings.CheckMode == CheckMode.Off
+            ? names.Contains(TimerTaskName) || names.Contains(ReturnTaskName) // BR-08: leftovers from before a settings reset
+            : !names.Contains(TimerTaskName) || !names.Contains(ReturnTaskName);
     }
 
     public static void RegisterDailyTimer(DateTimeOffset next)

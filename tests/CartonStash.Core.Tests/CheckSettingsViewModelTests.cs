@@ -40,6 +40,18 @@ public sealed class CheckSettingsViewModelTests : IDisposable
         Assert.Empty(_scheduler.Applied);
     }
 
+    [Fact] // BR-17: nothing selected (-1) is never saved
+    public void A_mode_index_outside_the_list_changes_nothing()
+    {
+        var settings = new FakeSettings(new AppSettings { CheckMode = CheckMode.Interval });
+        var vm = Create(settings);
+
+        vm.ModeIndex = -1;
+
+        Assert.Equal(CheckMode.Interval, settings.Current.CheckMode);
+        Assert.Empty(_scheduler.Applied);
+    }
+
     [Fact]
     public void Only_the_chosen_modes_control_is_available() // R3.1
     {

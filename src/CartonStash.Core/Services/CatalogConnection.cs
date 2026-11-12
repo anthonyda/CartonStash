@@ -19,7 +19,31 @@ public sealed class CatalogConnection(ISettings settings)
     private PackageCatalog? _localFirst;
     private PackageCatalog? _installedOnly;
 
-    internal PackageManager Manager { get; } = new();
+    private readonly Lock _managerLock = new();
+    private PackageManager? _manager;
+
+    /// <summary>
+    /// WinGet's package manager, made on first use: a background check that isn't due never starts WinGet's server
+    /// (BR-26).
+    /// </summary>
+    internal PackageManager Manager
+    {
+        get
+        {
+            lock (_managerLock)
+            {
+                if (_manager is null && !WinGetAvailability.IsInstalled())
+                {
+                    // 011 R3.1: activating WinGet when it's missing ends the process; a background check records this instead.
+                    throw new WinGetException("WinGet (App Installer) isn't installed.", null);
+                }
+                return _manager ??= new PackageManager();
+            }
+        }
+    }
+
+    /// <summary>Starts WinGet now, so the app's start finds out at once whether it can (011 R3.5).</summary>
+    public void Activate() => _ = Manager;
 
     /// <summary>Sources left out of the catalogs until the next <see cref="Invalidate"/> (011 R1.5).</summary>
     public IReadOnlyList<SourceFailure> SourceFailures => [.. _failedSources.Values.OrderBy(f => f.Source, StringComparer.OrdinalIgnoreCase)];

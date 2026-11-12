@@ -33,6 +33,39 @@ public sealed class SettingsTests : IDisposable
         Assert.False(reset);
     }
 
+    [Fact] // BR-08: the defaults are written at once; the old file stays as .bak; the next start reports nothing
+    public void A_corrupt_file_is_replaced_by_the_defaults_once()
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(SettingsPath)!);
+        File.WriteAllText(SettingsPath, "{ not json");
+
+        var (first, reset) = new JsonSettingsStore(SettingsPath).Load();
+        var (second, resetAgain) = new JsonSettingsStore(SettingsPath).Load();
+
+        Assert.True(reset);
+        Assert.Equal(new AppSettings(), first);
+        Assert.Equal("{ not json", File.ReadAllText(SettingsPath + ".bak"));
+        Assert.False(resetAgain);
+        Assert.Equal(new AppSettings(), second);
+    }
+
+    [Fact] // BR-33: a file the user can't read is a reset for this run, and stays as it is
+    public void An_unreadable_file_is_left_alone()
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(SettingsPath)!);
+        new JsonSettingsStore(SettingsPath).Save(new AppSettings { Theme = AppTheme.Dark });
+        var before = File.ReadAllText(SettingsPath);
+        var (loaded, reset) = (new AppSettings(), false);
+        using (new FileStream(SettingsPath, FileMode.Open, FileAccess.ReadWrite, FileShare.None)) // held: reading fails with IOException
+        {
+            (loaded, reset) = new JsonSettingsStore(SettingsPath).Load();
+        }
+
+        Assert.True(reset);
+        Assert.Equal(new AppSettings(), loaded);
+        Assert.Equal(before, File.ReadAllText(SettingsPath)); // not overwritten
+    }
+
     [Fact]
     public void Window_layout_survives_a_restart() // R6.1, R6.2
     {
