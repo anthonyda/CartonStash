@@ -284,7 +284,7 @@ has no catch, so "Windows couldn't install App Installer: …" would never show.
 
 ### BR-12 "WinGet couldn't start" only handles one exception type
 
-- [ ] Reviewed
+- [ ] Reviewed. *2026-11-12, fix approved as proposed: at start, any error from WinGet (not only `COMException`) opens the "WinGet couldn't start" window instead of ending the app. Code waits until the whole review is read.*
 
 **Where:** [App.xaml.cs:27-59](../src/CartonStash.App/App.xaml.cs#L27-L59). Spec 011 R3.5 (still pending in the roadmap).
 
