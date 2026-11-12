@@ -54,6 +54,14 @@
   - Verify: logged below.
   - Done 2026-11-05: Update and Decline, then Update all and Accept. Accept on a single Update is covered by the unit tests.
 
+### Amendment R8: rows stay in place when the list reloads (Draft, 2026-11-12)
+
+- [x] **T18.** `UpdatesViewModel.Rebuild` keeps the rows still listed and syncs both lists with removals and inserts only; the selection keeps the rows that stay. *(R8.1, R8.2)*
+  - Verify: `UpdatesViewModelTests.Finished_updates_leave_by_removal_never_by_reset`, `New_updates_are_inserted_in_name_order`, `A_reload_keeps_the_checked_rows_that_stay`, `Sync_handles_a_row_whose_place_changed`; all unit tests pass.
+- [x] **T19.** Manual in the test VM, Store build: the crash's repro (fresh `clean`, old jq, ripgrep, fzf, zoxide and Just, jq running, Update on each row, Activity pinned, 30 s, then Tab from the Activity pane through Refresh into the list). *(R8.1)*
+  - Verify: logged below.
+  - Done 2026-11-12: released 1.3.0 crashed, test build 1.3.96 didn't.
+
 ## Manual verification log
 
 | Criterion | Date | Result | Notes |
@@ -69,3 +77,4 @@
 | R6.4 (T15) | 2026-11-05 | Pass | Same build. A second copy of the app held WinGet's server open. After the restart, the new copy waited its 60 s, still saw 1.29.379.0, showed "App Installer isn't updated yet. It finishes updating once every program using WinGet is closed…" and kept the Restart CartonStash button on the row |
 | Q5 for R6.2, R6.3 (T13, T15) | 2026-11-05 | Pass | Test VM, build 1.1.11. Dark: the notification's Restart CartonStash button, the card's warning icon with "Updated · restart CartonStash" and its accent button are readable. Keyboard: Tab reaches the card's button in the Activity pane; the row's and the notification's buttons are keyboard focusable, with the names "Restart CartonStash to finish updating App Installer" and "Restart CartonStash". High Contrast Black: the row's button uses the contrast accent like Update, the notification's button and the card are bordered and readable |
 | R7.1, R7.2 (T17) | 2026-11-05 | Pass | Test VM, Store test build 1.1.12; Power BI Desktop 2.158.1304.0 installed with the `winget` command; UAC's consent prompt turned off for this run only, so the per-machine installer could elevate without a click (the app stayed unelevated). Update on its row showed "Microsoft PowerBI Desktop (x64): license agreement" with the "Microsoft Software License Terms" link; Decline queued nothing and the Update button stayed. Update all (6 packages): the same dialog after the confirmation; Accept; Power BI updated: log "Updated successfully.", WinGet status Ok, `winget list` shows 2.159.1231.0. Before the fix the same update failed with `PackageAgreementsNotAccepted` (`0x8A150041`) |
+| R8.1 (T19) | 2026-11-12 | Pass | Test VM, fresh `clean`. Released 1.3.0 Store build: the Updates list went from 11 rows to 7 after the five updates (jq failed, running), and Tab from **Refresh** closed the app (`0xc000027b`, stowed `E_BOUNDS`); the full dump showed `IList.GetAt` past the end from CsWinRT while WinUI handled Tab. Store test build 1.3.96 with R8: same 11 to 7 rows, Tab from **Refresh** focused App Installer's row, then its Update and Exclude buttons, then on to the navigation; no crash, no dump |

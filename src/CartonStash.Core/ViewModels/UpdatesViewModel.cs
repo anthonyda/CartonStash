@@ -107,21 +107,65 @@ public sealed partial class UpdatesViewModel : ObservableObject
     }
 
     // Updated packages drop out here after the store reloads (R2.4).
+    // R8.1: rows still listed stay the same objects in place; only rows that left are removed and new ones inserted.
+    // Never Clear: WinUI's ListView keeps the index it last focused across a reset, and Tab into the shorter list then
+    // asks for a row past the end and the app crashes (E_BOUNDS). Removing rows one by one brings that index back in range.
     private void Rebuild()
     {
-        Updates.Clear();
-        Excluded.Clear();
         _excludedIds = _settings.Current.ExcludedPackageIds;
+        var existing = Updates.Concat(Excluded)
+            .GroupBy(r => r.Package.Key, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => new Queue<PackageRowViewModel>(g), StringComparer.OrdinalIgnoreCase);
+        List<PackageRowViewModel> updates = [], excluded = [];
         foreach (var package in _store.Packages
                      .Where(p => p.HasUpdate && p.IsManaged)
                      .OrderBy(p => p.Name, StringComparer.CurrentCultureIgnoreCase))
         {
-            var row = new PackageRowViewModel(package, _actions, RowActions.Update, _settings);
-            (row.IsExcluded ? Excluded : Updates).Add(row);
+            PackageRowViewModel row;
+            if (existing.TryGetValue(package.Key, out var same) && same.Count > 0)
+            {
+                row = same.Dequeue();
+                row.Refresh(package);
+                row.NotifyStateChanged(); // App Installer's restart state and the exclusion aren't part of the package (R6.2)
+            }
+            else
+            {
+                row = new PackageRowViewModel(package, _actions, RowActions.Update, _settings);
+            }
+            (row.IsExcluded ? excluded : updates).Add(row);
         }
+        Sync(Updates, updates);
+        Sync(Excluded, excluded);
         OnPropertyChanged(nameof(HasExcluded));
-        SetSelection([]);
+        SetSelection(_selected.Where(Updates.Contains).ToList()); // R8.2: checked rows that stay keep their check
         NotifyCount();
+    }
+
+    /// <summary>Makes <paramref name="target"/> equal <paramref name="wanted"/> with removals and inserts only (R8.1).</summary>
+    internal static void Sync(ObservableCollection<PackageRowViewModel> target, IReadOnlyList<PackageRowViewModel> wanted)
+    {
+        var keep = wanted.ToHashSet();
+        for (var i = target.Count - 1; i >= 0; i--)
+        {
+            if (!keep.Contains(target[i]))
+            {
+                target.RemoveAt(i);
+            }
+        }
+        for (var i = 0; i < wanted.Count; i++)
+        {
+            if (i < target.Count && ReferenceEquals(target[i], wanted[i]))
+            {
+                continue;
+            }
+            // A row that moved (its name changed): take it out and put it back, no Move, like the rest.
+            var at = target.IndexOf(wanted[i]);
+            if (at >= 0)
+            {
+                target.RemoveAt(at);
+            }
+            target.Insert(i, wanted[i]);
+        }
     }
 
     private void OnSettingsChanged(object? sender, EventArgs e)
