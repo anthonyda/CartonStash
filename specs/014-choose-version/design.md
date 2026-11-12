@@ -398,7 +398,7 @@ today. With R2.6 in place this is rare: it covers changes made outside the app s
 
 `IPackageInstaller.RunAsync` gains an optional explicit scope, only for the R3.5 chain and R3.7 (see above). `OperationOutcome` and `PackageOperation` gain `Scope` and `ScopeFromInstalled`.
 
-## Amendment R2.8: going back from the newest version (2026-11-12, Draft)
+## Amendment R2.8: going back from the newest version (approved 2026-11-12)
 
 - `AfterUpdate` gains the chosen version when going back. Going back: warn when `after.Version == versionBefore`,
   ignoring `UpdateAvailable`. Message: "WinGet finished without an error, but Windows still lists {name} {before}.

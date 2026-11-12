@@ -1,6 +1,6 @@
 # 006 – Settings: Requirements
 
-**Status:** Approved (2026-10-29). Amendment R5 (start page) approved 2026-10-30. Amendment R4.3 (safe diagnostics) approved 2026-10-30. Amendment R3.4 (startup check and source agreements) approved 2026-11-01. Amendment R6 (window layout) approved 2026-11-12. Amendment R3.14 to R3.17 (explicit sources, bug review BR-01): **Draft** 2026-11-12
+**Status:** Approved (2026-10-29). Amendment R5 (start page) approved 2026-10-30. Amendment R4.3 (safe diagnostics) approved 2026-10-30. Amendment R3.4 (startup check and source agreements) approved 2026-11-01. Amendment R6 (window layout) approved 2026-11-12. Amendment R3.14 to R3.17 (explicit sources, bug review BR-01): approved 2026-11-12
 **Depends on:** 002, 003
 
 ## Problem
@@ -105,7 +105,7 @@ Open questions for this amendment:
 - **Should the amendment stay general or name `msstore`?** Recommended: general, since any source can have agreements. R3.6 needs
   fixed text per known source, because the COM API exposes only the agreement list.
 
-## Amendment R3.14 to R3.17: explicit sources (2026-11-12, Draft)
+## Amendment R3.14 to R3.17: explicit sources (approved 2026-11-12)
 
 **Found in the bug review of 2026-11-10 (BR-01).** R3.1 lists a source as "explicit (excluded from default searches)",
 and `winget` leaves such a source out of `search`, `list` and `upgrade` unless it is named with `--source`. The app

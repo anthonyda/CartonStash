@@ -206,7 +206,7 @@ T11 tested this in clean Sandboxes, unelevated: a test exe and a test MSIX with 
 - On start: `DisplayArea.GetFromRect(rect, DisplayAreaFallback.None)`; null → resize only (R6.3). Sizes under 500 × 400 are
   ignored. Then `OverlappedPresenter.Maximize()` if saved maximized, and `Nav.IsPaneOpen` from settings.
 
-## Amendment R3.14 to R3.17: explicit sources (2026-11-12, Draft)
+## Amendment R3.14 to R3.17: explicit sources (approved 2026-11-12)
 
 - `AppSettings.SearchedExplicitSources`: the IDs of explicit sources whose box is checked (case-insensitive set,
   default empty, missing reads as empty), with the hand-written `Equals` updated. Keyed by source ID, as

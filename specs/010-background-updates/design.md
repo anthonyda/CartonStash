@@ -167,7 +167,7 @@ The app also applies this table each time it opens, packaged only, without touch
 
 One behavior the design didn't expect: when `RequestEnableAsync` turns the entry on, Windows starts the exe through it right away, with kind `StartupTask` (5 seconds later in the probe). Turning it on from Startup apps didn't do this. The check path handles it unchanged: `IsDue` decides, and right after the user turns checks on, no check is due, so the process exits. T16 confirms that turning checks on shows nothing.
 
-## Amendment R3.18: two triggers in one process (2026-11-12, Draft)
+## Amendment R3.18: two triggers in one process (approved 2026-11-12)
 
 - A small Core class, `ActiveTasks`, counts the tasks the COM server runs: `Begin()`, and `End()` that returns true
   for the last one. `BackgroundCheckTask.Run` calls `Begin()` before it starts and `End()` after `deferral.Complete()`;

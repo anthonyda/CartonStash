@@ -47,7 +47,7 @@ One thing applies to many findings: the App has no handler for unhandled excepti
 
 ### BR-01 Explicit sources are searched and matched like any other
 
-- [ ] Reviewed. *2026-11-12, spec change drafted (006 R3.14 to R3.17), waiting for approval. Decided: explicit sources are left out by default, as in `winget`. In Settings, each explicit source gets its own **Use in searches** checkbox, which adds it to Search only, and a paragraph explains what an explicit source is.*
+- [ ] Reviewed. *2026-11-12, spec change approved (006 R3.14 to R3.17); code waits until the whole review is read. Decided: explicit sources are left out by default, as in `winget`. In Settings, each explicit source gets its own **Use in searches** checkbox, which adds it to Search only, and a paragraph explains what an explicit source is.*
 
 **Where:** [CatalogConnection.cs:150-188](../src/CartonStash.Core/Services/CatalogConnection.cs#L150-L188) (every
 catalog goes into the composite), [CatalogConnection.cs:224-237](../src/CartonStash.Core/Services/CatalogConnection.cs#L224-L237),
@@ -67,7 +67,7 @@ spec has to say which (constitution P1).
 
 ### BR-02 Going back from the newest version: an installer that does nothing is reported as a success
 
-- [ ] Reviewed. *2026-11-12, spec change drafted (014 R2.8), waiting for approval. Proposed: after going back, compare the version alone; if Windows still lists the old one, warn "Not confirmed" and add no exclusion.*
+- [ ] Reviewed. *2026-11-12, spec change approved (014 R2.8); code waits until the whole review is read. Proposed: after going back, compare the version alone; if Windows still lists the old one, warn "Not confirmed" and add no exclusion.*
 
 **Where:** [WinGetPackageInstaller.cs:249-263](../src/CartonStash.Core/Services/WinGetPackageInstaller.cs#L249-L263)
 (`AfterUpdate`), [WinGetPackageInstaller.cs:185-189](../src/CartonStash.Core/Services/WinGetPackageInstaller.cs#L185-L189),
@@ -174,7 +174,7 @@ they keep the generic glyph until a new search. The Activity card of a package i
 
 ### BR-06 Two background triggers in one process: the second ends the process while the first check runs
 
-- [ ] Reviewed. *2026-11-12, spec change drafted (010 R3.18), waiting for approval. Proposed: the background process counts the triggers it serves and exits only when the last is done. Check in the VM first.*
+- [ ] Reviewed. *2026-11-12, spec change approved (010 R3.18); code waits until the whole review is read. Proposed: the background process counts the triggers it serves and exits only when the last is done. Check in the VM first.*
 
 **Where:** [BackgroundCheckTask.cs:31-50](../src/CartonStash.App/Services/BackgroundCheckTask.cs#L31-L50),
 [BackgroundCheckTask.cs:53-60](../src/CartonStash.App/Services/BackgroundCheckTask.cs#L53-L60),

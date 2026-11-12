@@ -1,6 +1,6 @@
 # 010 – Background update checks: Requirements
 
-**Status:** Approved (2026-10-31), including the R3.8 change from T1's results. Amendment R3.14 (missed check at sign-in through a startup entry): approved 2026-11-02. Amendment R3.18 (two triggers in one process, bug review BR-06): **Draft** 2026-11-12
+**Status:** Approved (2026-10-31), including the R3.8 change from T1's results. Amendment R3.14 (missed check at sign-in through a startup entry): approved 2026-11-02. Amendment R3.18 (two triggers in one process, bug review BR-06): approved 2026-11-12
 **Depends on:** 002, 003, 004, 006, 007
 **Issues:** [#14](https://github.com/anthonyda/CartonStash/issues/14)
 
@@ -135,7 +135,7 @@ The portable app has no startup entry (R4.1).
 - **Run a missed check when the user opens the app, too?** **Decided 2026-11-02: no.** The app's own Updates page already refreshes when it
   opens, so a background check then would only duplicate it.
 
-## Amendment R3.18: two triggers in one process (2026-11-12, Draft, bug review BR-06)
+## Amendment R3.18: two triggers in one process (bug review BR-06, approved 2026-11-12)
 
 R3.17 was checked with the startup entry and "user present", which are two processes. The timer task and the
 "check on return" task are both served by the background COM server, one process. When the second fires while the
