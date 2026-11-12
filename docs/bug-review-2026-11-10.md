@@ -73,18 +73,26 @@ spec has to say which (constitution P1).
 (`AfterUpdate`), [WinGetPackageInstaller.cs:185-189](../src/CartonStash.Core/Services/WinGetPackageInstaller.cs#L185-L189),
 [PackageActions.cs:41-54](../src/CartonStash.Core/ViewModels/PackageActions.cs#L41-L54). Spec 014 R2.5.
 
-**What happens:** R2.5 says: if WinGet still lists the version from before, the result shall say so and not claim
-success. `AfterUpdate` warns only when the version is unchanged **and** WinGet still offers an update. When the
-installed version is the newest one, which is the usual start for going back, no update is offered before or after. So
-an installer that returns 0 and changes nothing ends as "Installed successfully". With "Leave … out of update checks"
-ticked (the default), the package is then excluded as well.
+**What happens:** VLC 3.0.21 is installed, the newest version WinGet has, so the Updates page doesn't list it. In its
+details you choose **Go back to this version** for 3.0.20. When the installer ends, the app checks whether it worked.
+That check, `AfterUpdate`, was written for updates (013) and warns only when both are true:
+
+1. Windows still lists the version from before, **and**
+2. WinGet still offers an update.
+
+- **Going back worked:** Windows lists 3.0.20 and WinGet offers 3.0.21. Condition 1 is false, so no warning. Correct.
+- **The installer did nothing:** Windows still lists 3.0.21, so condition 1 is true. But VLC is still on the newest
+  version, so WinGet offers no update and condition 2 is false. No warning: the app says "Installed successfully", and
+  with **Leave this package out of update checks** ticked (the default) it also excludes VLC. Wrong.
+
+So when going back starts from the newest version, the usual case, the check can never warn. R2.5 says it should: if
+WinGet still lists the version from before, the result shall say so and not claim success.
+
+And when the warning does fire for a go-back (going back from a version that isn't the newest), its words are about
+updating: "Update not confirmed" and "may update itself the next time it starts".
 
 The design note (014 design, "R2.5 reuses 013's `AfterUpdate` unchanged … After going back an update is available
 again, so the check fits") only holds when going back worked.
-
-When the warning does fire for a go-back, its words are about updating: "Update not confirmed"
-([PackageOperation.cs:274](../src/CartonStash.Core/Models/PackageOperation.cs#L274)) and "may update itself the next
-time it starts".
 
 **Check:** unit test: a go-back with `AfterUpdate(ok, "2.0", new InstalledAfterUpdate("2.0", UpdateAvailable: false))`
 should warn.

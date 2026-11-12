@@ -127,12 +127,25 @@ uninstallPrevious`). That's WinGet's behaviour for any update, not 014's.
 
 ## Amendment R2.8 (2026-11-12, Draft, bug review BR-02)
 
-R2.5 is not met when going back starts from the newest version, which is the usual case. The design reuses 013's
-`AfterUpdate`, which warns only when the version is unchanged **and** WinGet still offers an update. Installed on the
-newest version, a package is offered no update before or after an installer that changes nothing, so the app says
-"Installed successfully". The design's reasoning ("after going back an update is available again, so the check fits")
-only holds when going back worked. When the warning does fire for a go-back, its words are about updating ("Update not
-confirmed", "may update itself the next time it starts").
+R2.5 is not met when going back starts from the newest version.
+
+**Example:** VLC 3.0.21 is installed, the newest version WinGet has, so the Updates page doesn't list it. In its
+details you choose **Go back to this version** for 3.0.20. When the installer ends, the app checks whether it worked.
+That check, `AfterUpdate`, was written for updates (013) and warns only when both are true:
+
+1. Windows still lists the version from before, **and**
+2. WinGet still offers an update.
+
+- **Going back worked:** Windows lists 3.0.20 and WinGet offers 3.0.21. Condition 1 is false, so no warning. Correct.
+- **The installer did nothing:** Windows still lists 3.0.21, so condition 1 is true. But VLC is still on the newest
+  version, so WinGet offers no update and condition 2 is false. No warning: the app says "Installed successfully", and
+  with **Leave this package out of update checks** ticked (the default) it also excludes VLC. Wrong.
+
+So when going back starts from the newest version, the usual case, the check can never warn. R2.5 says it should: if
+WinGet still lists the version from before, the result shall say so and not claim success.
+
+And when the warning does fire for a go-back (going back from a version that isn't the newest), its words are about
+updating: "Update not confirmed" and "may update itself the next time it starts".
 
 | ID   | Story | Criterion |
 |------|-------|-----------|
