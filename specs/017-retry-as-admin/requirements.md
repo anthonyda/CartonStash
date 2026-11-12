@@ -36,6 +36,7 @@ manifest has one installer and no scope, and the installer chooses all users by 
 | R1.5 | US1   | While it runs, the card and the row shall show progress as for any operation (P3), with "May ask for permission" (003 R8.3). If the user declines the prompt, the result shall be **Cancelled** with "Windows' permission prompt was declined." |
 | R1.6 | –     | The elevated run shall end with a result like any other (013): success, failure with its code, or not confirmed, and its own log (009 R2). It shall go through the queue: one operation at a time (003 R4.1), never the same package twice (R4.2). |
 | R1.7 | –     | **Update all** and background checks shall never retry as administrator on their own: only the user's press does (P2). |
+| R1.8 | US1   | The retry shall stay in the CartonStash window the user is in: the same card and row show it, from queued to the result. The only other thing on screen shall be Windows' permission prompt. No other window opens, and CartonStash doesn't restart. |
 
 ## Out of scope
 
@@ -55,6 +56,9 @@ manifest has one installer and no scope, and the installer chooses all users by 
     (the installer elevated succeeded), but needs the CLI exception A6 (still undecided, spec 008), and A6's draft says
     "never elevated", so it would change too. Progress is only "running", and the result comes from the exit code.
   - *Proposed:* (a) if T1 passes, else (b) with A6 amended for this one command.
+  - **Maintainer's answer, 2026-11-12:** the operation starts again and Windows shows its permission prompt, all in
+    the same CartonStash window (R1.8). Both (a) and (b) can do that: the elevated process has no window. (a) first,
+    as proposed.
 - **Q2. Which failures offer it?** *Proposed:* only the list of R1.2, extended as cases are measured. The alternative,
   offering it after any installer failure, would also show it where it can't help.
 - **Q3. Release.** *Proposed:* 1.4.2 waits for this spec, as asked. R1.1 alone (the words, no button) could ship first
