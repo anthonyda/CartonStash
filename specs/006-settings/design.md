@@ -206,22 +206,27 @@ T11 tested this in clean Sandboxes, unelevated: a test exe and a test MSIX with 
 - On start: `DisplayArea.GetFromRect(rect, DisplayAreaFallback.None)`; null → resize only (R6.3). Sizes under 500 × 400 are
   ignored. Then `OverlappedPresenter.Maximize()` if saved maximized, and `Nav.IsPaneOpen` from settings.
 
-## Amendment R3.14 to R3.16: explicit sources (2026-11-12, Draft)
+## Amendment R3.14 to R3.17: explicit sources (2026-11-12, Draft)
 
-- `AppSettings.IncludeExplicitSources` (bool, default false, missing reads as false), with the hand-written `Equals`
-  updated.
-- `CatalogConnection.ConnectAsync` takes whether explicit sources count. The remote-first catalog (search, details,
-  install) passes the setting; the local-first catalog (Installed, Updates, background check) passes false. A
-  reference whose `Info.Explicit` doesn't count is skipped before its agreements are read (R3.14). `SourcesInUse`
-  follows the same rule, so source isolation never tests a source that wasn't used (011 R1.3).
+- `AppSettings.SearchedExplicitSources`: the IDs of explicit sources whose box is checked (case-insensitive set,
+  default empty, missing reads as empty), with the hand-written `Equals` updated. Keyed by source ID, as
+  `SourceAgreementAnswers` is (R3.17).
+- `CatalogConnection.ConnectAsync` takes which explicit sources count. The remote-first catalog (search, details,
+  install) passes the checked IDs; the local-first catalog (Installed, Updates, background check) passes none. A
+  reference whose `Info.Explicit` is true and whose ID isn't counted is skipped before its agreements are read
+  (R3.14). `SourcesInUse` follows the same rule, so source isolation never tests a source that wasn't used (011 R1.3).
 - The rule is a small static method next to `IsInUse`, so it is unit tested without COM.
-- Changing the setting calls `CatalogConnection.Invalidate()`, so the next search reconnects (R3.15).
-- Settings page: a `CheckBox` under the source list, bound to `SettingsViewModel.IncludeExplicitSources`, shown only
-  when at least one source is explicit. `SourceInfo.DetailText` takes the setting (R3.16). Refresh sources skips
-  explicit sources while it's off; the background check keeps skipping them.
-- Tests: the rule for each catalog and setting; the setting's default and a file without it; the detail text (unit).
-  Manual check on the maintainer's PC, where `winget-font` exists: off, a font only `winget-font` has isn't found, as
-  with `winget search`; on, it is found and installs; Installed and Updates the same either way.
+- Checking or unchecking a box saves the setting and calls `CatalogConnection.Invalidate()`, so the next search
+  reconnects (R3.15).
+- `SourceInfo` gains `UsedInSearches`. Settings page: in each explicit source's row, a `CheckBox` "Use in searches"
+  with the source name in its accessible name (Q5), bound through the source row's view model. The R3.16 paragraph
+  is a `TextBlock` above the list, shown only when a source is explicit. `DetailText` keeps "explicit" as a word, without
+  "(excluded from default searches)", since the paragraph explains it.
+- Refresh sources skips an explicit source whose box is off; the background check keeps skipping all of them.
+- Tests: the rule for each catalog and box state; the setting's default and a file without it; the paragraph's
+  visibility (unit). Manual check on the maintainer's PC, where `winget-font` exists: box off, a font only
+  `winget-font` has isn't found, as with `winget search`; box on, it is found and installs; Installed and Updates the
+  same either way; keyboard and Narrator read the box with the source name.
 
 ## Testing strategy
 
