@@ -23,7 +23,7 @@ CartonStash is a free **graphical interface for WinGet**, the Windows Package Ma
 it with one click, see everything installed on your PC, and **update all your apps at once**, without typing commands.
 It talks to WinGet directly through its official API, so what you see is exactly what `winget` knows.
 
-![CartonStash searching for Firefox, with the package details pane open](docs/images/search.png)
+![CartonStash searching for Spotify, with the package details pane open](docs/images/search.png)
 
 ## Features
 
@@ -37,8 +37,10 @@ It talks to WinGet directly through its official API, so what you see is exactly
 - **Update apps on Windows**: one package, a selection, or **Update all** with a confirmation first.
 - **Uninstall programs** cleanly, with a confirmation that names exactly what will be removed.
 - **Progress for everything**: downloads, installs and uninstalls run one at a time in a queue, with cancel (while
-  downloading), retry, and a clear success or error message. Pin the Activity pane to keep it open beside the page.
+  downloading), retry, and a clear success or error message. Pin the Activity pane to keep it open beside the page,
+  filter it by name, and switch between all, active, done and failed operations.
 - **Background update checks**, optional and off by default: on a schedule you choose, Windows runs a short check, even with the app closed, and a notification tells you what's waiting. It never installs anything by itself. Exclude any package you don't want to hear about. Microsoft Store version only.
+- **The updates count on the taskbar icon**, kept up to date by the app and by background checks.
 - **Logs when something fails**: every operation keeps a log with WinGet's result and the installer's own output, ready
   to read or copy into a bug report.
 - **Runs without admin rights.** When an installer needs administrator access, Windows asks for that installer only.
@@ -46,21 +48,25 @@ It talks to WinGet directly through its official API, so what you see is exactly
   refresh, and copyable diagnostic info.
 - **Accessible**: keyboard navigation, screen reader names, light, dark and high-contrast themes.
 
-| Installed apps, filtered by status | Available updates, and the packages you excluded |
+| Installed apps, with color-coded versions | Available updates, and the packages you excluded |
 |---|---|
-| ![Installed programs with color-coded version badges and status filter chips](docs/images/installed.png) | ![The Updates page with nine updates, Update all, an Exclude button on each row and Notepad++ in the Excluded list](docs/images/updates.png) |
+| ![The Installed page in the dark theme, with color-coded version badges, status filter chips, and apps such as Obsidian, PrusaSlicer, Spotify, Steam and VLC](docs/images/installed.png) | ![The Updates page with five updates, Update all, an Exclude button on each row and Notepad++ in the Excluded list](docs/images/updates.png) |
 
-| Release notes and every available version | Install for all users or just for you |
+| Activity pane, pinned beside the page | Release notes and every available version |
 |---|---|
-| ![The jq details pane on the Updates page, with formatted release notes and version 1.8.2 selected in Available versions, showing Update to this version](docs/images/details.png) | ![The Pandoc Install split button open, offering Install for all users and Install for the current user](docs/images/install-scope.png) |
+| ![The Activity pane in the dark theme, pinned next to the Installed page, with its filter box, All, Active, Done and Failed tabs, and three finished operations](docs/images/activity.png) | ![The Obsidian details pane on the Updates page, with formatted release notes and version 1.15.0 selected in Available versions, showing Update to this version](docs/images/details.png) |
 
-| Activity pane, pinned beside the page | Operation log |
+| Go back to an older version | Install for all users or just for you |
 |---|---|
-| ![The Activity pane pinned next to the Installed page, with three finished installs and updates](docs/images/activity.png) | ![The log of the jq update, with WinGet's result, the scope used, and Copy and Open folder buttons](docs/images/log.png) |
+| ![PrusaSlicer details in the dark theme, with an older version selected and Go back to this version](docs/images/goback.png) | ![The Pandoc Install split button open, offering Install for all users and Install for the current user](docs/images/install-scope.png) |
 
-| Settings | Dark theme, going back to an older version |
+| Operation log | The updates count on the taskbar |
 |---|---|
-| ![Settings with theme, start page, default install scope and background update checks every 24 hours](docs/images/settings.png) | ![7-Zip details in the dark theme, with an older version selected and Go back to this version](docs/images/dark.png) |
+| ![The log of the Obsidian update in the dark theme, with WinGet's result, the scope used, and Copy and Open folder buttons](docs/images/log.png) | ![The Updates page above the Windows taskbar, where the CartonStash icon shows a badge with 5](docs/images/taskbar.png) |
+
+| Settings |
+|---|
+| ![Settings in the dark theme, with theme, start page, default install scope and background update checks every 24 hours](docs/images/settings.png) |
 
 ## Download and install
 
