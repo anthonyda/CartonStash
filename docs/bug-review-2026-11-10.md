@@ -238,7 +238,7 @@ start when the mode is Off.
 
 ### BR-09 Check history can keep part of a file path
 
-- [ ] Reviewed. *2026-11-12, decided otherwise than proposed: keep full paths in failure reasons and say so in `PRIVACY.md`, as for operation logs. Spec change approved (010 R3.13a, R3.13b). Code waits until the whole review is read.*
+- [x] Reviewed. *2026-11-12, decided otherwise than proposed: keep full paths in failure reasons and say so in `PRIVACY.md`, as for operation logs. Spec change approved (010 R3.13a, R3.13b). Code waits until the whole review is read.*
 
 **Where:** [CheckHistoryStore.cs:45-48](../src/CartonStash.Core/Services/CheckHistoryStore.cs#L45-L48),
 [BackgroundCheckRunner.cs:95](../src/CartonStash.Core/Services/BackgroundCheckRunner.cs#L95). Spec 010 R3.13, and
@@ -252,7 +252,7 @@ messages.
 
 ### BR-10 The queue stops for good if anything around an operation throws
 
-- [ ] Reviewed
+- [ ] Reviewed. *2026-11-12, fix approved as proposed: `try`/`finally` around the worker's loop body so the queue always moves on, and a catch-all around writing the log and around each `Completed` handler. Code waits until the whole review is read.*
 
 **Where:** [PackageOperationQueue.cs:159-202](../src/CartonStash.Core/Services/PackageOperationQueue.cs#L159-L202),
 [PackageOperationQueue.cs:204-225](../src/CartonStash.Core/Services/PackageOperationQueue.cs#L204-L225),
