@@ -69,7 +69,9 @@ public sealed class WinGetPackageService(CatalogConnection connection, IInstallC
             return options;
         }
 
-        return ToPackages(await connection.FindAsync(localFirst: false, Options, cancellationToken));
+        var matches = await connection.FindAsync(localFirst: false, Options, cancellationToken);
+        // BR-16 (A4): about ten calls into WinGet's process per result; off the UI thread, as the installed list.
+        return await Task.Run(() => ToPackages(matches), cancellationToken);
     }
 
     public IReadOnlyList<SourceFailure> SourceFailures => connection.SourceFailures;
@@ -152,7 +154,7 @@ public sealed class WinGetPackageService(CatalogConnection connection, IInstallC
         {
             return ToVersionStatus(available.CompareToVersion(installedVersion));
         }
-        catch (Exception ex) when (ex is ArgumentException or System.Runtime.InteropServices.COMException)
+        catch (Exception ex) when (ex is not OperationCanceledException) // BR-12: whatever type the projection maps WinGet's code to
         {
             return VersionStatus.Unknown;
         }
@@ -315,7 +317,7 @@ public sealed class WinGetPackageService(CatalogConnection connection, IInstallC
 
     public async Task<string?> RefreshSourceAsync(string sourceName, CancellationToken cancellationToken = default)
     {
-        var reference = connection.Manager.GetPackageCatalogByName(sourceName);
+        var reference = await Task.Run(() => connection.Manager.GetPackageCatalogByName(sourceName), cancellationToken); // BR-16
         if (reference is null)
         {
             return $"Source '{sourceName}' no longer exists.";
@@ -442,7 +444,7 @@ public sealed class WinGetPackageService(CatalogConnection connection, IInstallC
         {
             versions.Add(ids[i].Version);
         }
-        if (versions.Count > 1 && reference.CompareToVersion(versions[0]) == CompareResult.Greater)
+        if (versions.Count > 1 && SafeCompare(() => reference.CompareToVersion(versions[0])) == CompareResult.Greater)
         {
             versions.Reverse();
         }
@@ -451,10 +453,23 @@ public sealed class WinGetPackageService(CatalogConnection connection, IInstallC
         var list = new List<PackageVersion>(versions.Count);
         foreach (var v in versions)
         {
-            CompareResult? compared = installed is not null && primaryMatch ? installed.CompareToVersion(v) : null;
+            CompareResult? compared = installed is not null && primaryMatch ? SafeCompare(() => installed.CompareToVersion(v)) : null;
             list.Add(new PackageVersion(v, Direction(compared, installed is not null, primaryMatch)));
         }
         return list;
+    }
+
+    /// <summary>BR-22: a version WinGet refuses to compare (an empty one, say) is Unknown, not a failed details load.</summary>
+    internal static CompareResult? SafeCompare(Func<CompareResult> compare)
+    {
+        try
+        {
+            return compare();
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            return null;
+        }
     }
 
     /// <summary>

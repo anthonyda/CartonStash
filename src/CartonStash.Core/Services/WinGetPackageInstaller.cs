@@ -17,16 +17,16 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
     public async Task<IReadOnlyList<Agreement>> GetAgreementsAsync(PackageInfo package, string? version = null, CancellationToken cancellationToken = default)
     {
         var found = await connection.FindByIdAsync(package.Id, package.Source, localFirst: false, cancellationToken);
-        // 014 R2.2: the chosen version's agreements. A version the source no longer has has none here; the run says so.
-        var info = version is null ? found.DefaultInstallVersion
-            : FindVersion(found, version) is { } id ? found.GetPackageVersionInfo(id) : null;
-        if (info is null)
-        {
-            return [];
-        }
-
+        // BR-16 (A4): the version lookup reads every available version from WinGet's process: off the UI thread.
         return await Task.Run<IReadOnlyList<Agreement>>(() =>
         {
+            // 014 R2.2: the chosen version's agreements. A version the source no longer has has none here; the run says so.
+            var info = version is null ? found.DefaultInstallVersion
+                : FindVersion(found, version) is { } id ? found.GetPackageVersionInfo(id) : null;
+            if (info is null)
+            {
+                return [];
+            }
             var agreements = info.GetCatalogPackageMetadata().Agreements;
             var list = new List<Agreement>(agreements.Count);
             for (var i = 0; i < agreements.Count; i++)
@@ -735,7 +735,9 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
             InstallResultStatus.NoApplicableInstallers => Failed(scope == InstallScope.Any
                 ? "No installer for this PC (architecture or OS version)."
                 : "No installer for this PC with the selected install scope. Try changing it in Settings."),
-            InstallResultStatus.NoApplicableUpgrade => Failed("No applicable update for this PC."),
+            InstallResultStatus.NoApplicableUpgrade => Failed(scope == InstallScope.Any // BR-23: the scope setting applies to updates too (006 R2.1)
+                ? "No applicable update for this PC."
+                : "No installer for this PC with the selected install scope. Try changing it in Settings."),
             InstallResultStatus.PackageAgreementsNotAccepted => Failed("The package's license agreement wasn't accepted."),
             InstallResultStatus.CatalogError => Failed("Couldn't reach the package source. Check your internet connection."),
             InstallResultStatus.ManifestError => Failed("The package's manifest is invalid. Try again later."),

@@ -90,6 +90,16 @@ public class WinGetErrorMessageTests
         Assert.Contains("changing it in Settings", outcome.Message);
     }
 
+    [Theory] // BR-23 (006 R2.1): the scope setting applies to updates too
+    [InlineData(InstallScope.User, "No installer for this PC with the selected install scope. Try changing it in Settings.")]
+    [InlineData(InstallScope.Any, "No applicable update for this PC.")]
+    public void No_applicable_update_names_the_scope_setting_when_one_is_set(InstallScope scope, string message)
+    {
+        var outcome = WinGetPackageInstaller.MapInstallResult(OperationKind.Upgrade, InstallResultStatus.NoApplicableUpgrade, 0, false, scope);
+
+        Assert.Equal(message, outcome.Message);
+    }
+
     [Theory]
     [InlineData(UninstallResultStatus.Ok, OperationResult.Succeeded, "Uninstalled successfully")]
     [InlineData(UninstallResultStatus.UninstallError, OperationResult.Failed, "error code 0x80070005")]
