@@ -26,6 +26,9 @@ public static class Program
     /// <summary>The notification that opened this copy of the app, if any.</summary>
     public static bool StartedFromNotification { get; private set; }
 
+    // 010 R3.18: the timer and "check on return" tasks share this process; it ends when the last one is done.
+    internal static readonly ActiveTasks BackgroundTasks = new();
+
     public static void SignalBackgroundDone() => BackgroundDone.Set();
 
     [STAThread]

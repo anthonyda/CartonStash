@@ -31,6 +31,7 @@ public sealed class BackgroundCheckTask : IBackgroundTask
     public void Run(IBackgroundTaskInstance taskInstance)
     {
         var deferral = taskInstance.GetDeferral();
+        Program.BackgroundTasks.Begin(); // R3.18
         taskInstance.Canceled += (_, _) => _cancelled.Cancel();
         var name = taskInstance.Task.Name;
 
@@ -45,7 +46,10 @@ public sealed class BackgroundCheckTask : IBackgroundTask
                 // R1.6: a check never crashes. The runner records its own failures; this covers setup.
             }
             deferral.Complete();
-            Program.SignalBackgroundDone();
+            if (Program.BackgroundTasks.End()) // R3.18: a second trigger never ends the first one's check
+            {
+                Program.SignalBackgroundDone();
+            }
         });
     }
 

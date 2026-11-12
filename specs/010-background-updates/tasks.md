@@ -50,6 +50,13 @@ Tick a task only when its verification passes. Keep tasks small enough for one c
   - Verify: logged below. Then finish T11 and T12.
   - Done 2026-11-03. The run also found that two schedule changes in a row could leave two "check on return" tasks; `BackgroundCheckScheduler.ApplyAsync` now runs one change at a time, and removes and registers with no await between them.
 
+## Amendment R3.18: two triggers in one process (2026-11-12, bug review BR-06)
+
+- [x] **T17.** `ActiveTasks` counts the tasks the COM server runs; only the last to end signals the process to stop. *(R3.18)*
+  - Verify: `ActiveTasksTests`.
+- [ ] **T18.** Manual in the test VM: daily time, sleep past it, wake and unlock: one Check history entry, and the
+  next daily timer set. *(R3.18)*
+
 ## Manual verification log
 
 | Criterion | Date | Result | Notes |
