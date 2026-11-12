@@ -346,7 +346,7 @@ waits on the gate and gets the catalog from before the install. The new package 
 
 ### BR-16 Search maps its results on the UI thread
 
-- [ ] Reviewed
+- [ ] Reviewed. *2026-11-12, fix approved as proposed: move search's result mapping off the UI thread (`Task.Run`, as the installed list does), and the same for the version loop in `GetAgreementsAsync` and `GetPackageCatalogByName` in `RefreshSourceAsync` (constitution A4). Measure the stall on a 50-result search before and after. Code waits until the whole review is read.*
 
 **Where:** [WinGetPackageService.cs:45](../src/CartonStash.Core/Services/WinGetPackageService.cs#L45),
 [WinGetPackageService.cs:281-295](../src/CartonStash.Core/Services/WinGetPackageService.cs#L281-L295),
