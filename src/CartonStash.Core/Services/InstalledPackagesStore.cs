@@ -79,7 +79,7 @@ public sealed partial class InstalledPackagesStore : ObservableObject
                 Packages = installed;
             }
         }
-        catch (OperationCanceledException) when (load.IsCancellationRequested)
+        catch (Exception) when (load.IsCancellationRequested) // BR-14: any error on a superseded load: the newer one shows its own result
         {
         }
         catch (Exception ex) when (!load.IsCancellationRequested)
