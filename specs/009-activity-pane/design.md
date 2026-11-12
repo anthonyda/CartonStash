@@ -1,6 +1,6 @@
 # 009 – Activity pane: Design
 
-**Status:** Approved (2026-10-30). Amendment R2.7 approved 2026-10-30. Amendment R2.8–R2.10 approved 2026-10-30
+**Status:** Approved (2026-10-30). Amendment R2.7 approved 2026-10-30. Amendment R2.8–R2.10 approved 2026-10-30. Amendment R4 approved 2026-11-12
 **Requirements:** [requirements.md](requirements.md)
 
 ## Overview
@@ -124,3 +124,93 @@ Enqueue → queue stamps `StartedAt` when the worker takes it, gets a log path �
 - **Alternative: parse WinGet's own diagnostic logs per operation.** Rejected: files aren't per-operation. *Reopened by amendment R2.8–R2.10.*
 - **The folder and file format are WinGet internals (amendment R2.8–R2.10).** They can change without notice, so R2.9 treats a missing or unmatched record as normal. T12 checks the MSIX can read the folder at all.
 - **Alternative: a real `ListView` grouping (Active / Finished).** Rejected: more chrome; ordering and state icons do the job.
+
+
+## Amendment R4: filter, tabs and sort (approved 2026-11-12)
+
+This reopens the alternative rejected above: grouping is back, but only in the All tab and as light dividers, not
+`ListView` group headers. With a dozen updates queued, ordering alone no longer does the job.
+
+### Layout
+
+```
+Activity                     [⇅] [Clear finished] [pin]
+[ Filter by name or ID                             ]
+ All (9) │ Active (6) │ Done (2) │ Failed (1)
+ Active 6 ─────────────────────────────────────────
+ ┌ [icon] Node.js                         12:25 PM ┐
+ │        Update · ⟳ Updating…                     │
+ │                                       [Cancel]  │
+ └─────────────────────────────────────────────────┘
+ ...
+ Failed 1 ─────────────────────────────────────────
+ Done 2 ───────────────────────────────────────────
+```
+
+Cards are unchanged (R4.9).
+
+### Components
+
+| Layer | Type | Responsibility | New / changed |
+|-------|------|----------------|---------------|
+| Core/Models | `ActivityTab` (All, Active, Done, Failed), `ActivitySort` (Default, Newest, Oldest, Name) | enums | new |
+| Core/Models | `AppSettings.ActivitySort` | saved order, default `Default`; older files load as `Default` (R4.8); checked in `JsonSettingsStore.Load` like the other enums | changed |
+| Core/Models | `PackageOperation.Sequence` | a number the queue gives at `Enqueue` and `Retry`, so Default lists queued operations in run order | changed |
+| Core/ViewModels | `ActivityArranger` (static, pure) | `Arrange(operations, filter, tab, sort)` → the entries to show (an `ActivityHeader` or an operation) and the four tab counts. Every R4.1–R4.5 rule lives here | new |
+| Core/ViewModels | `ActivityViewModel` | `FilterText`, `Tab`, `Sort` (saved), `Entries` (`ObservableCollection<object>`), tab counts and texts, `HasNoMatch`, `ClearFilterCommand`. Re-arranges on every change | changed |
+| App | Activity pane in `MainWindow.xaml` | `TextBox`; `SelectorBar` for the tabs; sort `DropDownButton` with a `RadioMenuFlyoutItem` per order; the `ListView` binds `Entries` with a template selector (divider or `OperationCard`); no-match text with **Clear filter** | changed |
+
+### Rules in `Arrange`
+
+- Match: trimmed text, `OrdinalIgnoreCase` `Contains` on `Package.Name`, `Package.Id` and `KindText`. Empty text matches all.
+- Category: Queued and Running → Active; Failed → Failed; Succeeded, RestartRequired, Unconfirmed, Cancelled → Done.
+- Default: Running, then Queued by `Sequence` ascending; finished by `FinishedAt` descending. Newest / Oldest: `StartedAt`
+  (the time on the card), ties by `Sequence`. Name: `Package.Name`, current culture, ignoring case.
+- All tab: Active, Failed, Done blocks, each led by `ActivityHeader(name, count)` when it isn't empty. Other tabs: no headers.
+- Counts: per tab, after the text filter, before the tab.
+
+### Keeping cards alive (R4.6)
+
+`Entries` is never replaced. After `Arrange`, the view model brings it to the new list with `RemoveAt` and `Insert` (remove
+what's gone, then walk the target and put each item into place). Cards that keep their place keep their containers, progress
+and focus; a card that changes place is removed and inserted, so it loses focus.
+
+*Changed during T20 (2026-11-12):* the first version used `ObservableCollection.Move`. In the VM, WinUI's `ListView` then drew
+the groups out of order (Done above Failed, while the collection was right) and crashed in `Microsoft.UI.Xaml.dll`
+(0xc000027b) when the sort changed. Remove and insert avoid both.
+
+It re-arranges when:
+
+- `Operations` changes (enqueue, retry, clear finished),
+- an operation's `State` changes (the view model subscribes to each operation's `PropertyChanged` and unsubscribes when it
+  leaves the list). Progress ticks (`Percent`, `Phase` inside one state) don't re-arrange, so the list doesn't jump while the
+  user scrolls,
+- the filter, tab or sort changes. Every keystroke re-arranges: the list is a few dozen items at most.
+
+Headers are records compared by category and count, so a header whose count changed is replaced.
+
+### Accessibility (R4.10)
+
+- Divider: caption-style `TextBlock` with a line after it, `AutomationProperties.HeadingLevel="Level3"`, accessible name with
+  the count in words ("Failed, 1 operation"). Failed uses the critical brush and its own word, so it doesn't rely on color.
+- Divider containers aren't focusable (`IsTabStop=false`), so Tab moves from card to card.
+- Tabs: `SelectorBarItem` text "Active (6)", like the navigation's "Activity (2)"; Narrator reads the text as is. An empty tab shows its name alone.
+- Sort: accessible name and tooltip "Sort: Default", updated with the order; the menu marks the current one.
+- Esc in the filter box clears it (a `KeyDown` handler, so no accelerator tooltip; Esc on an empty box goes on to the pane as before).
+
+### Testing
+
+| Criteria | How |
+|----------|-----|
+| R4.1–R4.5, R4.7 | `ActivityArrangerTests`: match on name, ID and action; each tab; counts follow the filter; dividers only in All and only when not empty; each sort, inside groups; queued in run order under Default; no match |
+| R4.6 | `ActivityViewModelTests`: a state change moves the entry (collection events recorded: never `Reset`) |
+| R4.8 | `SettingsTests`: sort round trip; older file loads as Default |
+| R4.9 | `ActivityViewModelTests`: Clear finished with a filter on removes hidden finished operations too |
+| R4.6 focus, R4.10 | Manual in the VM (T20): keyboard, Narrator names, light, dark, high contrast; a focused card keeps focus when its update finishes |
+
+### Risks and alternatives
+
+- `SelectorBar` came with Windows App SDK 1.5; the app is on 2.6. If its keyboard handling or counts fall short, a row of
+  `RadioButton`s styled as tabs is the fallback.
+- **Alternatives shown on 2026-11-12:** chips (A), a filter flyout (B), grouped collapsible sections (D) and a search box
+  with an action menu (E). The maintainer chose C, with dividers added.

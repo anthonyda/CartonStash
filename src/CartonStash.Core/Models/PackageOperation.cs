@@ -200,6 +200,9 @@ public sealed partial class PackageOperation : ObservableObject
     [ObservableProperty]
     public partial DateTimeOffset? FinishedAt { get; internal set; }
 
+    /// <summary>Given by the queue at each enqueue and retry, so queued operations can be listed in run order (009 R4.5).</summary>
+    public long Sequence { get; internal set; }
+
     /// <summary>The log file of the latest run; null if none could be written (009 R2.5).</summary>
     public string? LogFilePath { get; internal set; }
 

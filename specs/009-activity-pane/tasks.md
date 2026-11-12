@@ -41,6 +41,19 @@ Tick a task only when its verification passes. Keep tasks small enough for one c
 - [x] **T15.** Manual: a package with no installer log, one with an installer log, and a failed one, on the portable app and an installed MSIX. *(R2.8–R2.10)*
   - Passed on the portable app and the released v1.0.3 MSIX (see log).
 
+### Amendment R4: filter, tabs and sort (approved 2026-11-12)
+
+- [x] **T16.** `ActivityTab`, `ActivitySort`, `AppSettings.ActivitySort`, `PackageOperation.Sequence` set by the queue. *(R4.5, R4.8)*
+  - Verify: `SettingsTests` (round trip, older file loads as Default); queue test for the sequence on enqueue and retry.
+- [x] **T17.** `ActivityArranger.Arrange` with every rule. *(R4.1–R4.5, R4.7)*
+  - Verify: `ActivityArrangerTests`.
+- [x] **T18.** `ActivityViewModel`: filter, tab, sort, `Entries` kept in step by moves, counts, Clear filter. *(R4.6–R4.9)*
+  - Verify: `ActivityViewModelTests`.
+- [x] **T19.** Pane XAML: filter box, `SelectorBar` with counts, sort menu, dividers, no-match message. *(R4.1–R4.5, R4.7, R4.10)*
+  - Verify: build; manual T20.
+- [x] **T20.** Manual in the VM with a dozen queued updates and one failure: each tab and sort, filter, keyboard and Narrator names, focus kept when a card finishes, light, dark and high contrast. *(R4.1–R4.10)*
+  - Verify: results in the log below.
+
 ## Manual verification log
 
 | Criterion | Date | Result | Notes |
@@ -61,3 +74,9 @@ Tick a task only when its verification passes. Keep tasks small enough for one c
 | R2.8–R2.10 (package identity) | 2026-10-30 | Pass | Same three cases with the dev build started through `Invoke-CommandInDesktopPackage` in the installed 1.0.1 package: logs went to the package's `LocalState\logs`, and `Caller:` matched the family name. Not a real MSIX of this code |
 | R2.8–R2.10 (real MSIX) | 2026-10-30 | Pass | Released v1.0.3 x64 MSIX, installed over 1.0.1 and started from Start: jq, LocalSend and the failing Wget each logged their own record, last, with the package family name as `Caller:`, no URL queries, and the headers line "(removed)". Queuing two operations was tested on the portable app only |
 | R1.7 high contrast | – | **Pending** | With the 006 high-contrast pass |
+| R4.1–R4.4, R4.7 | 2026-11-12 | Pass | VM, Store MSIX 1.3.97: five portable updates, jq kept running so it failed. All (5), Done (4), Failed (1), Active with no count; All tab shows Failed then Done under dividers; each tab lists its category; Active shows "No operations match"; filter `zzz` → message and Clear filter, which emptied the box and went back to All (screenshot) |
+| R4.6 | 2026-11-12 | Pass, after a fix | First build used `Move`: the list showed Done above Failed while the collection was right. Remove and insert since (design R4.6); groups in order in the next run. The updates finished in seconds, so cards were never seen queued or running in the VM; unit tests cover that order |
+| R4.5, R4.8 | 2026-11-12 | Pass | Sort menu → Name A to Z: button and tooltip "Sort: Name A to Z", Done group sorted by name inside, `settings.json` `"ActivitySort": "Name"`, same after restart. Oldest and Newest weren't driven through the menu (the script couldn't reopen it); same handler, covered by `ActivityArrangerTests` |
+| R4.9 | 2026-11-12 | Pass (unit) | `ActivityFilterTests.Clear_finished_removes_hidden_finished_operations_too`; cards kept Log and Retry in the VM |
+| R4.10 | 2026-11-12 | Partial | Esc emptied the filter; Tab from the filter goes All tab → card → Log → Retry, skipping the dividers; dark theme starts. Narrator names and high contrast **pending** |
+| – | 2026-11-12 | Not this feature | Tab from Refresh into the Updates list after updates finish crashed with E_BOUNDS (`Microsoft.UI.Xaml.dll`, 0xc000027b). Released 1.3.0 crashes the same way in the same run, so it's an older bug, to fix separately |

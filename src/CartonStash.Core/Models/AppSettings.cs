@@ -47,6 +47,9 @@ public sealed record AppSettings
     /// <summary>Keep the Activity pane open beside the page (009 R3.4).</summary>
     public bool ActivityPinned { get; init; }
 
+    /// <summary>The Activity pane's order (009 R4.8). Missing in older files, which then use Default.</summary>
+    public ActivitySort ActivitySort { get; init; } = ActivitySort.Default;
+
     /// <summary>The main window's last size and position (006 R6.1). Null until the window first closes (R6.4).</summary>
     public WindowLayout? Window { get; init; }
 
@@ -84,7 +87,7 @@ public sealed record AppSettings
         other is not null
         && (Theme, InstallScope, StartPage, ActivityPinned) == (other.Theme, other.InstallScope, other.StartPage, other.ActivityPinned)
         && (CheckMode, CheckIntervalHours, CheckTime, CheckScheduleSetAt) == (other.CheckMode, other.CheckIntervalHours, other.CheckTime, other.CheckScheduleSetAt)
-        && (Window, NavPaneOpen) == (other.Window, other.NavPaneOpen)
+        && (Window, NavPaneOpen, ActivitySort) == (other.Window, other.NavPaneOpen, other.ActivitySort)
         && ExcludedPackageIds.SequenceEqual(other.ExcludedPackageIds, StringComparer.OrdinalIgnoreCase)
         && SourceAgreementAnswers.Count == other.SourceAgreementAnswers.Count
         && SourceAgreementAnswers.All(a => other.SourceAgreementAnswers.TryGetValue(a.Key, out var answer) && a.Value == answer);

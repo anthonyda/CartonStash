@@ -1,6 +1,6 @@
 # 009 – Activity pane: Requirements
 
-**Status:** Done (2026-10-30). Amendment R2.7 (log privacy note) approved 2026-10-30. Amendment R2.8–R2.10 (WinGet's record in the log) approved 2026-10-30
+**Status:** Done (2026-10-30). Amendment R2.7 (log privacy note) approved 2026-10-30. Amendment R2.8–R2.10 (WinGet's record in the log) approved 2026-10-30. Amendment R4 (filter, tabs and sort) approved 2026-11-12
 **Depends on:** 003 (operation queue, Activity pane), 006 (settings)
 **Issues:** [#2](https://github.com/anthonyda/CartonStash/issues/2) (operation logs), [#3](https://github.com/anthonyda/CartonStash/issues/3) (pin the pane), [#4](https://github.com/anthonyda/CartonStash/issues/4) (redesign)
 
@@ -62,3 +62,36 @@ user clicks elsewhere, so it can't be watched while using the app.
 - **R2.8: always add WinGet's record, or only when the installer wrote nothing?** **Decided 2026-10-30: always.** It's the same shape on every package, and it shows the
   arguments the installer got, which also helps when an installer log exists.
 - **R2.8: where in the log?** **Decided 2026-10-30: last.** The dialog keeps the end of a very long log, so a large installer log can't push it out.
+
+## Amendment R4: filter, tabs and sort (approved 2026-11-12)
+
+**Problem.** With a dozen updates queued, the pane is a long scroll. The operation actually running can sit below every queued
+card (seen 2026-11-12: Node.js updating under five queued cards), and a failure is easy to miss among finished ones.
+
+**Maintainer's choice, 2026-11-12:** design C from the mockups: a text filter, tabs with counts, a sort button, and labelled
+dividers between the categories in the All tab.
+
+- **US4.** As a user, I want to find an operation by name, see only what's active, done or failed, and choose the order, so
+  that a long Activity list stays readable.
+
+| ID   | Story | Criterion |
+|------|-------|-----------|
+| R4.1 | US4   | The pane shall show a text box under its header ("Filter by name or ID"). While it holds text, the pane shall show only operations whose package name, package ID or action (Install, Update, Uninstall) contains that text, ignoring case. |
+| R4.2 | US4   | Below the filter, the pane shall show four tabs: **All**, **Active** (queued and running), **Done** (succeeded, restart required, unconfirmed, cancelled) and **Failed**. Each tab shall show how many operations it would list, counting only those that match the text filter. |
+| R4.3 | US4   | Selecting a tab shall show only that category's operations. The tab and the text filter combine. |
+| R4.4 | US4   | In the All tab, the pane shall group the cards as Active, then Failed, then Done, each group under a divider with its name and count. A group with nothing to show shall have no divider. The other tabs shall have no dividers. |
+| R4.5 | US4   | The header shall offer a **Sort** button with four orders: **Default** (the running operation, then queued ones in the order they'll run, then finished ones newest first), **Newest first** and **Oldest first** (by the time on the card), and **Name A to Z**. The order shall apply inside each group (R4.4). The button's tooltip and accessible name shall say the current order. |
+| R4.6 | –     | When an operation changes state, it shall move to its new tab and group at once, without reloading the whole list, so other cards keep their state and the focused card keeps focus where it can. |
+| R4.7 | US4   | If nothing matches the filter and tab, then the pane shall say "No operations match" and offer **Clear filter**, which empties the text and selects All. When the list itself is empty, the pane keeps today's message. |
+| R4.8 | –     | The sort order shall be saved in Settings (006) and restored at start. The text and the tab shall last for the session only, kept while the pane is closed and reopened. |
+| R4.9 | –     | Cards shall keep their content and buttons (R1, Cancel, Retry, Log). **Clear finished** shall keep clearing every finished operation, including ones the filter hides. |
+| R4.10 | –    | The filter, tabs, dividers and Sort shall be keyboard reachable with accessible names, dividers shall be headings, and the Failed divider shall not rely on color alone (constitution Q5). They shall work in light, dark and high contrast. Esc in the filter box shall clear it. |
+
+### Open questions (R4), decided 2026-11-12 as proposed
+
+- **Unconfirmed updates (013 R2.2): Done or Failed?** Proposed: **Done**, since the card already says what to check. Failed would
+  make them harder to miss.
+- **Highlight the matching text on cards?** Proposed: **no** for now. The mockup did, but it adds work in the card template for
+  little gain in a short list.
+- **Switch to All when a new operation is queued while another tab hides it?** Proposed: **no**. The tab counts update, and
+  switching tabs under the user's cursor is worse.

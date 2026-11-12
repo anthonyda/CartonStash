@@ -184,8 +184,160 @@ public sealed partial class ActivityViewModel : ObservableObject
         _logs = logs;
         _dialogs = dialogs;
         _settings = settings;
-        ((INotifyCollectionChanged)queue.Operations).CollectionChanged += (_, _) => OnPropertyChanged(nameof(IsEmpty));
+        ((INotifyCollectionChanged)queue.Operations).CollectionChanged += (_, _) =>
+        {
+            Watch();
+            OnPropertyChanged(nameof(IsEmpty));
+            Rearrange();
+        };
         queue.LogRequested += async (_, operation) => await ShowLogAsync(operation);
+        Watch();
+        Rearrange();
+    }
+
+    private readonly HashSet<PackageOperation> _watched = [];
+
+    /// <summary>What the list shows: an <see cref="ActivityHeader"/> or a <see cref="PackageOperation"/> (009 R4). Never replaced (R4.6).</summary>
+    public System.Collections.ObjectModel.ObservableCollection<object> Entries { get; } = [];
+
+    /// <summary>R4.1, for the session only (R4.8).</summary>
+    [ObservableProperty]
+    public partial string FilterText { get; set; } = "";
+
+    partial void OnFilterTextChanged(string value) => Rearrange();
+
+    /// <summary>R4.2, R4.3, for the session only (R4.8).</summary>
+    [ObservableProperty]
+    public partial ActivityTab Tab { get; set; }
+
+    partial void OnTabChanged(ActivityTab value) => Rearrange();
+
+    /// <summary>R4.5, saved in Settings (R4.8).</summary>
+    public ActivitySort Sort
+    {
+        get => _settings.Current.ActivitySort;
+        set
+        {
+            if (value != Sort)
+            {
+                _settings.Update(s => s with { ActivitySort = value });
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(SortText));
+                Rearrange();
+            }
+        }
+    }
+
+    /// <summary>The Sort button's tooltip and accessible name (R4.5).</summary>
+    public string SortText => $"Sort: {SortLabel(Sort)}";
+
+    public static string SortLabel(ActivitySort sort) => sort switch
+    {
+        ActivitySort.Newest => "Newest first",
+        ActivitySort.Oldest => "Oldest first",
+        ActivitySort.Name => "Name A to Z",
+        _ => "Default",
+    };
+
+    /// <summary>Tab labels with their counts, "Active (6)" (R4.2).</summary>
+    [ObservableProperty]
+    public partial string AllTabText { get; private set; } = "All";
+
+    [ObservableProperty]
+    public partial string ActiveTabText { get; private set; } = "Active";
+
+    [ObservableProperty]
+    public partial string DoneTabText { get; private set; } = "Done";
+
+    [ObservableProperty]
+    public partial string FailedTabText { get; private set; } = "Failed";
+
+    /// <summary>R4.7: there are operations, but none matches the filter and tab.</summary>
+    [ObservableProperty]
+    public partial bool HasNoMatch { get; private set; }
+
+    /// <summary>R4.7: empties the filter and selects All.</summary>
+    [RelayCommand]
+    private void ClearFilter()
+    {
+        FilterText = "";
+        Tab = ActivityTab.All;
+    }
+
+    // Re-arrange when an operation changes category or time, not on progress ticks (R4.6).
+    private void Watch()
+    {
+        foreach (var gone in _watched.Where(o => !_queue.Operations.Contains(o)).ToList())
+        {
+            gone.PropertyChanged -= Operation_PropertyChanged;
+            _watched.Remove(gone);
+        }
+        for (var i = 0; i < _queue.Operations.Count; i++)
+        {
+            if (_watched.Add(_queue.Operations[i]))
+            {
+                _queue.Operations[i].PropertyChanged += Operation_PropertyChanged;
+            }
+        }
+    }
+
+    private void Operation_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(PackageOperation.State) or nameof(PackageOperation.FinishedAt) or nameof(PackageOperation.StartedAt))
+        {
+            Rearrange();
+        }
+    }
+
+    private void Rearrange()
+    {
+        var arrangement = ActivityArranger.Arrange(_queue.Operations, FilterText, Tab, Sort);
+        SyncTo(Entries, arrangement.Entries);
+        AllTabText = TabText("All", arrangement.All);
+        ActiveTabText = TabText("Active", arrangement.Active);
+        DoneTabText = TabText("Done", arrangement.Done);
+        FailedTabText = TabText("Failed", arrangement.Failed);
+        HasNoMatch = _queue.Operations.Count > 0 && Entries.Count == 0;
+    }
+
+    private static string TabText(string name, int count) => count > 0 ? $"{name} ({count})" : name;
+
+    /// <summary>
+    /// Brings <paramref name="target"/> to <paramref name="wanted"/> with removes and inserts, never a reset, so cards that
+    /// keep their place keep their containers (R4.6).
+    /// </summary>
+    internal static void SyncTo(System.Collections.ObjectModel.ObservableCollection<object> target, IReadOnlyList<object> wanted)
+    {
+        var keep = new HashSet<object>(wanted);
+        for (var i = target.Count - 1; i >= 0; i--)
+        {
+            if (!keep.Contains(target[i]))
+            {
+                target.RemoveAt(i);
+            }
+        }
+        for (var i = 0; i < wanted.Count; i++)
+        {
+            if (i < target.Count && Equals(target[i], wanted[i]))
+            {
+                continue;
+            }
+            var from = -1;
+            for (var j = i + 1; j < target.Count; j++)
+            {
+                if (Equals(target[j], wanted[i]))
+                {
+                    from = j;
+                    break;
+                }
+            }
+            // No Move: WinUI's ListView drew moved items out of order and crashed when the sort changed (VM run, 2026-11-12).
+            if (from >= 0)
+            {
+                target.RemoveAt(from);
+            }
+            target.Insert(i, wanted[i]);
+        }
     }
 
     public System.Collections.ObjectModel.ObservableCollection<PackageOperation> Operations => _queue.Operations;

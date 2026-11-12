@@ -62,6 +62,10 @@ public sealed partial class MainWindow : Window
             {
                 ApplyActivityPin();
             }
+            else if (e.PropertyName == nameof(ActivityViewModel.Tab))
+            {
+                SelectActivityTab(); // Clear filter goes back to All (009 R4.7)
+            }
         };
         theme.Attach(this);
 
@@ -157,6 +161,55 @@ public sealed partial class MainWindow : Window
     }
 
     private void CloseActivity_Click(object sender, RoutedEventArgs e) => ActivitySplit.IsPaneOpen = false;
+
+    // 009 R4.3
+    private void ActivityTabs_SelectionChanged(SelectorBar sender, SelectorBarSelectionChangedEventArgs args)
+    {
+        if (sender.SelectedItem?.Tag is string tag && Enum.TryParse<ActivityTab>(tag, out var tab))
+        {
+            Activity.Tab = tab;
+        }
+    }
+
+    private void SelectActivityTab()
+    {
+        var item = ActivityTabs.Items.FirstOrDefault(i => i.Tag as string == Activity.Tab.ToString());
+        if (item is not null && ActivityTabs.SelectedItem != item)
+        {
+            ActivityTabs.SelectedItem = item;
+        }
+    }
+
+    // 009 R4.5: the menu marks the current order.
+    private void ActivitySort_Opening(object? sender, object e)
+    {
+        foreach (var item in ((MenuFlyout)sender!).Items.OfType<RadioMenuFlyoutItem>())
+        {
+            item.IsChecked = item.Tag as string == Activity.Sort.ToString();
+        }
+    }
+
+    private void ActivitySort_Click(object sender, RoutedEventArgs e)
+    {
+        if (((FrameworkElement)sender).Tag is string tag && Enum.TryParse<ActivitySort>(tag, out var sort))
+        {
+            Activity.Sort = sort;
+        }
+    }
+
+    // 009 R4.10: Esc empties the filter.
+    private void ActivityFilter_KeyDown(object sender, Microsoft.UI.Xaml.Input.KeyRoutedEventArgs e)
+    {
+        if (e.Key == Windows.System.VirtualKey.Escape && Activity.FilterText.Length > 0)
+        {
+            Activity.FilterText = "";
+            e.Handled = true;
+        }
+    }
+
+    // 009 R4.10: Tab goes from card to card, past the dividers.
+    private void ActivityList_ContainerContentChanging(ListViewBase sender, ContainerContentChangingEventArgs args) =>
+        args.ItemContainer.IsTabStop = args.Item is not ActivityHeader;
 
     // 006 R6.2–R6.4: saved size, position, maximized state and navigation pane, or the defaults.
     private void RestoreLayout(AppSettings saved)

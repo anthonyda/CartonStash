@@ -15,6 +15,7 @@ public sealed class PackageOperationQueue(IPackageInstaller installer, IOperatio
     private CancellationTokenSource? _runningCancellation;
     private Task _worker = Task.CompletedTask;
     private bool _isWorking;
+    private long _sequence;
 
     /// <summary>All operations this session, newest first (Activity pane).</summary>
     public ObservableCollection<PackageOperation> Operations { get; } = [];
@@ -147,6 +148,7 @@ public sealed class PackageOperationQueue(IPackageInstaller installer, IOperatio
 
     private void Start(PackageOperation operation)
     {
+        operation.Sequence = ++_sequence; // 009 R4.5: run order, set first: the next changes re-sort the Activity list
         operation.Phase = OperationPhase.Queued;
         operation.StartedAt = DateTimeOffset.Now;
         _pending.Enqueue(operation);

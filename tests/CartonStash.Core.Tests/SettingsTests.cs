@@ -47,7 +47,20 @@ public sealed class SettingsTests : IDisposable
     }
 
     [Fact]
-    public void File_from_before_window_layout_keeps_defaults() // R6.4
+    public void Activity_sort_survives_a_restart() // 009 R4.8
+    {
+        var saved = new AppSettings { ActivitySort = ActivitySort.Oldest };
+        new JsonSettingsStore(SettingsPath).Save(saved);
+
+        var (loaded, reset) = new JsonSettingsStore(SettingsPath).Load();
+
+        Assert.Equal(ActivitySort.Oldest, loaded.ActivitySort);
+        Assert.NotEqual(new AppSettings(), loaded);
+        Assert.False(reset);
+    }
+
+    [Fact]
+    public void File_from_before_window_layout_keeps_defaults() // R6.4, 009 R4.8
     {
         Directory.CreateDirectory(_dir);
         File.WriteAllText(SettingsPath, """{ "Theme": "Dark" }""");
@@ -56,6 +69,7 @@ public sealed class SettingsTests : IDisposable
 
         Assert.Null(loaded.Window);
         Assert.True(loaded.NavPaneOpen);
+        Assert.Equal(ActivitySort.Default, loaded.ActivitySort);
         Assert.False(reset);
     }
 
