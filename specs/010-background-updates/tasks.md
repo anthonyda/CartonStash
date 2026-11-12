@@ -54,7 +54,7 @@ Tick a task only when its verification passes. Keep tasks small enough for one c
 
 - [x] **T17.** `ActiveTasks` counts the tasks the COM server runs; only the last to end signals the process to stop. *(R3.18)*
   - Verify: `ActiveTasksTests`.
-- [ ] **T18.** Manual in the test VM: daily time, sleep past it, wake and unlock: one Check history entry, and the
+- [x] **T18.** Manual in the test VM: daily time, sleep past it, wake and unlock: one Check history entry, and the
   next daily timer set. *(R3.18)*
 
 ## Manual verification log
@@ -80,3 +80,4 @@ Tick a task only when its verification passes. Keep tasks small enough for one c
 | R3.15, R3.16 (T16) | 2026-11-03 | Pass | Checks off turned the entry off, and on turned it back on. Turned off in Startup apps: the app opened with the note "Windows won't start CartonStash at sign-in", kept it after changing the schedule, hid it with checks off and showed it again with checks on. The entry stayed off throughout |
 | R3.6 (T16, uninstall) | 2026-11-03 | Pass | No package, startup entry, task or data folder left; Startup apps no longer lists it |
 | App Certification Kit, Store build 1.1.1 x64 | 2026-11-02 | Partial | Kit copied from the host SDK into Windows Sandbox, since the admin prompt couldn't be approved over a remote session. 14 tests pass, including app manifest, resources, background-task capabilities and run level. The six metadata tests (ExclusiveTo, Type location, the two type-name tests, metadata correctness and Properties) couldn't start because the copied Kit found no platform metadata folder, so they weren't run. The optional Blocked executables test flags the usual launch-process APIs in the runtime and .NET files, and the optional Platform appropriate files test fails with no detail. DPI awareness is only a warning, because WinUI sets it at run time. Store certification on submission still decides |
+| R3.18 (T18) | 2026-11-12 | Pass | VM, daily mode, a check due, app closed; both tasks started a second apart with `Start-AppBackgroundTask` (instead of a real sleep and wake). 1.4.0: no history entry (BR-06 reproduced; one task alone records one). 1.4.1 from the bug-review branch: one entry, the daily timer registered again, no crash |

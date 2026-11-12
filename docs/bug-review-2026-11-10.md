@@ -62,7 +62,7 @@ One thing applies to many findings: the App has no handler for unhandled excepti
 
 ### BR-01 Explicit sources are searched and matched like any other
 
-- [ ] Reviewed. *2026-11-12, spec change approved (006 R3.14 to R3.17); code waits until the whole review is read. Decided: explicit sources are left out by default, as in `winget`. In Settings, each explicit source gets its own **Use in searches** checkbox, which adds it to Search only, and a paragraph explains what an explicit source is.*
+- [x] Reviewed. *2026-11-12, fixed (006 R3.14 to R3.17): explicit sources are left out by default; each has a **Use in searches** box in Settings, which adds it to Search only; a paragraph explains them. `ExplicitSourceTests`; checked in the VM with `winget-font`.*
 
 **Where:** [CatalogConnection.cs:150-188](../src/CartonStash.Core/Services/CatalogConnection.cs#L150-L188) (every
 catalog goes into the composite), [CatalogConnection.cs:224-237](../src/CartonStash.Core/Services/CatalogConnection.cs#L224-L237),
@@ -82,7 +82,7 @@ spec has to say which (constitution P1).
 
 ### BR-02 Going back from the newest version: an installer that does nothing is reported as a success
 
-- [ ] Reviewed. *2026-11-12, spec change approved (014 R2.8); code waits until the whole review is read. Proposed: after going back, compare the version alone; if Windows still lists the old one, warn "Not confirmed" and add no exclusion.*
+- [x] Reviewed. *2026-11-12, fixed (014 R2.8): after going back, the installed version alone decides; "Not confirmed" with its own message. `AfterGoingBackVersionTests`.*
 
 **Where:** [WinGetPackageInstaller.cs:249-263](../src/CartonStash.Core/Services/WinGetPackageInstaller.cs#L249-L263)
 (`AfterUpdate`), [WinGetPackageInstaller.cs:185-189](../src/CartonStash.Core/Services/WinGetPackageInstaller.cs#L185-L189),
@@ -189,7 +189,7 @@ they keep the generic glyph until a new search. The Activity card of a package i
 
 ### BR-06 Two background triggers in one process: the second ends the process while the first check runs
 
-- [ ] Reviewed. *2026-11-12, spec change approved (010 R3.18); code waits until the whole review is read. Proposed: the background process counts the triggers it serves and exits only when the last is done. Check in the VM first.*
+- [x] Reviewed. *2026-11-12, fixed (010 R3.18): the process counts its tasks and ends after the last. Reproduced in the VM on 1.4.0 (two tasks a second apart: no history entry) and fixed on 1.4.1 (one entry, timer set again). `ActiveTasksTests`.*
 
 **Where:** [BackgroundCheckTask.cs:31-50](../src/CartonStash.App/Services/BackgroundCheckTask.cs#L31-L50),
 [BackgroundCheckTask.cs:53-60](../src/CartonStash.App/Services/BackgroundCheckTask.cs#L53-L60),
