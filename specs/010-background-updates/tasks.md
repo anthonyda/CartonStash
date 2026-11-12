@@ -57,6 +57,12 @@ Tick a task only when its verification passes. Keep tasks small enough for one c
 - [x] **T18.** Manual in the test VM: daily time, sleep past it, wake and unlock: one Check history entry, and the
   next daily timer set. *(R3.18)*
 
+## Amendment R3.13: failure reasons keep their paths (2026-11-12, bug review BR-09)
+
+- [x] **T19.** `CheckHistoryStore` keeps the reason unchanged; `PRIVACY.md` says the history can hold the user name and
+  paths. Also BR-33: one writer at a time (named mutex) and a unique temp file per write. *(R3.13a, R3.13b)*
+  - Verify: `Reasons_are_kept_as_the_error_gave_them_R3_13a`, `Two_writers_at_once_keep_both_records`.
+
 ## Manual verification log
 
 | Criterion | Date | Result | Notes |

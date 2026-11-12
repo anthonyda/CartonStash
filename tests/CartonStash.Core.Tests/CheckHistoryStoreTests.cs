@@ -67,15 +67,32 @@ public sealed class CheckHistoryStoreTests : IDisposable
         Assert.Single(Store.Read());
     }
 
-    [Theory]
-    [InlineData(@"Can't open C:\Users\anthony\AppData\file.log now", "Can't open [path] now")]
-    [InlineData(@"Failed at \\server\share\x", "Failed at [path]")]
-    [InlineData("No network", "No network")]
-    public void Reasons_hold_no_paths(string reason, string expected) // R3.13
+    [Theory] // 010 R3.13a (BR-09): kept whole, a user name with a space and forward slashes included
+    [InlineData(@"Can't open C:\Users\Jean Dupont\AppData\file.log now")]
+    [InlineData("Can't open C:/Users/Jean Dupont/AppData/file.log now")]
+    [InlineData(@"Failed at \\server\share\x")]
+    [InlineData("No network")]
+    public void Reasons_are_kept_as_the_error_gave_them_R3_13a(string reason)
     {
         Store.Append(new CheckRecord(Now, CheckTrigger.Schedule, CheckResult.Failed, Reason: reason));
 
-        Assert.Equal(expected, Store.Read()[0].Reason);
+        Assert.Equal(reason, Store.Read()[0].Reason);
+    }
+
+    [Fact] // BR-33: two writers at once (the app and a background check) both keep their record
+    public async Task Two_writers_at_once_keep_both_records()
+    {
+        var other = new CheckHistoryStore(_dir, new FixedClockAt(Now));
+        await Task.WhenAll(Enumerable.Range(0, 20).Select(i => Task.Run(() =>
+            (i % 2 == 0 ? Store : other).Append(Record(Now.AddSeconds(-i))))));
+
+        Assert.Equal(20, Store.Read().Count);
+        Assert.Empty(Directory.GetFiles(_dir, "*.tmp"));
+    }
+
+    private sealed class FixedClockAt(DateTimeOffset now) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => now;
     }
 
     [Fact]
