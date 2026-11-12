@@ -1,6 +1,6 @@
 # 004 – Updates: Requirements
 
-**Status:** Approved (2026-10-29, R3 deferred). Amendment R6 (updating App Installer): approved 2026-11-04. Amendment R7 (license agreements on update): approved 2026-11-05. Amendment R8 (rows stay in place on reload): Draft, for review with the fix (2026-11-12)
+**Status:** Approved (2026-10-29, R3 deferred). Amendment R6 (updating App Installer): approved 2026-11-04. Amendment R7 (license agreements on update): approved 2026-11-05. Amendment R8 (rows stay in place on reload): approved and done 2026-11-12
 **Depends on:** 002, 003
 
 ## Problem
@@ -109,7 +109,7 @@ accepted, so WinGet refuses every update of such a package. The `winget` command
 - **Check the Update all confirmation count?** Recommended: the confirmation comes first and counts every package (R2.3), then
   the agreements. A declined package doesn't get queued, and the Activity pane shows what really runs.
 
-## Amendment R8: rows stay in place when the list reloads (Draft, 2026-11-12)
+## Amendment R8: rows stay in place when the list reloads (approved 2026-11-12)
 
 **Why.** The app crashed. In the test VM on 2026-11-12, released 1.3.0 and the current build alike: after five updates
 finished (four succeeded, jq failed because it was running), the Updates list went from 11 rows to 7. Pressing Tab from

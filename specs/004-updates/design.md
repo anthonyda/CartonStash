@@ -228,7 +228,7 @@ installs; Decline: nothing. Update all → confirm *n* → for each package: loo
 | R7.4 | Unit: agreements that throw → queued without acceptance |
 | R7.1, R7.2 live | Manual in the test VM: Power BI Desktop 2.158 → 2.159 with Update, then with Update all; Decline once, then Accept |
 
-## Amendment R8: rows stay in place when the list reloads (Draft, 2026-11-12)
+## Amendment R8: rows stay in place when the list reloads (approved 2026-11-12)
 
 ### Finding
 

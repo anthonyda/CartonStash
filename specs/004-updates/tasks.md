@@ -54,7 +54,7 @@
   - Verify: logged below.
   - Done 2026-11-05: Update and Decline, then Update all and Accept. Accept on a single Update is covered by the unit tests.
 
-### Amendment R8: rows stay in place when the list reloads (Draft, 2026-11-12)
+### Amendment R8: rows stay in place when the list reloads (approved 2026-11-12)
 
 - [x] **T18.** `UpdatesViewModel.Rebuild` keeps the rows still listed and syncs both lists with removals and inserts only; the selection keeps the rows that stay. *(R8.1, R8.2)*
   - Verify: `UpdatesViewModelTests.Finished_updates_leave_by_removal_never_by_reset`, `New_updates_are_inserted_in_name_order`, `A_reload_keeps_the_checked_rows_that_stay`, `Sync_handles_a_row_whose_place_changed`; all unit tests pass.
