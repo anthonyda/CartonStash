@@ -37,8 +37,8 @@ If implementation reveals the spec is wrong, **stop, update the spec first**, th
 
 | #   | Feature                                   | Status      |
 |-----|-------------------------------------------|-------------|
-| 001 | [Package search](001-package-search/)                  | Done |
-| 002 | [Installed packages list](002-installed-packages/)     | Done; amendment R6 done; amendment R7 done; amendment R8 (status filter chips) done |
+| 001 | [Package search](001-package-search/)                  | Done; amendment R4 (Tab into new results never closes the app): draft |
+| 002 | [Installed packages list](002-installed-packages/)     | Done; amendment R6 done; amendment R7 done; amendment R8 (status filter chips) done; amendment R9 (the list changes in place, Tab crash): draft |
 | 003 | [Install / uninstall with progress](003-install-uninstall/) | Done; amendment R7 (say when a program is running): done; amendment R8 (all-users MSI packages: Default mode, honest uninstall failure): done; R8.4 checked by unit tests only |
 | 004 | [Available updates](004-updates/)                      | In progress: code done; live update (R2.1) done; R3 pins deferred, open; amendment R6 (updating App Installer): done (T8 to T15); amendment R7 (license agreements on update): done (T16, T17); amendment R8 (rows stay in place on reload, Tab crash): draft, code done (T18), VM check T19 |
 | 005 | [Package details pane](005-package-details/)           | In progress: code done; link-opens-browser check (R1.3) pending; amendment R6 (https icons) done |

@@ -85,3 +85,11 @@ drop its results → otherwise results replace `Results` → state becomes Resul
 - **Parsing `winget.exe` output:** rejected. The output is unstable, localized and slow.
 - **`Microsoft.WinGet.Client` PowerShell module:** rejected. It needs a PowerShell host and adds overhead.
 - **Composite catalog connect latency (~1–3 s cold):** acceptable for v1; cache later if measured slow.
+
+## Amendment R4: Tab into new results never closes the app (Draft, 2026-11-12)
+
+- `SearchViewModel.SearchAsync` empties `Results` with removals, not `Clear()`, through the helper that 004 R8 adds for the
+  Updates page (moved out of `UpdatesViewModel` so the three lists share it). The new results are then added as today.
+- No visible change: the old results still go as soon as the new search starts (R3.2).
+- Testing: a unit test that a new search raises no `Reset` on `Results`; the VM repro below (T13).
+

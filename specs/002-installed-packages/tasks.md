@@ -50,6 +50,13 @@
 - [x] **T18.** Chip row on `InstalledPage` with dots, labels, counts, tooltips; shared badge brushes. *(R8.1, R8.4)*
   - Verify: manual (UIA: names and counts; screenshots dark + light; click each chip).
 
+### Amendment R9: the list changes in place (Draft, 2026-11-12)
+
+- [ ] **T19.** `ApplyFilter` syncs `Visible` with the shared helper instead of `Clear()` and refilling. *(R9.1, R9.2)*
+  - Verify: `InstalledViewModelTests.Filtering_keeps_rows_in_place_without_a_reset`, `Reload_replaces_rows_without_a_reset`.
+- [ ] **T20.** Manual in the test VM, Store build: focus the 13th row, filter to `App Installer`, Tab from the filter box into the list. *(R9.1)*
+  - Verify: logged below. Before the fix (1.3.96, 2026-11-12): the app closed, 2 of 2.
+
 ## Manual verification log
 
 | Criterion | Date | Result | Notes |

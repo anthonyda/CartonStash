@@ -35,6 +35,13 @@ Tick a task only when its verification passes. Keep tasks small enough for one c
   - Verify: names via UI Automation + human keyboard/Narrator check (see log).
 - [x] **T11.** Mark the spec `Done` once all criteria are verified.
 
+### Amendment R4: Tab into new results never closes the app (Draft, 2026-11-12)
+
+- [ ] **T12.** `SearchAsync` empties `Results` by removals, through the shared helper. *(R4.1)*
+  - Verify: `SearchViewModelTests.New_search_removes_old_results_without_a_reset`.
+- [ ] **T13.** Manual in the test VM, Store build: search `microsoft`, focus the 13th result, search `jqlang.jq`, Tab from the box into the results. *(R4.1)*
+  - Verify: logged below. Before the fix (1.3.96, 2026-11-12): the app closed, 2 of 2.
+
 ## Manual verification log
 
 | Criterion | Date | Result | Notes |
