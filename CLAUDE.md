@@ -40,6 +40,43 @@ Always these folders, in the main checkout `C:\dev\CartonStash`. Never make up a
 - **Portable zips:** `artifacts\`.
 - **Test builds for the VM:** `C:\VMs\CartonStash-Test\builds\<run name>\` (see `TEST-ENV.local.md`), never inside the repo.
 
+## Screenshots (README and Store listing)
+
+Take them in the test VM from the release's Store build, 2560x1440 window crops (VM screen 2560x1600, scaling 125%),
+half light and half dark (scripts: `C:\VMs\CartonStash-Test\guest\shots2-setup.ps1` elevated, `dpi.ps1`, restart,
+then `shots2-run.ps1`; they live in the VM folder, not the repo). Keep this set so shots stay comparable between
+versions; change it here first.
+
+- **Setup (all users):** the VM's own apps updated first, except App Installer; Steam (current); PrusaSlicer, VLC,
+  7-Zip and Notepad++ one version back (Updates content); Notepad++ excluded; msstore source removed (no agreement
+  dialog). **Per user:** Obsidian one version back. Settings: start page Search, scope Any; solid desktop in the
+  window's background color.
+- **Operations during the run:** per user only (Pandoc for the current user, Obsidian update, Spotify install), so no
+  UAC prompt can appear. Programs that start after installing are closed before the next shot.
+
+| Store # | File in `docs/images/` | Theme | Content |
+|---|---|---|---|
+| 1 | `search.png` | Light | Search for `spotify`, Spotify details open |
+| 2 | `installed.png` | Dark | Installed page, list scrolled to the end (the samples, after the Microsoft runtimes) |
+| 3 | `updates.png` | Light | Updates: PrusaSlicer, VLC, 7-Zip, Obsidian; Notepad++ under Excluded |
+| 4 | `activity.png` | Dark | Activity pinned on Installed: Pandoc, Obsidian, Spotify done |
+| 5 | `details.png` | Light | Obsidian from Updates: release notes, newest version selected |
+| 6 | `goback.png` | Dark | PrusaSlicer details, older version selected (Go back) |
+| 7 | `install-scope.png` | Light | Pandoc's Install split button open |
+| 8 | `log.png` | Dark | Log of the Obsidian update |
+| 9 | `taskbar.png` | Light | Updates page plus the taskbar with the updates badge (screen crop) |
+| 10 | `settings.png` | Dark | Settings, background checks every 24 hours |
+
+The Store allows 10 screenshots: a new one replaces one of these. Where the files go:
+
+- **Raw output of a run:** `C:\VMs\CartonStash-Test\logs\shots\` (`name.png` crop, `full-name.png` whole screen).
+  Overwritten by the next run.
+- **README:** `docs/images/name.png`, committed.
+- **Store upload:** `artifacts\store-listing\<version>_<date taken>\N-name.png` (e.g.
+  `1.4.0_2026-11-12\1-search.png`), numbered in the Store order above, one folder per release whose shots were retaken. Git-ignored; `Publish-Release.ps1` only empties the
+  files at the top of `artifacts\`, not these folders. The Store logo stays at `artifacts\store-listing\logo-300x300.png`.
+  Give the user the full path.
+
 ## Gotchas
 
 - WinGet collections: index them, don't `foreach` (constitution W2).
