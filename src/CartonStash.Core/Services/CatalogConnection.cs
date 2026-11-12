@@ -15,9 +15,10 @@ public sealed class CatalogConnection(ISettings settings)
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly ConcurrentDictionary<string, SourceFailure> _failedSources = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, byte> _leftOutSources = new(StringComparer.OrdinalIgnoreCase);
-    private PackageCatalog? _remoteFirst;
-    private PackageCatalog? _localFirst;
-    private PackageCatalog? _installedOnly;
+    // BR-15: each keeps a catalog only if no Invalidate happened while it connected.
+    private readonly CatalogCache<PackageCatalog> _remoteFirst = new();
+    private readonly CatalogCache<PackageCatalog> _localFirst = new();
+    private readonly CatalogCache<PackageCatalog> _installedOnly = new();
 
     private readonly Lock _managerLock = new();
     private PackageManager? _manager;
@@ -56,9 +57,9 @@ public sealed class CatalogConnection(ISettings settings)
     {
         _failedSources.Clear();
         _leftOutSources.Clear();
-        _remoteFirst = null;
-        _localFirst = null;
-        _installedOnly = null;
+        _remoteFirst.Invalidate();
+        _localFirst.Invalidate();
+        _installedOnly.Invalidate();
     }
 
     /// <summary>Leaves these sources out of the next connection. Memory only: the user's sources stay as they are (011 R1.6).</summary>
@@ -68,8 +69,8 @@ public sealed class CatalogConnection(ISettings settings)
         {
             _failedSources[failure.Source] = failure;
         }
-        _remoteFirst = null;
-        _localFirst = null;
+        _remoteFirst.Invalidate();
+        _localFirst.Invalidate();
     }
 
     /// <summary>Saves the user's answer for this agreement text and reconnects with it (006 R3.9).</summary>
@@ -107,19 +108,20 @@ public sealed class CatalogConnection(ISettings settings)
     /// </summary>
     internal async Task<PackageCatalog> GetInstalledOnlyAsync(CancellationToken cancellationToken)
     {
-        if (_installedOnly is { } cached)
+        if (_installedOnly.Value is { } cached)
         {
             return cached;
         }
 
-        // A rare double connect while two loads race is harmless; the last one is kept.
+        // A rare double connect while two loads race is harmless; the last one is kept, unless an Invalidate came between.
+        var generation = _installedOnly.Begin();
         var reference = Manager.GetLocalPackageCatalog(LocalPackageCatalog.InstalledPackages);
         var connect = await reference.ConnectAsync().AsTask(cancellationToken);
         if (connect.Status != ConnectResultStatus.Ok)
         {
             throw new WinGetException(WinGetPackageService.DescribeConnectFailure(connect.Status), connect.ExtendedErrorCode);
         }
-        return _installedOnly = connect.PackageCatalog;
+        return _installedOnly.Keep(generation, connect.PackageCatalog);
     }
 
     /// <param name="localFirst">
@@ -129,8 +131,8 @@ public sealed class CatalogConnection(ISettings settings)
     /// <returns>Null when no source may be used and <paramref name="localFirst"/> is false (006 R3.10).</returns>
     private async Task<PackageCatalog?> GetAsync(bool localFirst, CancellationToken cancellationToken)
     {
-        var cached = localFirst ? _localFirst : _remoteFirst;
-        if (cached is not null)
+        var cache = localFirst ? _localFirst : _remoteFirst;
+        if (cache.Value is { } cached)
         {
             return cached;
         }
@@ -138,22 +140,14 @@ public sealed class CatalogConnection(ISettings settings)
         await _gate.WaitAsync(cancellationToken);
         try
         {
-            cached = localFirst ? _localFirst : _remoteFirst;
-            if (cached is not null)
+            if (cache.Value is { } kept)
             {
-                return cached;
+                return kept;
             }
 
+            var generation = cache.Begin();
             var catalog = await ConnectAsync(localFirst, IsInUse, cancellationToken);
-            if (localFirst)
-            {
-                _localFirst = catalog;
-            }
-            else
-            {
-                _remoteFirst = catalog;
-            }
-            return catalog;
+            return catalog is null ? null : cache.Keep(generation, catalog);
         }
         finally
         {
