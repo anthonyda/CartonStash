@@ -53,5 +53,6 @@ If implementation reveals the spec is wrong, **stop, update the spec first**, th
 | 014 | [Install a chosen version](014-choose-version/)        | Done (2026-11-09); Store packages and the notification text checked by unit tests only; amendment R1.6, R1.7 (action next to the selected version, Excluded rows open details): done; amendment R2.6, R2.7, R3.8, R3.9 (installed scope when going back, fresh installed state): done; R3.9 through the app and the refusing MSIs checked by unit tests only; amendment R2.8 (going back from the newest version, BR-02): done, unit tests only |
 | 015 | [Choose the install scope per install](015-install-scope-choice/) | Done (2026-11-11); keyboard by hand, dark and high contrast not checked |
 | 016 | [Updates count on the taskbar icon](016-taskbar-badge/) | Done (2026-11-12); R1.4 checked by unit tests only; 99+ and badges turned off in Windows not checked |
+| 017 | [Retry as administrator](017-retry-as-admin/) | Draft (2026-11-12): from the Microsoft 365 Copilot update failure; Q1 (how to elevate) open |
 
 Suggested build order: 002 → 003 → 004 → 005 → 006 → 007 (006's scope setting slots into 003's installer when it lands).
