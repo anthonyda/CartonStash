@@ -240,6 +240,36 @@ public sealed partial class PackageDetailsViewModel(IPackageService packages, IR
     // The package the details were loaded for: a refresh that changes nothing doesn't reload (014 R2.6).
     private PackageInfo? _loadedFor;
 
+    /// <summary>
+    /// BR-03: the page made new rows (a new search). The pane follows the new row for the same package, so its actions and
+    /// progress reach the list again (005 R3.1), and closes when the package is no longer listed.
+    /// </summary>
+    public void FollowRows(IReadOnlyList<PackageRowViewModel> rows)
+    {
+        if (!IsOpen || Row is not { } current || rows.Contains(current))
+        {
+            return;
+        }
+        var same = rows.FirstOrDefault(r => string.Equals(r.Package.Key, current.Package.Key, StringComparison.OrdinalIgnoreCase)
+            && string.Equals(r.Package.Source, current.Package.Source, StringComparison.OrdinalIgnoreCase));
+        if (same is null)
+        {
+            Close();
+            return;
+        }
+        Row = same;
+        if (!string.Equals(same.Package.InstalledVersion, _loadedFor?.InstalledVersion, StringComparison.Ordinal))
+        {
+            _ = LoadAsync(same); // 014 R2.6: the versions' actions depend on the installed version
+            return;
+        }
+        _loadedFor = same.Package;
+        OnPropertyChanged(nameof(CanRunVersion));
+        RunVersionCommand.NotifyCanExecuteChanged();
+        RunVersionForAllUsersCommand.NotifyCanExecuteChanged();
+        RunVersionForCurrentUserCommand.NotifyCanExecuteChanged();
+    }
+
 
     public bool IsLoading => State == DetailsState.Loading;
 

@@ -182,4 +182,31 @@ public class SearchViewModelTests
         Assert.Null(vm.ErrorMessage);
         Assert.Single(vm.Results);
     }
+    [Fact] // BR-03: a new search makes new rows; the open pane follows the new row, so the pane's actions reach the list (005 R3.1)
+    public async Task The_open_pane_follows_the_new_row_after_a_new_search_005_R3_1()
+    {
+        var vm = Create(_ => [Pkg("Spotify.Spotify"), Pkg("Other")]);
+        vm.Query = "spotify";
+        await vm.SearchCommand.ExecuteAsync(null);
+        await vm.Details.LoadAsync(vm.Results[0]);
+
+        await vm.SearchCommand.ExecuteAsync(null);
+
+        Assert.True(vm.Details.IsOpen);
+        Assert.Same(vm.Results[0], vm.Details.Row);
+    }
+
+    [Fact] // BR-03: the package is no longer listed: the pane closes
+    public async Task The_open_pane_closes_when_a_new_search_doesnt_list_its_package_005_R4_1()
+    {
+        var vm = Create(q => q == "a" ? [Pkg("A")] : [Pkg("B")]);
+        vm.Query = "a";
+        await vm.SearchCommand.ExecuteAsync(null);
+        await vm.Details.LoadAsync(vm.Results[0]);
+
+        vm.Query = "b";
+        await vm.SearchCommand.ExecuteAsync(null);
+
+        Assert.False(vm.Details.IsOpen);
+    }
 }
