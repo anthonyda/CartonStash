@@ -330,7 +330,7 @@ It needs a failure and a new load at the same moment, for example Refresh presse
 
 ### BR-15 Dropping the cached catalogs can be undone by a connection already under way
 
-- [ ] Reviewed
+- [ ] Reviewed. *2026-11-12, fix approved as proposed: a counter that each `Invalidate` raises; a connection notes it when it starts and is only cached if it hasn't changed when it finishes. Covers the remote-first, local-first and installed-only catalogs. Unit test on that rule (a connection that started before an invalidate isn't kept). Code waits until the whole review is read.*
 
 **Where:** [CatalogConnection.cs:31-38](../src/CartonStash.Core/Services/CatalogConnection.cs#L31-L38),
 [CatalogConnection.cs:103-135](../src/CartonStash.Core/Services/CatalogConnection.cs#L103-L135),
