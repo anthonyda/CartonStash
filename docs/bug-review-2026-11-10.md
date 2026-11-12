@@ -47,7 +47,7 @@ One thing applies to many findings: the App has no handler for unhandled excepti
 
 ### BR-01 Explicit sources are searched and matched like any other
 
-- [ ] Reviewed. *2026-11-12, spec change drafted (006 R3.14, R3.15), waiting for approval. Question: leave explicit sources out of search, the lists and checks, as `winget` does (proposed), or keep using them and change the Settings text.*
+- [ ] Reviewed. *2026-11-12, spec change drafted (006 R3.14 to R3.16), waiting for approval. Decided: explicit sources are left out by default, as in `winget`; a Settings checkbox, **Include explicit sources in searches**, adds them to Search only.*
 
 **Where:** [CatalogConnection.cs:150-188](../src/CartonStash.Core/Services/CatalogConnection.cs#L150-L188) (every
 catalog goes into the composite), [CatalogConnection.cs:224-237](../src/CartonStash.Core/Services/CatalogConnection.cs#L224-L237),

@@ -206,15 +206,22 @@ T11 tested this in clean Sandboxes, unelevated: a test exe and a test MSIX with 
 - On start: `DisplayArea.GetFromRect(rect, DisplayAreaFallback.None)`; null → resize only (R6.3). Sizes under 500 × 400 are
   ignored. Then `OverlappedPresenter.Maximize()` if saved maximized, and `Nav.IsPaneOpen` from settings.
 
-## Amendment R3.14, R3.15: explicit sources (2026-11-12, Draft)
+## Amendment R3.14 to R3.16: explicit sources (2026-11-12, Draft)
 
-- `CatalogConnection.ConnectAsync` skips a reference whose `Info.Explicit` is true, before reading its agreements
-  (R3.14). `SourcesInUse` leaves it out too, so source isolation never tests it (011 R1.3).
-- The decision is a small static rule next to `IsInUse`, so it is unit tested without COM.
-- `SourceInfo.DetailText` says `explicit: not used unless named, as in winget` (R3.15).
-- Refresh sources skips explicit sources (R3.15), as `BackgroundCheckRunner` already does.
-- Tests: the rule and the text (unit). Manual check on the maintainer's PC, where `winget-font` exists: a font that only
-  `winget-font` has isn't found, as with `winget search`.
+- `AppSettings.IncludeExplicitSources` (bool, default false, missing reads as false), with the hand-written `Equals`
+  updated.
+- `CatalogConnection.ConnectAsync` takes whether explicit sources count. The remote-first catalog (search, details,
+  install) passes the setting; the local-first catalog (Installed, Updates, background check) passes false. A
+  reference whose `Info.Explicit` doesn't count is skipped before its agreements are read (R3.14). `SourcesInUse`
+  follows the same rule, so source isolation never tests a source that wasn't used (011 R1.3).
+- The rule is a small static method next to `IsInUse`, so it is unit tested without COM.
+- Changing the setting calls `CatalogConnection.Invalidate()`, so the next search reconnects (R3.15).
+- Settings page: a `CheckBox` under the source list, bound to `SettingsViewModel.IncludeExplicitSources`, shown only
+  when at least one source is explicit. `SourceInfo.DetailText` takes the setting (R3.16). Refresh sources skips
+  explicit sources while it's off; the background check keeps skipping them.
+- Tests: the rule for each catalog and setting; the setting's default and a file without it; the detail text (unit).
+  Manual check on the maintainer's PC, where `winget-font` exists: off, a font only `winget-font` has isn't found, as
+  with `winget search`; on, it is found and installs; Installed and Updates the same either way.
 
 ## Testing strategy
 
