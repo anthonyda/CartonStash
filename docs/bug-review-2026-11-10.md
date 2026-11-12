@@ -47,7 +47,7 @@ One thing applies to many findings: the App has no handler for unhandled excepti
 
 ### BR-01 Explicit sources are searched and matched like any other
 
-- [ ] Reviewed. *2026-11-12: spec amendment drafted, 006 R3.14, R3.15 (Q1: leave explicit sources out, or keep them). Waiting for approval.*
+- [ ] Reviewed. *2026-11-12, spec change drafted (006 R3.14, R3.15), waiting for approval. Question: leave explicit sources out of search, the lists and checks, as `winget` does (proposed), or keep using them and change the Settings text.*
 
 **Where:** [CatalogConnection.cs:150-188](../src/CartonStash.Core/Services/CatalogConnection.cs#L150-L188) (every
 catalog goes into the composite), [CatalogConnection.cs:224-237](../src/CartonStash.Core/Services/CatalogConnection.cs#L224-L237),
@@ -67,7 +67,7 @@ spec has to say which (constitution P1).
 
 ### BR-02 Going back from the newest version: an installer that does nothing is reported as a success
 
-- [ ] Reviewed. *2026-11-12: spec amendment drafted, 014 R2.8. Waiting for approval.*
+- [ ] Reviewed. *2026-11-12, spec change drafted (014 R2.8), waiting for approval. Proposed: after going back, compare the version alone; if Windows still lists the old one, warn "Not confirmed" and add no exclusion.*
 
 **Where:** [WinGetPackageInstaller.cs:249-263](../src/CartonStash.Core/Services/WinGetPackageInstaller.cs#L249-L263)
 (`AfterUpdate`), [WinGetPackageInstaller.cs:185-189](../src/CartonStash.Core/Services/WinGetPackageInstaller.cs#L185-L189),
@@ -93,7 +93,7 @@ should warn.
 
 ### BR-03 The details pane keeps a row its list has thrown away
 
-- [x] Reviewed. *2026-11-12: Installed and Updates were fixed by 004 R8 and 014 R2.6 (rows stay the same objects). Search fixed: the pane follows the new row for the same package after a new search, or closes (`SearchViewModelTests.The_open_pane_*`).*
+- [x] Reviewed. *2026-11-12, fixed (PR #45). Installed and Updates were already fixed by 004 R8 and 014 R2.6, which keep the same rows on reload. Search still built new rows on every search, so the open pane stayed tied to a row no longer in the list: Install from the pane showed no progress. Now, when a search finishes, the pane switches to the new row for the same package, or closes if the package isn't in the results. Tests: `SearchViewModelTests.The_open_pane_*`.*
 
 **Where:** [PackageDetailsViewModel.cs:67-68](../src/CartonStash.Core/ViewModels/PackageDetailsViewModel.cs#L67-L68),
 [InstalledViewModel.cs:138-147](../src/CartonStash.Core/ViewModels/InstalledViewModel.cs#L138-L147),
@@ -119,7 +119,7 @@ when that row is gone.
 
 ### BR-04 Rows built after an operation ended still take its result: Install or Update button missing
 
-- [x] Reviewed. *2026-11-12: fixed. A success hides a row's button only on the row that saw it run, until the row shows WinGet's data again (`RowFinishedOperationTests`).*
+- [x] Reviewed. *2026-11-12, fixed (PR #45). Only the row that watched the operation run hides its button, and only until it shows WinGet's data again. New rows, and rows refreshed by a reload, show buttons from the package's real state, so Install comes back on Search after an uninstall, and Update after "Update not confirmed". Tests: `RowFinishedOperationTests`.*
 
 **Where:** [PackageRowViewModel.cs:37](../src/CartonStash.Core/ViewModels/PackageRowViewModel.cs#L37) (a new row takes
 the newest operation with its key, finished or not),
@@ -147,7 +147,7 @@ installed version; a finished Upgrade, then `Rebuild` with the package still `Ha
 
 ### BR-05 Search rows lose their icons after any reload of the installed list
 
-- [x] Reviewed. *2026-11-12: fixed. Search entries are kept apart and only replaced by the next search (`VersionCacheTests`).*
+- [x] Reviewed. *2026-11-12, fixed (PR #45). Search entries are kept apart from the installed list's: a reload clears only its own, and only the next search replaces the search's, so search rows keep their icons. Tests: `VersionCacheTests`.*
 
 **Where:** [WinGetPackageService.cs:196-200](../src/CartonStash.Core/Services/WinGetPackageService.cs#L196-L200),
 [WinGetPackageService.cs:172-181](../src/CartonStash.Core/Services/WinGetPackageService.cs#L172-L181),
@@ -166,7 +166,7 @@ they keep the generic glyph until a new search. The Activity card of a package i
 
 ### BR-06 Two background triggers in one process: the second ends the process while the first check runs
 
-- [ ] Reviewed. *2026-11-12: spec amendment drafted, 010 R3.18. Waiting for approval; the VM check comes first.*
+- [ ] Reviewed. *2026-11-12, spec change drafted (010 R3.18), waiting for approval. Proposed: the background process counts the triggers it serves and exits only when the last is done. Check in the VM first.*
 
 **Where:** [BackgroundCheckTask.cs:31-50](../src/CartonStash.App/Services/BackgroundCheckTask.cs#L31-L50),
 [BackgroundCheckTask.cs:53-60](../src/CartonStash.App/Services/BackgroundCheckTask.cs#L53-L60),
