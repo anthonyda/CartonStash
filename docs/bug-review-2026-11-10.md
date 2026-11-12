@@ -365,7 +365,7 @@ and `GetPackageCatalogByName` in `RefreshSourceAsync`
 
 ### BR-17 The update check mode has no guard: a bad index would reset all settings
 
-- [ ] Reviewed
+- [ ] Reviewed. *2026-11-12, fix approved as a guard (not known to happen): ignore a mode index outside the list, as the three combo boxes and the interval already do, so an invalid mode is never saved. Unit test with index -1. Code waits until the whole review is read.*
 
 **Where:** [CheckSettingsViewModel.cs:139](../src/CartonStash.Core/ViewModels/CheckSettingsViewModel.cs#L139) against
 [CheckSettingsViewModel.cs:141-147](../src/CartonStash.Core/ViewModels/CheckSettingsViewModel.cs#L141-L147) and
