@@ -71,11 +71,15 @@ It talks to WinGet directly through its official API, so what you see is exactly
 ## Download and install
 
 Get CartonStash from the **[Microsoft Store](https://apps.microsoft.com/detail/9MT37M7DBZRK)**. Microsoft signs it, and
-Windows keeps it up to date. You can also install it from a terminal:
+Windows keeps it up to date. You can also install it from a terminal with WinGet:
 
 ```powershell
-winget install 9MT37M7DBZRK --source msstore
+winget install CartonStash
 ```
+
+WinGet installs it from the Microsoft Store source, where its package ID is the Store's product ID, `9MT37M7DBZRK`
+(`winget install 9MT37M7DBZRK` does the same). The first time you use that source, WinGet asks you to accept its
+agreements.
 
 See what's new in each version in the [changelog](CHANGELOG.md).
 
