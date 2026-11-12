@@ -216,7 +216,7 @@ sources with the same package ID share one key.
 
 ### BR-08 A reset settings file is never rewritten
 
-- [ ] Reviewed
+- [ ] Reviewed. *2026-11-12, fix approved as proposed: save the defaults right after a reset, and at start remove leftover background tasks when the mode is Off. Code waits until the whole review is read.*
 
 **Where:** [Settings.cs:102-113](../src/CartonStash.Core/Services/Settings.cs#L102-L113),
 [Settings.cs:130-134](../src/CartonStash.Core/Services/Settings.cs#L130-L134),
