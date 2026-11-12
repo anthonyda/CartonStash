@@ -84,7 +84,8 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
                     break;
                 case CheckAfterOperation.InstalledVersion:
                     connection.Invalidate();
-                    outcome = AfterUpdate(outcome, package.InstalledVersion, await InstalledAfterUpdateAsync(package), package.Name);
+                    outcome = AfterUpdate(outcome, package.InstalledVersion, await InstalledAfterUpdateAsync(package), package.Name,
+                        goingBackTo: GoesBack(kind, package, version) ? version : null); // 014 R2.8
                     break;
             }
             return outcome;
@@ -513,14 +514,27 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
     /// unchanged. Comparing with the old version, not the new one: installers often list a different version than the
     /// manifest's, so "not the new version" would warn after good updates.
     /// </summary>
-    internal static OperationOutcome AfterUpdate(OperationOutcome outcome, string? versionBefore, InstalledAfterUpdate? after, string packageName = "")
+    /// <param name="goingBackTo">014 R2.8: the chosen version when going back. The installed version alone decides then: from
+    /// the newest version no update is offered before or after an installer that changed nothing.</param>
+    internal static OperationOutcome AfterUpdate(OperationOutcome outcome, string? versionBefore, InstalledAfterUpdate? after, string packageName = "",
+        string? goingBackTo = null)
     {
+        var name = string.IsNullOrWhiteSpace(packageName) ? "the package" : packageName;
+        if (goingBackTo is not null)
+        {
+            return after is { Version: { } listed } && versionBefore is not null && string.Equals(listed, versionBefore, StringComparison.Ordinal)
+                ? outcome with
+                {
+                    Result = OperationResult.SucceededUnconfirmed,
+                    Message = $"WinGet finished without an error, but Windows still lists {name} {listed}. Going back to {goingBackTo} may not have worked.",
+                }
+                : outcome;
+        }
         if (after is not { Version: { } version, UpdateAvailable: true } || versionBefore is null
             || !string.Equals(version, versionBefore, StringComparison.Ordinal))
         {
             return outcome;
         }
-        var name = string.IsNullOrWhiteSpace(packageName) ? "the package" : packageName;
         return outcome with
         {
             Result = OperationResult.SucceededUnconfirmed,

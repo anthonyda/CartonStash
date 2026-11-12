@@ -206,3 +206,9 @@ Approved 2026-11-10: Q7 with a notice in the confirmation, Q8 as proposed.
 | T24, R3.8 all users | 2026-11-10 | Pass | Pandoc 3.13 `--scope machine` (elevated setup); Windows Installer: Machine only. Settings "Let WinGet decide": no notice. Go back to 3.12 → UAC prompt, answered by the maintainer → log "Scope: for all users, as installed", Installed; one entry, Pandoc 3.12 in `C:\Program Files\Pandoc\`; Windows Installer has 3.12 (Machine) and no longer 3.13 |
 | T24, portable | 2026-11-10 | Pass | jq 1.8.2 → 1.8.1 still goes back directly; log "Scope: for the current user, as installed" (WinGet's scope for a portable package) |
 | T24, second copy (R3.9 parts) | 2026-11-10 | Measured | The T1 tool, elevated: `PackageInstallScope.System` 3.13 over the per-user 3.12 → two uninstall entries, both folders, `winget list` shows Pandoc 3.12 and 3.13, but the by-ID search counts 1. Not reproduced through the app (R3.8 prevents it); `AfterGoingBack` and `StillInstalled` are unit tested. No crashes in any T24 run |
+
+## Amendment R2.8 (2026-11-12, bug review BR-02)
+
+- [x] **T25.** `AfterUpdate` takes the chosen version when going back and compares the installed version alone; "Not
+  confirmed" for an install. *(R2.8)*
+  - Verify: `AfterGoingBackVersionTests`.
