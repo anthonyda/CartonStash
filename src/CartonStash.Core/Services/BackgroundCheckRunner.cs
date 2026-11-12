@@ -46,7 +46,8 @@ public sealed class BackgroundCheckRunner(
     IAppActivity activity,
     INetworkState network,
     TimeProvider? clock = null,
-    TimeZoneInfo? zone = null)
+    TimeZoneInfo? zone = null,
+    ITaskbarBadge? badge = null)
 {
     /// <summary>How long a refresh may take before the check uses the data WinGet already has (R1.9).</summary>
     public static readonly TimeSpan RefreshBudget = TimeSpan.FromSeconds(30);
@@ -148,6 +149,8 @@ public sealed class BackgroundCheckRunner(
             names.Count,
             excluded,
             names));
+
+        badge?.Show(names.Count); // 016 R2.1: only after a check that finished (R2.2)
 
         if (names.Count > 0 && !activity.WindowInForeground)
         {

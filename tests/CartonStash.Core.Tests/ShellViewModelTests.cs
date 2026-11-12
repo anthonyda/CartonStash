@@ -233,4 +233,69 @@ public class ShellViewModelTests
         Assert.True(shell.IsNotificationOpen);
         Assert.Equal("Settings were reset", shell.NotificationTitle);
     }
+    private sealed class FakeBadge : ITaskbarBadge
+    {
+        public List<int> Shown { get; } = [];
+
+        public void Show(int count) => Shown.Add(count);
+    }
+
+    private static (TestApp App, ShellViewModel Shell, UpdatesViewModel Updates, FakeBadge Badge) CreateWithBadge()
+    {
+        var app = new TestApp();
+        var updates = new UpdatesViewModel(app.Store, app.Actions, app.Packages, app.Settings, app.ReleaseNotes);
+        var badge = new FakeBadge();
+        return (app, new ShellViewModel(app.Queue, updates, app.Dialogs, new FakeSettings(), badge: badge), updates, badge);
+    }
+
+    [Fact]
+    public async Task TaskbarBadge_shows_the_count_once_loaded() // 016 R1.1, R1.2, R1.5
+    {
+        var (app, _, _, badge) = CreateWithBadge();
+        app.SetInstalled(Pkg.Installed("A", update: true), Pkg.Installed("B", update: true), Pkg.Installed("C"));
+        Assert.Empty(badge.Shown);
+
+        await app.Store.EnsureLoadedAsync();
+
+        Assert.Equal([2], badge.Shown);
+    }
+
+    [Fact]
+    public async Task TaskbarBadge_follows_changes_and_does_not_repeat() // 016 R1.3, R1.4
+    {
+        var (app, _, _, badge) = CreateWithBadge();
+        app.SetInstalled(Pkg.Installed("A", update: true));
+        await app.Store.EnsureLoadedAsync();
+
+        await app.Store.ReloadAsync();
+        app.SetInstalled(Pkg.Installed("A"));
+        await app.Store.ReloadAsync();
+
+        Assert.Equal([1, 0], badge.Shown);
+    }
+
+    [Fact]
+    public async Task TaskbarBadge_leaves_out_excluded_packages() // 016 R1.2, 010 R5.7
+    {
+        var (app, _, updates, badge) = CreateWithBadge();
+        app.SetInstalled(Pkg.Installed("A", update: true), Pkg.Installed("B", update: true));
+        await app.Store.EnsureLoadedAsync();
+
+        updates.Updates[0].ExcludeCommand.Execute(null);
+
+        Assert.Equal([2, 1], badge.Shown);
+    }
+
+    [Fact]
+    public async Task TaskbarBadge_is_left_alone_when_loading_fails() // 016 R1.6
+    {
+        var (app, _, _, badge) = CreateWithBadge();
+        app.SetInstalled(Pkg.Installed("A", update: true));
+        await app.Store.EnsureLoadedAsync();
+
+        app.Packages.Installed = _ => throw new WinGetException("Couldn't reach the package sources.", null);
+        await app.Store.ReloadAsync();
+
+        Assert.Equal([1], badge.Shown);
+    }
 }

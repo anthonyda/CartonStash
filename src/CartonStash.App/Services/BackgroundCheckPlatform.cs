@@ -1,5 +1,6 @@
 using Microsoft.Windows.AppNotifications;
 using Microsoft.Windows.AppNotifications.Builder;
+using Microsoft.Windows.BadgeNotifications;
 using Windows.Networking.Connectivity;
 using CartonStash.Core.Services;
 
@@ -19,6 +20,32 @@ public sealed class WindowsNotifier : INotifier
             .BuildNotification();
         notification.Tag = Tag;
         AppNotificationManager.Default.Show(notification);
+    }
+}
+
+/// <summary>
+/// The number on the taskbar icon (016). Windows keeps it after the app closes. Without package identity, or with badges
+/// turned off, it does nothing (R3.1); Windows shows "99+" above 99 (R3.2).
+/// </summary>
+public sealed class WindowsTaskbarBadge : ITaskbarBadge
+{
+    public void Show(int count)
+    {
+        try
+        {
+            if (count > 0)
+            {
+                BadgeNotificationManager.Current.SetBadgeAsCount((uint)count);
+            }
+            else
+            {
+                BadgeNotificationManager.Current.ClearBadge();
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Taskbar badge: {ex.Message}"); // R3.1: no error, no message
+        }
     }
 }
 

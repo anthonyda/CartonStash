@@ -172,6 +172,7 @@ public partial class App : Application
             .AddSingleton<DialogService>()
             .AddSingleton<IDialogService>(sp => sp.GetRequiredService<DialogService>())
             .AddSingleton<IClipboardService, ClipboardService>()
+            .AddSingleton<ITaskbarBadge, WindowsTaskbarBadge>() // 016
             .AddSingleton<ThemeService>()
             .AddSingleton<AppActivityMarker>()
             .AddSingleton<AppRestarter>()
