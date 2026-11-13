@@ -181,12 +181,13 @@ public sealed class ActivityTests : IDisposable
     }
 
     [Fact]
-    public void Very_long_logs_show_their_end() // design: last 1 MB
+    public async Task Very_long_logs_show_their_end() // design: last 1 MB
     {
         var (installer, queue, logs, _, _, _) = Create();
         var op = queue.Enqueue(OperationKind.Install, Pkg.Remote("A"));
         File.WriteAllText(op.LogFilePath!, new string('x', OperationLogStore.MaxShownCharacters + 10) + "THE END");
         installer.Complete("A");
+        await queue.Idle; // BR-20: the log is written off the UI thread; reading before it's done raced (flaky in CI)
 
         var text = logs.Read(op);
 
