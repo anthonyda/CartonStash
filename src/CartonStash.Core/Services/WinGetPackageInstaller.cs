@@ -752,8 +752,8 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
 
     /// <summary>018 R2.2: results a declined permission prompt gives. Measured cases only (P1).</summary>
     internal static bool IsDeclinedPromptResult(uint exitCode, int extendedError) =>
-        exitCode == 1625 // Windows Installer "forbidden by system policy": its answer to a declined prompt (VM, 7-Zip and VLC, 2026-11-13)
-        || extendedError == InstallCancelledByUser;
+        exitCode == 1602 // Windows Installer "user cancelled": No on the prompt for VLC's MSI (VM, maintainer's click, 2026-11-13)
+        || extendedError == InstallCancelledByUser; // WinGet's reading of it, reported with 1602 in the same run
 
     /// <summary>WinGet's "cancelled by user", from the manifest's expected return codes.</summary>
     internal const int InstallCancelledByUser = unchecked((int)0x8A15010C);

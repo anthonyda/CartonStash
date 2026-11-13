@@ -89,7 +89,7 @@ The monitor takes the time as an argument, so tests drive it with plain values; 
 
 ## Amendment R2: a declined prompt
 
-`MapInstallResult` and `MapUninstallResult` mark a failed result whose exit code is 1625, or whose extended error is
+`MapInstallResult` and `MapUninstallResult` mark a failed result whose exit code is 1602, or whose extended error is
 WinGet's "cancelled by user" (`0x8A15010C`), with `OperationOutcome.MayBeDeclinedPrompt`; the message is unchanged. The
 monitor sets `PackageOperation.SawPermissionPrompt` whenever it flags the operation, and `Start` clears it for each run.
 After the installer returns, the queue's `DeclinedPrompt` turns a marked failure into **Cancelled** with 017's

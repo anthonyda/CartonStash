@@ -133,8 +133,15 @@ public partial class App : Application
             if (e.Kind == ExtendedActivationKind.ToastNotification)
             {
                 // 018 R1.4: the permission notification opens Activity; the updates one opens Updates (010 R2.2).
-                var toActivity = e.Data is Microsoft.Windows.AppNotifications.AppNotificationActivatedEventArgs { } toast
-                    && toast.Arguments.TryGetValue("page", out var page) && page == "activity";
+                // A click comes as Windows' toast activation (its Argument is the raw "page=activity" text) or as the App
+                // SDK's own; read both (T9 finding: only the latter was read, so the click opened Updates).
+                var argument = e.Data switch
+                {
+                    Windows.ApplicationModel.Activation.IToastNotificationActivatedEventArgs toast => toast.Argument,
+                    Microsoft.Windows.AppNotifications.AppNotificationActivatedEventArgs app => app.Argument,
+                    _ => null,
+                };
+                var toActivity = NotificationArguments.Page(argument) == "activity";
                 window.DispatcherQueue.TryEnqueue(() =>
                 {
                     if (toActivity)

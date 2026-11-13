@@ -9,7 +9,7 @@ namespace CartonStash.Core.Tests;
 public class DeclinedPromptTests
 {
     private static readonly PackageInfo Seven = new("7zip.7zip", "7-Zip", "26.05", "26.06", "winget", UpdateAvailable: true);
-    private const int BlockedByPolicy = unchecked((int)0x8A15010F); // what WinGet reported with 1625, both times
+    private const int BlockedByPolicy = unchecked((int)0x8A15010F); // WinGet's reading of 1625
 
     private sealed class OpenProbe : IPermissionPromptProbe
     {
@@ -18,28 +18,36 @@ public class DeclinedPromptTests
         public bool IsOpen() => Open;
     }
 
-    [Fact]
-    public void Exit_code_1625_is_marked_and_keeps_its_message_R2_2_R2_3()
+    [Fact] // the maintainer's No on VLC's prompt (T9): exit code 1602, WinGet's "cancelled by user"
+    public void A_declined_prompt_is_marked_and_keeps_its_message_R2_2_R2_3()
     {
-        var outcome = MapInstallResult(OperationKind.Upgrade, InstallResultStatus.InstallError, 1625, false, InstallScope.Any, BlockedByPolicy, "7-Zip");
+        var outcome = MapInstallResult(OperationKind.Upgrade, InstallResultStatus.InstallError, 1602, false, InstallScope.Any, InstallCancelledByUser, "VLC");
 
         Assert.Equal(OperationResult.Failed, outcome.Result);
         Assert.True(outcome.MayBeDeclinedPrompt);
-        Assert.Equal("The installer failed with error code 1625.", outcome.Message);
+        Assert.Equal("The installer failed with error code 1602.", outcome.Message);
+    }
+
+    [Fact] // 1625 came from ending consent.exe, not from a user's No: it means a policy, and stays a failure
+    public void Exit_code_1625_is_not_marked_R2_2()
+    {
+        var outcome = MapInstallResult(OperationKind.Upgrade, InstallResultStatus.InstallError, 1625, false, InstallScope.Any, BlockedByPolicy, "7-Zip");
+
+        Assert.False(outcome.MayBeDeclinedPrompt);
     }
 
     [Fact]
     public void An_uninstall_declined_the_same_way_is_marked_R2_2()
     {
-        var outcome = MapUninstallResult(UninstallResultStatus.UninstallError, 1625, false, BlockedByPolicy, "7-Zip");
+        var outcome = MapUninstallResult(UninstallResultStatus.UninstallError, 1602, false, InstallCancelledByUser, "7-Zip");
 
         Assert.True(outcome.MayBeDeclinedPrompt);
     }
 
     [Fact]
-    public void WinGets_cancelled_by_user_is_marked_R2_2()
+    public void WinGets_cancelled_by_user_alone_is_marked_R2_2()
     {
-        var outcome = MapInstallResult(OperationKind.Install, InstallResultStatus.InstallError, 1602, false, InstallScope.Any, InstallCancelledByUser, "VLC");
+        var outcome = MapInstallResult(OperationKind.Install, InstallResultStatus.InstallError, 1, false, InstallScope.Any, InstallCancelledByUser, "VLC");
 
         Assert.True(outcome.MayBeDeclinedPrompt);
     }
@@ -70,11 +78,11 @@ public class DeclinedPromptTests
         Assert.Equal("Windows' permission prompt was declined.", operation.Message);
         Assert.True(operation.CanRetry);
         Assert.False(operation.CanRetryAsAdmin); // R2.4
-        Assert.Contains("Installer exit code: 1625", operation.Details); // R2.4: the code stays in the log
+        Assert.Contains("Installer exit code: 1602", operation.Details); // R2.4: the code stays in the log
     }
 
     [Fact]
-    public void Without_the_prompt_seen_1625_stays_a_failure_R2_3()
+    public void Without_the_prompt_seen_it_stays_a_failure_R2_3()
     {
         var installer = new ScriptedInstaller();
         var queue = new PackageOperationQueue(installer);
@@ -84,7 +92,7 @@ public class DeclinedPromptTests
         installer.Complete(Seven.Id, Declined());
 
         Assert.Equal(OperationResult.Failed, operation.Result);
-        Assert.Equal("The installer failed with error code 1625.", operation.Message);
+        Assert.Equal("The installer failed with error code 1602.", operation.Message);
     }
 
     [Fact]
@@ -106,6 +114,6 @@ public class DeclinedPromptTests
     }
 
     private static OperationOutcome Declined() =>
-        MapInstallResult(OperationKind.Upgrade, InstallResultStatus.InstallError, 1625, false, InstallScope.Any, BlockedByPolicy, "7-Zip")
-            with { Details = FormatDetails("InstallError", 1625, null) };
+        MapInstallResult(OperationKind.Upgrade, InstallResultStatus.InstallError, 1602, false, InstallScope.Any, InstallCancelledByUser, "VLC")
+            with { Details = FormatDetails("InstallError", 1602, null) };
 }

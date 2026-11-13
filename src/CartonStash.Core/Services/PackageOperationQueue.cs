@@ -307,8 +307,8 @@ public sealed class PackageOperationQueue(IPackageInstaller installer, IOperatio
 
     /// <summary>Raises an event to each handler in turn: one that throws doesn't stop the others or the queue (BR-10).</summary>
     /// <summary>
-    /// 018 R2.1, R2.3: a result a declined prompt gives is Cancelled only when the prompt was seen during this run; 1625
-    /// alone may be a real policy. WinGet's status and codes stay in <see cref="OperationOutcome.Details"/> (R2.4).
+    /// 018 R2.1, R2.3: a result a declined prompt gives is Cancelled only when the prompt was seen during this run, so
+    /// the words never claim a prompt the app didn't see. WinGet's status and codes stay in <see cref="OperationOutcome.Details"/> (R2.4).
     /// </summary>
     internal static OperationOutcome DeclinedPrompt(PackageOperation operation, OperationOutcome outcome) =>
         outcome is { Result: OperationResult.Failed, MayBeDeclinedPrompt: true } && operation.SawPermissionPrompt

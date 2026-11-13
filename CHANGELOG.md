@@ -6,7 +6,7 @@ What's new in each version of CartonStash. Get it from the [Microsoft Store](htt
 
 ### New
 
-- **Says when Windows is waiting for your permission.** Some installers ask Windows for administrator rights, and Windows' permission prompt often opens behind the app, with only a flashing shield in the taskbar. CartonStash used to keep reading "Updating…" while the queue waited. Now a banner at the top of the window says that Windows is waiting for your permission, and the operation reads "Waiting for your permission…". If the prompt is still open after a minute, a Windows notification says so too. Declining the prompt now ends the operation as **Cancelled**, "Windows' permission prompt was declined.", instead of "The installer failed with error code 1625."
+- **Says when Windows is waiting for your permission.** Some installers ask Windows for administrator rights, and Windows' permission prompt often opens behind the app, with only a flashing shield in the taskbar. CartonStash used to keep reading "Updating…" while the queue waited. Now a banner at the top of the window says that Windows is waiting for your permission, and the operation reads "Waiting for your permission…". If the prompt is still open after a minute, a Windows notification says so too. Declining the prompt now ends the operation as **Cancelled**, "Windows' permission prompt was declined.", instead of "The installer failed with error code 1602."
 
 ## 1.4.2
 
