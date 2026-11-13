@@ -8,6 +8,8 @@ namespace CartonStash.Core.Tests;
 /// <summary>018 amendment R2: a declined permission prompt is Cancelled, not Failed. Codes measured in the VM (T9).</summary>
 public class DeclinedPromptTests
 {
+    // Progress reports run inline, as on the UI thread; without this they go to the thread pool and race the asserts.
+    public DeclinedPromptTests() => SynchronizationContext.SetSynchronizationContext(new InlineSynchronizationContext());
     private static readonly PackageInfo Seven = new("7zip.7zip", "7-Zip", "26.05", "26.06", "winget", UpdateAvailable: true);
     private const int BlockedByPolicy = unchecked((int)0x8A15010F); // WinGet's reading of 1625
 
