@@ -247,22 +247,37 @@
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
-                    <!-- 003 R5.1–R5.3: outcome of the latest operation -->
-                    <InfoBar
-                        Margin="24,8,24,0"
-                        CloseButtonCommand="{x:Bind Shell.CloseNotificationCommand}"
-                        IsOpen="{x:Bind Shell.IsNotificationOpen, Mode=TwoWay}"
-                        Message="{x:Bind Shell.NotificationMessage, Mode=OneWay}"
-                        Severity="{x:Bind ui:Ui.Severity(Shell.NotificationSeverity), Mode=OneWay}"
-                        Title="{x:Bind Shell.NotificationTitle, Mode=OneWay}">
-                        <!-- 004 R6.3 -->
-                        <InfoBar.ActionButton>
-                            <Button
-                                Command="{x:Bind Shell.RestartCommand}"
-                                Content="Restart CartonStash"
-                                Visibility="{x:Bind Shell.HasNotificationRestart, Mode=OneWay}" />
-                        </InfoBar.ActionButton>
-                    </InfoBar>
+                    <StackPanel>
+                        <!-- 018 R1.1: Windows' permission prompt is waiting; it goes when the prompt does (R1.3) -->
+                        <InfoBar
+                            Margin="24,8,24,0"
+                            AutomationProperties.LiveSetting="Assertive"
+                            IsClosable="False"
+                            IsOpen="{x:Bind Shell.IsPermissionBannerOpen, Mode=OneWay}"
+                            Message="{x:Bind Shell.PermissionBannerMessage}"
+                            Severity="Warning"
+                            Title="{x:Bind Shell.PermissionBannerTitle}">
+                            <InfoBar.IconSource>
+                                <FontIconSource Glyph="&#xEA18;" />
+                            </InfoBar.IconSource>
+                        </InfoBar>
+                        <!-- 003 R5.1–R5.3: outcome of the latest operation -->
+                        <InfoBar
+                            Margin="24,8,24,0"
+                            CloseButtonCommand="{x:Bind Shell.CloseNotificationCommand}"
+                            IsOpen="{x:Bind Shell.IsNotificationOpen, Mode=TwoWay}"
+                            Message="{x:Bind Shell.NotificationMessage, Mode=OneWay}"
+                            Severity="{x:Bind ui:Ui.Severity(Shell.NotificationSeverity), Mode=OneWay}"
+                            Title="{x:Bind Shell.NotificationTitle, Mode=OneWay}">
+                            <!-- 004 R6.3 -->
+                            <InfoBar.ActionButton>
+                                <Button
+                                    Command="{x:Bind Shell.RestartCommand}"
+                                    Content="Restart CartonStash"
+                                    Visibility="{x:Bind Shell.HasNotificationRestart, Mode=OneWay}" />
+                            </InfoBar.ActionButton>
+                        </InfoBar>
+                    </StackPanel>
                     <Frame x:Name="ContentFrame" Grid.Row="1" />
                 </Grid>
             </SplitView>

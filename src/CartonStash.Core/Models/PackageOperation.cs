@@ -260,8 +260,16 @@ public sealed partial class PackageOperation : ObservableObject
     [NotifyPropertyChangedFor(nameof(ShowPermission))]
     public partial bool MayAskPermission { get; internal set; }
 
-    /// <summary>The card's permission line, while the operation runs (R8.3). A plain bool for x:Bind.</summary>
-    public bool ShowPermission => MayAskPermission && IsActive;
+    /// <summary>
+    /// 018 R1.2: Windows' permission prompt is open while this operation runs. Set and cleared by
+    /// <see cref="Services.PermissionPromptMonitor"/>.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(StatusText), nameof(ShowPermission))]
+    public partial bool IsWaitingForPermission { get; internal set; }
+
+    /// <summary>The card's permission line, while the operation runs (R8.3), hidden while 018's waiting text shows (R1.9). A plain bool for x:Bind.</summary>
+    public bool ShowPermission => MayAskPermission && IsActive && !IsWaitingForPermission;
 
     public string PermissionText => "Windows may ask for permission. If nothing appears, look for the shield in the taskbar.";
 
@@ -351,6 +359,7 @@ public sealed partial class PackageOperation : ObservableObject
     /// <summary>Short status for rows and the Activity pane (003 R3.1).</summary>
     public string StatusText => (Phase, Result) switch
     {
+        (not OperationPhase.Done, _) when IsWaitingForPermission => "Waiting for your permission…", // 018 R1.2
         (OperationPhase.Queued, _) => "Queued",
         (OperationPhase.Downloading, _) => Percent is { } p ? $"Downloading {p:0}%" : "Downloading…",
         (OperationPhase.Running, _) => Kind switch

@@ -68,6 +68,7 @@ public partial class App : Application
             ConnectBackgroundChecks(window);
         }
         Services.GetRequiredService<AppRestarter>().CurrentPage = () => window.CurrentPageKey;
+        WatchPermissionPrompt(window);
         if (Program.Restart is { } restart)
         {
             window.OpenPage(restart.Page);
@@ -76,6 +77,35 @@ public partial class App : Application
         _window.Activate();
         setup?.Close();
         return true;
+    }
+
+    // Spec 018: the monitor looks for Windows' permission prompt once a second, only while an operation runs (R1.6).
+    private static void WatchPermissionPrompt(MainWindow window)
+    {
+        var monitor = Services.GetRequiredService<PermissionPromptMonitor>();
+        var timer = window.DispatcherQueue.CreateTimer();
+        timer.Interval = TimeSpan.FromSeconds(1);
+        timer.Tick += (_, _) => monitor.Tick(DateTimeOffset.Now);
+        monitor.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName != nameof(PermissionPromptMonitor.NeedsTicks))
+            {
+                return;
+            }
+            if (monitor.NeedsTicks)
+            {
+                timer.Start();
+            }
+            else
+            {
+                timer.Stop();
+            }
+        };
+        window.Closed += (_, _) =>
+        {
+            timer.Stop();
+            monitor.Stop(); // no notification left behind (R1.4)
+        };
     }
 
     private void ShowSetup(bool startFailed)
@@ -102,9 +132,19 @@ public partial class App : Application
         {
             if (e.Kind == ExtendedActivationKind.ToastNotification)
             {
+                // 018 R1.4: the permission notification opens Activity; the updates one opens Updates (010 R2.2).
+                var toActivity = e.Data is Microsoft.Windows.AppNotifications.AppNotificationActivatedEventArgs { } toast
+                    && toast.Arguments.TryGetValue("page", out var page) && page == "activity";
                 window.DispatcherQueue.TryEnqueue(() =>
                 {
-                    window.ShowUpdates();
+                    if (toActivity)
+                    {
+                        window.ShowActivity();
+                    }
+                    else
+                    {
+                        window.ShowUpdates();
+                    }
                     window.Activate();
                 });
             }
@@ -164,6 +204,9 @@ public partial class App : Application
             .AddSingleton<IOperationLogStore, OperationLogStore>()
             .AddSingleton<IElevatedRunner, ElevatedProcessRunner>() // 017
             .AddSingleton<PackageOperationQueue>()
+            .AddSingleton<IPermissionPromptProbe, ConsentProcessProbe>() // 018
+            .AddSingleton<IPermissionNotifier, WindowsPermissionNotifier>()
+            .AddSingleton<PermissionPromptMonitor>()
             .AddSingleton<InstalledPackagesStore>()
             .AddSingleton<SourceAgreementCheck>()
             .AddSingleton<WinGetHost>()

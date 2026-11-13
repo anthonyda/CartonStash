@@ -11,7 +11,22 @@ namespace CartonStash.Core.Services;
 public sealed class PackageOperationQueue(IPackageInstaller installer, IOperationLogStore? logs = null, IElevatedRunner? elevated = null)
 {
     private readonly Queue<PackageOperation> _pending = new();
-    private PackageOperation? _running;
+    /// <summary>The operation the worker took off the waiting list, whatever its phase; null between operations (018 R1.1).</summary>
+    public PackageOperation? Running
+    {
+        get;
+        private set
+        {
+            if (field != value)
+            {
+                field = value;
+                Raise(RunningChanged, EventArgs.Empty);
+            }
+        }
+    }
+
+    /// <summary>Raised when <see cref="Running"/> changes (018 R1.6: the permission prompt is only looked for while it's set).</summary>
+    public event EventHandler? RunningChanged;
     private CancellationTokenSource? _runningCancellation;
     private Task _worker = Task.CompletedTask;
     private bool _isWorking;
@@ -38,9 +53,9 @@ public sealed class PackageOperationQueue(IPackageInstaller installer, IOperatio
     /// <summary>Raised once the queue has nothing left to run (004: one Installed reload per drain).</summary>
     public event EventHandler? Drained;
 
-    public bool HasPendingWork => _running is not null || _pending.Count > 0;
+    public bool HasPendingWork => Running is not null || _pending.Count > 0;
 
-    public int ActiveCount => (_running is null ? 0 : 1) + _pending.Count;
+    public int ActiveCount => (Running is null ? 0 : 1) + _pending.Count;
 
     /// <summary>The worker, for tests and the close guard to await.</summary>
     public Task Idle => _worker;
@@ -104,7 +119,7 @@ public sealed class PackageOperationQueue(IPackageInstaller installer, IOperatio
             return;
         }
 
-        if (operation == _running)
+        if (operation == Running)
         {
             _runningCancellation?.Cancel();
             return;
@@ -183,7 +198,7 @@ public sealed class PackageOperationQueue(IPackageInstaller installer, IOperatio
                 }
                 finally
                 {
-                    _running = null;
+                    Running = null;
                     _runningCancellation = null;
                 }
             }
@@ -198,7 +213,7 @@ public sealed class PackageOperationQueue(IPackageInstaller installer, IOperatio
     private async Task RunOneAsync(PackageOperation operation)
     {
         {
-            _running = operation;
+            Running = operation;
             operation.StartedAt = DateTimeOffset.Now;
             operation.LogFilePath = CreateLogPath(operation);
             using var cancellation = new CancellationTokenSource();
@@ -248,7 +263,7 @@ public sealed class PackageOperationQueue(IPackageInstaller installer, IOperatio
                     ex is WinGetException ? ex.Message : $"Something went wrong: {ex.Message}");
             }
 
-            _running = null;
+            Running = null;
             _runningCancellation = null;
             ApplyOutcome(operation, outcome);
             if (logs is not null && operation.LogFilePath is not null)
