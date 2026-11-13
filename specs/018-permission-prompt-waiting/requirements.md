@@ -1,6 +1,6 @@
 # 018 – Say when Windows' permission prompt is waiting: Requirements
 
-**Status:** In progress. Approved 2026-11-13: Q1 and Q3 as proposed, Q2 as answered by the maintainer (a notification after a minute, R1.4)
+**Status:** In progress. Approved 2026-11-13: Q1 and Q3 as proposed, Q2 as answered by the maintainer (a notification after a minute, R1.4). Amendment R2 (a declined prompt is Cancelled): approved 2026-11-13, as the maintainer asked
 **Depends on:** 003, 004, 009, 010, 016, 017
 
 ## Problem
@@ -32,6 +32,24 @@ Default mode, and only as a possibility, before anything happens. Every other in
 | R1.7 | –     | The wording shall not claim that the prompt belongs to the package: another program may have opened it. The banner says that Windows is waiting, not which installer asked. |
 | R1.8 | –     | The banner and the card text shall be read by Narrator when they appear (a live region), and shall follow light, dark and high contrast themes. |
 | R1.9 | –     | 003 R8.3's line ("Windows may ask for permission…") stays as it is for the operations it applies to; R1.2 replaces it only while the prompt is actually open. |
+
+## Amendment R2: a declined prompt is Cancelled, not Failed (approved 2026-11-13)
+
+Found during T9 (2026-11-13): declining the prompt for 7-Zip's and VLC's update (both run through their MSI) ended as
+**Failed**, "The installer failed with error code 1625.", with Retry. Measured in the VM, both times: WinGet status
+`InstallError`, installer exit code 1625, extended error `0x8A15010F`. 1625 is Windows Installer's "This installation is
+forbidden by system policy", and WinGet reads it as *blocked by policy*: the code alone can't tell a declined prompt from
+a real policy. What tells them apart is that the app saw the prompt open during the operation (R1.6).
+
+- **US2.** As a user who declined Windows' permission prompt, I want the operation to say so, not that the installer
+  failed, so that I know nothing is broken and I can retry when I'm ready.
+
+| ID   | Story | Criterion |
+|------|-------|-----------|
+| R2.1 | US2   | If an install, update or uninstall ends with a result that a declined prompt gives (R2.2) and the app saw Windows' permission prompt open while that operation ran (R1.6), then the result shall be **Cancelled** with "Windows' permission prompt was declined." (017 R1.5's words), and Retry offered as for any cancelled operation. |
+| R2.2 | –     | Results a declined prompt gives, measured cases only (P1): installer or uninstaller exit code 1625 (Windows Installer, VM 2026-11-13, 7-Zip and VLC); WinGet's own extended error "cancelled by user" (`0x8A15010C`), which WinGet reports when the manifest maps the exit code to a user cancel. Others are added with the case that showed them. |
+| R2.3 | US2   | If the app didn't see the prompt during that operation, the result stays as today (Failed with the code): 1625 may then really be a policy. |
+| R2.4 | –     | The operation log keeps WinGet's status, the exit code and the extended error (013 R4.1), so the code stays findable. Retry as administrator (017) is not offered for it: the user declined the rights. |
 
 ## Out of scope
 

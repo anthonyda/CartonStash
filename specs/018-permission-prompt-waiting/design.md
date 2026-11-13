@@ -87,6 +87,15 @@ The monitor takes the time as an argument, so tests drive it with plain values; 
   left alone over a minute, then accepted (R1.1 to R1.4); declined (R1.3); Narrator and high contrast (R1.8); taskbar
   badge unchanged (R1.5).
 
+## Amendment R2: a declined prompt
+
+`MapInstallResult` and `MapUninstallResult` mark a failed result whose exit code is 1625, or whose extended error is
+WinGet's "cancelled by user" (`0x8A15010C`), with `OperationOutcome.MayBeDeclinedPrompt`; the message is unchanged. The
+monitor sets `PackageOperation.SawPermissionPrompt` whenever it flags the operation, and `Start` clears it for each run.
+After the installer returns, the queue's `DeclinedPrompt` turns a marked failure into **Cancelled** with 017's
+`ElevatedProtocol.DeclinedMessage` only if the prompt was seen, and drops Retry as administrator. `Details` (the log's
+status and codes) is kept. 017's elevated run already reports a declined prompt itself and is unchanged.
+
 ## Risks and alternatives considered
 
 - **`consent.exe` hidden from an unelevated or packaged process:** T1 measures it before any code. Fallback (would need

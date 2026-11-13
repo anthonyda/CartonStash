@@ -146,6 +146,7 @@ public sealed partial class PermissionPromptMonitor : ObservableObject
         }
         _flagged = operation;
         operation.IsWaitingForPermission = true;
+        operation.SawPermissionPrompt = true; // R2.1
     }
 
     private void Unflag()

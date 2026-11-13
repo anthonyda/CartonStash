@@ -28,6 +28,17 @@ Tick a task only when its verification passes. Keep tasks small enough for one c
   - Verify: manual, recorded below.
 - [x] **T10.** CHANGELOG entry (1.4.3); roadmap status.
 
+### Amendment R2 (a declined prompt is Cancelled)
+
+- [x] **T11.** Measure in the VM what a declined prompt returns, for VLC (7-Zip measured in T9). *(R2.2)*
+  - Verify: manual, recorded below.
+- [x] **T12.** `WinGetPackageInstaller.IsDeclinedPromptResult` and `OperationOutcome.MayBeDeclinedPrompt` (install and
+  uninstall); `PackageOperation.SawPermissionPrompt`, set by the monitor, cleared per run; the queue turns a marked
+  failure into Cancelled when the prompt was seen. *(R2.1–R2.4)*
+  - Verify: `DeclinedPromptTests` (8 tests).
+- [x] **T13.** VM check: VLC's update, prompt declined. *(R2.1, R2.4)*
+  - Verify: manual, recorded below.
+
 ## Manual verification log
 
 | Criterion | Date | Result | Notes |
@@ -36,4 +47,6 @@ Tick a task only when its verification passes. Keep tasks small enough for one c
 | R1.1, R1.2 (T9) | 2026-11-13 | Pass | 3 s after the prompt opened: banner "Windows is waiting for your permission to continue / Select the flashing shield in the taskbar to answer it." on Updates; 7-Zip's row and card read "Waiting for your permission…" with the shield; VLC stayed "Queued" (`p1-banner.png`, `p2-activity.png`) |
 | R1.4 (T9) | 2026-11-13 | Pass | Notification "Windows is waiting for your permission" at 61 s, not before; one only (`p3-notification.png`). Selecting it (opens Activity) not checked |
 | R1.3 (T9) | 2026-11-13 | Pass | Prompt declined (host ended `consent.exe` as admin): banner and waiting text gone within 2 s; 7-Zip's card shows its result; VLC went on with 003 R8.3's line (`p4-closed.png`). Accepting the prompt not checked (no click on the secure prompt from a script). Finding, outside 018: a declined MSI prompt ends as "Failed, error code 1625" instead of Cancelled |
+| R2.2 (T11) | 2026-11-13 | Pass | VLC 3.0.23 for all users (WinGet ran its MSI, Default mode), prompt declined: WinGet status `InstallError`, exit code 1625, extended error `0x8A15010F` (WinGet's "blocked by policy"), the same as 7-Zip in T9. An EXE installer's decline wasn't produced (both packages used their MSI) |
+| R2.1, R2.4 (T13) | 2026-11-13 | Pass | Test build `C:\VMs\CartonStash-Test\builds\018b`, VLC's update, prompt declined: "Update VLC media player: Cancelled / Windows' permission prompt was declined.", the row offers Update again (`p5-declined.png`); the log keeps status, 1625 and 0x8A15010F |
 | R1.5, R1.8 | – | Not checked | Taskbar badge stayed "2" in the shots; Narrator, dark and high contrast not checked |

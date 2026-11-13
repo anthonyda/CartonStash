@@ -165,6 +165,7 @@ public sealed class PackageOperationQueue(IPackageInstaller installer, IOperatio
     private void Start(PackageOperation operation)
     {
         operation.Sequence = ++_sequence; // 009 R4.5: run order, set first: the next changes re-sort the Activity list
+        operation.SawPermissionPrompt = false; // 018 R2.1: per run
         operation.Phase = OperationPhase.Queued;
         operation.StartedAt = DateTimeOffset.Now;
         _pending.Enqueue(operation);
@@ -265,6 +266,7 @@ public sealed class PackageOperationQueue(IPackageInstaller installer, IOperatio
 
             Running = null;
             _runningCancellation = null;
+            outcome = DeclinedPrompt(operation, outcome);
             ApplyOutcome(operation, outcome);
             if (logs is not null && operation.LogFilePath is not null)
             {
@@ -304,6 +306,21 @@ public sealed class PackageOperationQueue(IPackageInstaller installer, IOperatio
     }
 
     /// <summary>Raises an event to each handler in turn: one that throws doesn't stop the others or the queue (BR-10).</summary>
+    /// <summary>
+    /// 018 R2.1, R2.3: a result a declined prompt gives is Cancelled only when the prompt was seen during this run; 1625
+    /// alone may be a real policy. WinGet's status and codes stay in <see cref="OperationOutcome.Details"/> (R2.4).
+    /// </summary>
+    internal static OperationOutcome DeclinedPrompt(PackageOperation operation, OperationOutcome outcome) =>
+        outcome is { Result: OperationResult.Failed, MayBeDeclinedPrompt: true } && operation.SawPermissionPrompt
+            ? outcome with
+            {
+                Result = OperationResult.Cancelled,
+                Message = ElevatedProtocol.DeclinedMessage,
+                OffersRetryAsAdmin = false, // R2.4: the user declined the rights
+                OffersUninstallFirst = false,
+            }
+            : outcome;
+
     private void Raise<T>(EventHandler<T>? handlers, T args)
     {
         foreach (var handler in handlers?.GetInvocationList() ?? [])

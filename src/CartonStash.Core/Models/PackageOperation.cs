@@ -143,6 +143,12 @@ public sealed record OperationOutcome(OperationResult Result, string Message, st
     /// <summary>017 R1.1: the installer lacked administrator rights; the card and row offer Retry as administrator.</summary>
     public bool OffersRetryAsAdmin { get; init; }
 
+    /// <summary>
+    /// 018 R2.2: a result a declined permission prompt gives. The queue makes it Cancelled only if the prompt was seen
+    /// during the operation (R2.1, R2.3).
+    /// </summary>
+    public bool MayBeDeclinedPrompt { get; init; }
+
     /// <summary>The scope the installer asked WinGet for (014 R3.8); <see cref="InstallScope.Any"/> lets WinGet decide.</summary>
     public InstallScope Scope { get; init; }
 
@@ -270,6 +276,9 @@ public sealed partial class PackageOperation : ObservableObject
 
     /// <summary>The card's permission line, while the operation runs (R8.3), hidden while 018's waiting text shows (R1.9). A plain bool for x:Bind.</summary>
     public bool ShowPermission => MayAskPermission && IsActive && !IsWaitingForPermission;
+
+    /// <summary>018 R2.1: Windows' permission prompt was seen open during this run. Cleared when the operation starts again.</summary>
+    public bool SawPermissionPrompt { get; internal set; }
 
     public string PermissionText => "Windows may ask for permission. If nothing appears, look for the shield in the taskbar.";
 
