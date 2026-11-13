@@ -712,7 +712,7 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
         Func<int, string?>? describe = null, string? goingBackTo = null, string? installedVersion = null, OperationMode mode = OperationMode.Silent)
     {
         var done = kind == OperationKind.Upgrade ? "Updated" : "Installed";
-        return status switch
+        return MarkDeclined(status == InstallResultStatus.InstallError, installerErrorCode, extendedError, status switch
         {
             // 013 R3.1: whatever the status (WinGet reports CatalogError), the code says the update isn't allowed in place.
             not InstallResultStatus.Ok when kind == OperationKind.Upgrade && extendedError == UpgradeNotSupported =>
@@ -747,12 +747,26 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
             InstallResultStatus.CatalogError => Failed("Couldn't reach the package source. Check your internet connection."),
             InstallResultStatus.ManifestError => Failed("The package's manifest is invalid. Try again later."),
             _ => Failed($"WinGet reported {status}."),
-        };
+        });
     }
+
+    /// <summary>018 R2.2: results a declined permission prompt gives. Measured cases only (P1).</summary>
+    internal static bool IsDeclinedPromptResult(uint exitCode, int extendedError) =>
+        exitCode == 1602 // Windows Installer "user cancelled": No on the prompt for VLC's MSI (VM, maintainer's click, 2026-11-13)
+        || extendedError == InstallCancelledByUser; // WinGet's reading of it, reported with 1602 in the same run
+
+    /// <summary>WinGet's "cancelled by user", from the manifest's expected return codes.</summary>
+    internal const int InstallCancelledByUser = unchecked((int)0x8A15010C);
+
+    private static OperationOutcome MarkDeclined(bool installerRan, uint exitCode, int extendedError, OperationOutcome outcome) =>
+        installerRan && outcome.Result == OperationResult.Failed && IsDeclinedPromptResult(exitCode, extendedError)
+            ? outcome with { MayBeDeclinedPrompt = true }
+            : outcome;
 
     internal static OperationOutcome MapUninstallResult(UninstallResultStatus status, uint uninstallerErrorCode, bool rebootRequired,
         int extendedError = 0, string packageName = "", IReadOnlyList<string>? runningFiles = null, Func<int, string?>? describe = null,
-        string? installedVersion = null, OperationMode mode = OperationMode.Silent) => status switch
+        string? installedVersion = null, OperationMode mode = OperationMode.Silent) => MarkDeclined(status == UninstallResultStatus.UninstallError,
+        uninstallerErrorCode, extendedError, status switch
     {
         UninstallResultStatus.Ok when rebootRequired =>
             new(OperationResult.SucceededRestartRequired, "Uninstalled. Restart your PC to finish."),
@@ -767,7 +781,7 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
         UninstallResultStatus.BlockedByPolicy => Failed("Blocked by a group policy on this PC."),
         UninstallResultStatus.CatalogError => Failed("Couldn't read the installed packages."),
         _ => Failed($"WinGet reported {status}."),
-    };
+    });
 
     /// <summary>The technical result lines of the log (009 R2.2).</summary>
     internal static string FormatDetails(string status, uint installerExitCode, Exception? extendedError) =>

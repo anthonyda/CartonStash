@@ -12,6 +12,7 @@ public class RetryAsAdminTests
     [InlineData(5u, 0)]
     [InlineData(0x80070005u, 0)]
     [InlineData(1925u, 0)]
+    [InlineData(0x80073D28u, 0)]
     public void A_lack_of_administrator_rights_says_so_and_offers_the_retry_R1_1(uint installerCode, int extendedError)
     {
         var outcome = WinGetPackageInstaller.MapInstallResult(OperationKind.Upgrade, InstallResultStatus.InstallError, installerCode, false,

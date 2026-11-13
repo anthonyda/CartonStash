@@ -19,11 +19,11 @@
       },
       "Microsoft.WindowsAppSDK.DWrite": {
         "type": "Direct",
-        "requested": "[2.6.4, )",
-        "resolved": "2.6.4",
-        "contentHash": "j2XW/DHmG27Rp5sI7xZ1NOHupaC7QBqE6X+6aa+XWpzPD+HXmkrWz1SP3EK/cW4CIhAnoy/C5JJzhSurtxBoCA==",
+        "requested": "[2.6.5, )",
+        "resolved": "2.6.5",
+        "contentHash": "ycKzxoqVig32FrCZiJyrarY+LgxNwqY2Fr4eEiMEIqK2m+a7YGs46pzPMtYEkl64rgUdBofFZwZ6/XRf+KA7Lg==",
         "dependencies": {
-          "Microsoft.WindowsAppSDK.Base": "2.6.4"
+          "Microsoft.WindowsAppSDK.Base": "2.6.5"
         }
       },
       "Microsoft.WindowsAppSDK.Runtime": {
@@ -64,8 +64,8 @@
       },
       "Microsoft.WindowsAppSDK.Base": {
         "type": "Transitive",
-        "resolved": "2.6.4",
-        "contentHash": "h9N9+RfWYMYtf0OB7zAIMo/bJhSv3Ea4YhO+y7j6V3TDVldx9hSNj/LkrbfMT9M9o3FojXIowRSb8ArYlNeKvA==",
+        "resolved": "2.6.5",
+        "contentHash": "/R+z6xrl4mIu6FmXNkdvMlL/Enl7pXgO5Q75LBJdls6uvieh3VTOn6jtvwtlywFnZMKfvsDP0Ckal6/phireJQ==",
         "dependencies": {
           "Microsoft.Windows.SDK.BuildTools": "10.0.26100.4654",
           "Microsoft.Windows.SDK.BuildTools.MSIX": "1.7.251221100"
@@ -92,7 +92,7 @@
         "type": "Project",
         "dependencies": {
           "CommunityToolkit.Mvvm": "[8.4.2, )",
-          "Markdig": "[1.4.2, )",
+          "Markdig": "[1.6.0, )",
           "Microsoft.WindowsPackageManager.ComInterop": "[1.29.380, )"
         }
       },
@@ -104,9 +104,9 @@
       },
       "Markdig": {
         "type": "CentralTransitive",
-        "requested": "[1.4.2, )",
-        "resolved": "1.4.2",
-        "contentHash": "C5jl2hFLK5KHxWWWO6JxfuQCRirW5DGnCn9IEhJ7xgBMVnd+PjRNdAKO2C6YHpkOtVvZMJ8Zbma7B+CDi+hl+g=="
+        "requested": "[1.6.0, )",
+        "resolved": "1.6.0",
+        "contentHash": "rJEpDfPM8wrfXUgkNejjg2bJN9bciy44uVyRwKUI+92CnSmbaLeJTLPYcCdvgM4RFsKrhs8d2H2hO78yZpMl3g=="
       },
       "Microsoft.WindowsPackageManager.ComInterop": {
         "type": "CentralTransitive",

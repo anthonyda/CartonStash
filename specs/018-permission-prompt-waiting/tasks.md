@@ -1,0 +1,57 @@
+# 018 – Say when Windows' permission prompt is waiting: Tasks
+
+**Status:** In progress
+**Design:** [design.md](design.md)
+
+Tick a task only when its verification passes. Keep tasks small enough for one commit.
+
+- [x] **T1.** Probe in the test VM: `Process.GetProcessesByName("consent")` from an unelevated portable build and from
+  the Store MSIX, with the prompt deferred to the taskbar and on the secure desktop. Record the result; if it fails,
+  stop and update the requirements (Q1). *(R1.6)*
+  - Verify: manual, recorded below.
+- [x] **T2.** `IPermissionPromptProbe`, `ConsentProcessProbe`. *(R1.6)*
+  - Verify: T1 in the VM (the probe is the same call); unit tests use a fake probe.
+- [x] **T3.** `PackageOperation.IsWaitingForPermission`, `StatusText`, `ShowPermission`. *(R1.2, R1.9)*
+  - Verify: `PermissionPromptTests.An_open_prompt_marks_the_running_operation_and_opens_the_banner_R1_1_R1_2`, `The_may_ask_line_hides_while_the_waiting_text_shows_R1_9`.
+- [x] **T4.** `PackageOperationQueue.Running` and `RunningChanged`. *(R1.6)*
+  - Verify: `PermissionPromptTests.The_queue_says_which_operation_it_runs_R1_1`.
+- [x] **T5.** `PermissionPromptMonitor` with `IPermissionNotifier`. *(R1.1–R1.4, R1.6)*
+  - Verify: `PermissionPromptTests` (11 tests, the cases listed in the design).
+- [x] **T6.** App: banner InfoBar, `ShellViewModel.IsPermissionBannerOpen`, timer wiring in `App.xaml.cs`. *(R1.1, R1.3, R1.8)*
+  - Verify: build; manual in T9.
+- [x] **T7.** App: shield glyph and live region on the card and the row. *(R1.2, R1.8)*
+  - Verify: build; manual in T9.
+- [x] **T8.** App: `WindowsPermissionNotifier`, activation with `page=activity`, removal on shutdown. *(R1.4)*
+  - Verify: build; manual in T9.
+- [ ] **T9.** End check in the test VM: Update all with two all-users installers; prompt left over a minute, then
+  accepted; again declined; Narrator; dark and high contrast; taskbar badge unchanged. *(R1.1–R1.5, R1.8)*
+  - Verify: manual, recorded below.
+- [x] **T10.** CHANGELOG entry (1.4.3); roadmap status.
+
+### Amendment R2 (a declined prompt is Cancelled)
+
+- [x] **T11.** Measure in the VM what a declined prompt returns, for VLC (7-Zip measured in T9). *(R2.2)*
+  - Verify: manual, recorded below.
+- [x] **T12.** `WinGetPackageInstaller.IsDeclinedPromptResult` and `OperationOutcome.MayBeDeclinedPrompt` (install and
+  uninstall); `PackageOperation.SawPermissionPrompt`, set by the monitor, cleared per run; the queue turns a marked
+  failure into Cancelled when the prompt was seen. *(R2.1–R2.4)*
+  - Verify: `DeclinedPromptTests` (8 tests).
+- [x] **T13.** VM check: VLC's update, prompt declined. *(R2.1, R2.4)*
+  - Verify: manual, recorded below.
+
+## Manual verification log
+
+| Criterion | Date | Result | Notes |
+|-----------|------|--------|-------|
+| Q1 (T1) | 2026-11-13 | Pass | Test VM, Store test build 1.4.3 (`C:\VMs\CartonStash-Test\builds\018`), tester unelevated (`t018p-run.ps1`). VLC 3.0.23 and 7-Zip 26.05 installed for all users; Update all. `consent.exe` was in tester's process list 3 s later; the prompt was deferred to the taskbar (flashing shield), as the user reported. The Store build's own probe found it (banner shown). Portable build not run separately: an unelevated PowerShell (same integrity as the portable exe) saw it. The secure-desktop case (prompt not deferred) not produced in this run |
+| R1.1, R1.2 (T9) | 2026-11-13 | Pass | 3 s after the prompt opened: banner "Windows is waiting for your permission to continue / Select the flashing shield in the taskbar to answer it." on Updates; 7-Zip's row and card read "Waiting for your permission…" with the shield; VLC stayed "Queued" (`p1-banner.png`, `p2-activity.png`) |
+| R1.4 (T9) | 2026-11-13 | Pass | Notification "Windows is waiting for your permission" at 61 s, not before; one only (`p3-notification.png`). Selecting it (opens Activity) not checked |
+| R1.3 (T9) | 2026-11-13 | Pass | Prompt declined (host ended `consent.exe` as admin): banner and waiting text gone within 2 s; 7-Zip's card shows its result; VLC went on with 003 R8.3's line (`p4-closed.png`). Accepting the prompt not checked (no click on the secure prompt from a script). Finding, outside 018: a declined MSI prompt ends as "Failed, error code 1625" instead of Cancelled |
+| R2.2 (T11) | 2026-11-13 | Pass | VLC 3.0.23 for all users (WinGet ran its MSI, Default mode), prompt declined: WinGet status `InstallError`, exit code 1625, extended error `0x8A15010F` (WinGet's "blocked by policy"), the same as 7-Zip in T9. An EXE installer's decline wasn't produced (both packages used their MSI) |
+| R2.1, R2.4 (T13) | 2026-11-13 | Pass | Test build `C:\VMs\CartonStash-Test\builds\018b`, VLC's update, prompt declined: "Update VLC media player: Cancelled / Windows' permission prompt was declined.", the row offers Update again (`p5-declined.png`); the log keeps status, 1625 and 0x8A15010F |
+| R1.3, R1.4, R2.1 (T9, the maintainer's run) | 2026-11-13 | Pass, one finding | Build `018b`, recorded every 2 s (`C:\VMs\CartonStash-Test\logs\t018r\`). Update all: banner and "Waiting for your permission…" on 7-Zip, VLC Queued (16:50:25). Notification shown at ~16:51:17. **Clicking it did not open Activity** (finding below). Shield clicked, **Yes**: banner gone, 7-Zip "Updated successfully" (16:51:53). VLC's prompt, **No**: "Update VLC media player: Cancelled / Windows' permission prompt was declined.", Update offered again; log: exit code 1602, extended error `0x8A15010C` |
+| R2.2 correction | 2026-11-13 | – | The 1625 of T11 came from ending `consent.exe` from outside, not from a No: removed from the list; 1602 and `0x8A15010C` from the maintainer's No are the measured case |
+| R1.4 finding | 2026-11-13 | Fixed | The click reached the open window (a second copy started and handed over in 3 s) but opened Updates: Windows delivers it as a toast activation (`Windows.ApplicationModel.Activation.ToastNotificationActivatedEventArgs`, `Argument` = `page=activity`), and the app only read the App SDK's type. Now reads both (`NotificationArguments`, 6 tests) |
+| R1.4 re-check 1 | 2026-11-13 | Fail, then fixed | Build `018d` with a temporary trace: the click was read (`toActivity=True`) and the pane opened and stayed open, but the window **didn't come to the front**: the copy Windows starts for the click has the right to the foreground, the open window it hands over to doesn't. The copy now passes it on (`AllowSetForegroundWindow`) and the open window brings itself forward, restoring itself if minimized (`Foreground`) |
+| R1.4 (T9, the maintainer's run) | 2026-11-13 | Pass | Build `018e`, recorded (`C:\VMs\CartonStash-Test\logs\t018u\`): Explorer maximized in front, the prompt open from 17:32:02, notification clicked at 17:33:45: CartonStash in front with Activity open 2 s later, 7-Zip "Waiting for your permission…". The trace was removed afterwards; the committed code is that build without it |
+| R1.5, R1.8 | – | Not checked | Taskbar badge stayed "2" in the shots; Narrator, dark and high contrast not checked |

@@ -87,6 +87,9 @@ public sealed partial class MainWindow : Window
     /// <summary>Opens the Updates page, for a clicked notification (010 R2.2).</summary>
     public void ShowUpdates() => OpenStartPage(StartPage.Updates);
 
+    /// <summary>018 R1.4: the permission notification opens the Activity pane.</summary>
+    public void ShowActivity() => ActivitySplit.IsPaneOpen = true;
+
     /// <summary>The open page's navigation key, so a restart opens it again (004 R6.3).</summary>
     public string? CurrentPageKey => Pages.FirstOrDefault(p => p.Value == ContentFrame.CurrentSourcePageType).Key;
 
