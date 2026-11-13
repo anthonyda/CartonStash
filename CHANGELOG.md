@@ -2,7 +2,9 @@
 
 What's new in each version of CartonStash. Get it from the [Microsoft Store](https://apps.microsoft.com/detail/9MT37M7DBZRK).
 
-## 1.5.0
+## 1.5.1
+
+(1.5.0 was never released.)
 
 ### New
 
