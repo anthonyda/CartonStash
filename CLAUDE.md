@@ -43,6 +43,16 @@ git-ignored.
   Store output folder at the start of each build, never the subfolders.
 - **Test builds for the VM:** `C:\VMs\CartonStash-Test\builds\<run name>\` (see `TEST-ENV.local.md`), never inside the repo.
 
+## Store changelog
+
+With every release, also give the user the text for Partner Center's "What's new in this version", written from that
+version's `CHANGELOG.md` section:
+
+- Under 1000 characters, plain text (the field shows no Markdown).
+- Two parts, **New** and **Fixed**, each with its own heading line and short lines under it. Leave a part out when it's
+  empty. Changes that are neither (dependency bumps, tests, docs) don't go in.
+- Written for users: what they see or can do, not how it's built.
+
 ## Screenshots (README and Store listing)
 
 Take them in the test VM from the release's Store build, 2560x1440 window crops (VM screen 2560x1600, scaling 125%),
