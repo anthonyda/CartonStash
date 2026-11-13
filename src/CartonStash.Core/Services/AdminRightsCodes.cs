@@ -12,6 +12,7 @@ public static class AdminRightsCodes
         5,          // ERROR_ACCESS_DENIED
         0x80070005, // E_ACCESSDENIED
         1925,       // Windows Installer: "You do not have sufficient privileges to complete this installation"
+        0x80073D28, // MSIX: "administrator privileges are required" (Claude's update, maintainer's PC, 2026-11-13)
     ];
 
     /// <summary>
