@@ -58,6 +58,7 @@ public sealed partial class OperationCard : UserControl
 
         var (glyph, iconStyle) = operation.State switch
         {
+            OperationState.Running when operation.IsWaitingForPermission => ("", "CautionIcon"), // shield (018 R1.2)
             OperationState.Queued => ("", "NeutralIcon"), // clock
             OperationState.Running => ("", "NeutralIcon"), // sync
             OperationState.Succeeded => ("", "SuccessIcon"), // check
