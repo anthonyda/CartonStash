@@ -5,6 +5,12 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    groups:
+      # The Windows App SDK's packages must share one version: a lone bump (DWrite 2.6.5 with Runtime 2.6.4) builds in
+      # CI but fails the release build (Microsoft.WindowsAppSDK.ComponentReference.targets), which cost v1.5.0.
+      windows-app-sdk:
+        patterns:
+          - "Microsoft.WindowsAppSDK*"
 
   - package-ecosystem: github-actions
     directory: /
