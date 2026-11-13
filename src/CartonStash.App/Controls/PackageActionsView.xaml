@@ -96,6 +96,14 @@
                 IsIndeterminate="{x:Bind Row.Operation.IsIndeterminate, Mode=OneWay}"
                 Maximum="100"
                 Value="{x:Bind Row.Operation.ProgressValue, Mode=OneWay}" />
+            <!-- 018 R1.2: Windows' permission prompt is waiting -->
+            <FontIcon
+                VerticalAlignment="Center"
+                AutomationProperties.AccessibilityView="Raw"
+                FontSize="14"
+                Foreground="{ThemeResource SystemFillColorCautionBrush}"
+                Glyph="&#xEA18;"
+                Visibility="{x:Bind Row.Operation.IsWaitingForPermission, Mode=OneWay}" />
             <TextBlock
                 VerticalAlignment="Center"
                 AutomationProperties.LiveSetting="Polite"

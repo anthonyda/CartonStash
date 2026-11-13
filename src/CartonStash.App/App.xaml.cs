@@ -68,6 +68,7 @@ public partial class App : Application
             ConnectBackgroundChecks(window);
         }
         Services.GetRequiredService<AppRestarter>().CurrentPage = () => window.CurrentPageKey;
+        WatchPermissionPrompt(window);
         if (Program.Restart is { } restart)
         {
             window.OpenPage(restart.Page);
@@ -76,6 +77,35 @@ public partial class App : Application
         _window.Activate();
         setup?.Close();
         return true;
+    }
+
+    // Spec 018: the monitor looks for Windows' permission prompt once a second, only while an operation runs (R1.6).
+    private static void WatchPermissionPrompt(MainWindow window)
+    {
+        var monitor = Services.GetRequiredService<PermissionPromptMonitor>();
+        var timer = window.DispatcherQueue.CreateTimer();
+        timer.Interval = TimeSpan.FromSeconds(1);
+        timer.Tick += (_, _) => monitor.Tick(DateTimeOffset.Now);
+        monitor.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName != nameof(PermissionPromptMonitor.NeedsTicks))
+            {
+                return;
+            }
+            if (monitor.NeedsTicks)
+            {
+                timer.Start();
+            }
+            else
+            {
+                timer.Stop();
+            }
+        };
+        window.Closed += (_, _) =>
+        {
+            timer.Stop();
+            monitor.Stop(); // no notification left behind (R1.4)
+        };
     }
 
     private void ShowSetup(bool startFailed)
@@ -102,10 +132,32 @@ public partial class App : Application
         {
             if (e.Kind == ExtendedActivationKind.ToastNotification)
             {
+                // 018 R1.4: the permission notification opens Activity; the updates one opens Updates (010 R2.2).
+                // A click comes as Windows' toast activation (its Argument is the raw "page=activity" text) or as the App
+                // SDK's own; read both (T9 finding: only the latter was read, so the click opened Updates).
+                var argument = e.Data switch
+                {
+                    Windows.ApplicationModel.Activation.IToastNotificationActivatedEventArgs toast => toast.Argument,
+                    Microsoft.Windows.AppNotifications.AppNotificationActivatedEventArgs app => app.Argument,
+                    _ => null,
+                };
+                var toActivity = NotificationArguments.Page(argument) == "activity";
                 window.DispatcherQueue.TryEnqueue(() =>
                 {
-                    window.ShowUpdates();
+                    if (!toActivity)
+                    {
+                        window.ShowUpdates();
+                    }
                     window.Activate();
+                    Foreground.Bring(WinRT.Interop.WindowNative.GetWindowHandle(window)); // 018 R1.4: Activate alone stays behind
+                    if (toActivity)
+                    {
+                        // After Activate: the overlay pane closes when focus moves, so open it once the window has it.
+                        window.DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () =>
+                        {
+                            window.ShowActivity();
+                        });
+                    }
                 });
             }
         };
@@ -164,6 +216,9 @@ public partial class App : Application
             .AddSingleton<IOperationLogStore, OperationLogStore>()
             .AddSingleton<IElevatedRunner, ElevatedProcessRunner>() // 017
             .AddSingleton<PackageOperationQueue>()
+            .AddSingleton<IPermissionPromptProbe, ConsentProcessProbe>() // 018
+            .AddSingleton<IPermissionNotifier, WindowsPermissionNotifier>()
+            .AddSingleton<PermissionPromptMonitor>()
             .AddSingleton<InstalledPackagesStore>()
             .AddSingleton<SourceAgreementCheck>()
             .AddSingleton<WinGetHost>()

@@ -30,8 +30,19 @@ public sealed partial class ShellViewModel : ObservableObject
     private int? _badgeShown;
 
     public ShellViewModel(PackageOperationQueue queue, UpdatesViewModel updates, IDialogService dialogs, ISettings settings,
-        WinGetHost? host = null, IAppRestarter? restarter = null, ITaskbarBadge? badge = null)
+        WinGetHost? host = null, IAppRestarter? restarter = null, ITaskbarBadge? badge = null, PermissionPromptMonitor? permission = null)
     {
+        if (permission is not null)
+        {
+            // 018 R1.1: a plain bool for x:Bind.
+            permission.PropertyChanged += (_, e) =>
+            {
+                if (e.PropertyName == nameof(PermissionPromptMonitor.IsWaiting))
+                {
+                    IsPermissionBannerOpen = permission.IsWaiting;
+                }
+            };
+        }
         _queue = queue;
         _updates = updates;
         _dialogs = dialogs;
@@ -63,6 +74,14 @@ public sealed partial class ShellViewModel : ObservableObject
 
     [ObservableProperty]
     public partial bool IsNotificationOpen { get; set; }
+
+    /// <summary>018 R1.1: Windows' permission prompt is open while an operation runs.</summary>
+    [ObservableProperty]
+    public partial bool IsPermissionBannerOpen { get; private set; }
+
+    public string PermissionBannerTitle => "Windows is waiting for your permission to continue";
+
+    public string PermissionBannerMessage => "Select the flashing shield in the taskbar to answer it.";
 
     [ObservableProperty]
     public partial string NotificationTitle { get; private set; } = "";

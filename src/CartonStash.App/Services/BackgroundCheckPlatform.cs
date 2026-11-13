@@ -24,6 +24,52 @@ public sealed class WindowsNotifier : INotifier
 }
 
 /// <summary>
+/// 018 R1.4: Windows' permission prompt has been open for a minute. Its own tag, so it never replaces the updates
+/// notification, and so it can be taken out of the notification center when the prompt closes. Without package
+/// identity, or with notifications turned off, it does nothing: the banner and the card still say it.
+/// </summary>
+public sealed class WindowsPermissionNotifier : IPermissionNotifier
+{
+    private const string Tag = "permission";
+
+    public void Show()
+    {
+        if (!AppPackage.IsPackaged)
+        {
+            return;
+        }
+        try
+        {
+            var notification = new AppNotificationBuilder()
+                .AddArgument("page", "activity")
+                .AddText("Windows is waiting for your permission")
+                .AddText("An operation in CartonStash can't continue until you answer the prompt. Select the flashing shield in the taskbar.")
+                .BuildNotification();
+            notification.Tag = Tag;
+            AppNotificationManager.Default.Show(notification);
+        }
+        catch (Exception ex) when (ex is System.Runtime.InteropServices.COMException or InvalidOperationException or UnauthorizedAccessException)
+        {
+        }
+    }
+
+    public void Remove()
+    {
+        if (!AppPackage.IsPackaged)
+        {
+            return;
+        }
+        try
+        {
+            _ = AppNotificationManager.Default.RemoveByTagAsync(Tag);
+        }
+        catch (Exception ex) when (ex is System.Runtime.InteropServices.COMException or InvalidOperationException or UnauthorizedAccessException)
+        {
+        }
+    }
+}
+
+/// <summary>
 /// The number on the taskbar icon (016). Windows keeps it after the app closes. Without package identity, or with badges
 /// turned off, it does nothing (R3.1); Windows shows "99+" above 99 (R3.2).
 /// </summary>
