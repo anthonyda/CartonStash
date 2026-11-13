@@ -54,6 +54,6 @@ If implementation reveals the spec is wrong, **stop, update the spec first**, th
 | 015 | [Choose the install scope per install](015-install-scope-choice/) | Done (2026-11-11); keyboard by hand, dark and high contrast not checked |
 | 016 | [Updates count on the taskbar icon](016-taskbar-badge/) | Done (2026-11-12); R1.4 checked by unit tests only; 99+ and badges turned off in Windows not checked |
 | 017 | [Retry as administrator](017-retry-as-admin/) | Done (2026-11-12); the permission prompt itself and declining it checked by unit tests only |
-| 018 | [Say when Windows' permission prompt is waiting](018-permission-prompt-waiting/) | In progress: code done, VM check passed (banner, card, row, notification after a minute, prompt declined); amendment R2 (a declined prompt is Cancelled): done; accepting the prompt, notification click, Narrator, dark and high contrast not checked |
+| 018 | [Say when Windows' permission prompt is waiting](018-permission-prompt-waiting/) | In progress: code done, VM check passed (banner, card, row, notification after a minute, prompt declined); amendment R2 (a declined prompt is Cancelled): done; the maintainer's VM run: accept, decline and the notification click (fixed twice) pass; Narrator, dark and high contrast not checked |
 
 Suggested build order: 002 → 003 → 004 → 005 → 006 → 007 (006's scope setting slots into 003's installer when it lands).

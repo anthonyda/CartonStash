@@ -114,6 +114,7 @@ public static class Program
             return false;
         }
 
+        Foreground.AllowFor(main.ProcessId); // the click's right to the foreground goes to the open window (018 R1.4)
         Task.Run(() => main.RedirectActivationToAsync(activation).AsTask()).Wait();
         return true;
     }

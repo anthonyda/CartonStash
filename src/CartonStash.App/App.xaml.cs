@@ -144,15 +144,20 @@ public partial class App : Application
                 var toActivity = NotificationArguments.Page(argument) == "activity";
                 window.DispatcherQueue.TryEnqueue(() =>
                 {
-                    if (toActivity)
-                    {
-                        window.ShowActivity();
-                    }
-                    else
+                    if (!toActivity)
                     {
                         window.ShowUpdates();
                     }
                     window.Activate();
+                    Foreground.Bring(WinRT.Interop.WindowNative.GetWindowHandle(window)); // 018 R1.4: Activate alone stays behind
+                    if (toActivity)
+                    {
+                        // After Activate: the overlay pane closes when focus moves, so open it once the window has it.
+                        window.DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () =>
+                        {
+                            window.ShowActivity();
+                        });
+                    }
                 });
             }
         };
