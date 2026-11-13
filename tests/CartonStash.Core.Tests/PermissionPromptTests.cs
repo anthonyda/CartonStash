@@ -7,6 +7,8 @@ namespace CartonStash.Core.Tests;
 /// <summary>Spec 018: say when Windows' permission prompt is waiting.</summary>
 public class PermissionPromptTests
 {
+    // Progress reports run inline, as on the UI thread; without this they go to the thread pool and race the asserts.
+    public PermissionPromptTests() => SynchronizationContext.SetSynchronizationContext(new InlineSynchronizationContext());
     private static readonly PackageInfo Seven = new("7zip.7zip", "7-Zip", "24.08", "25.01", "winget", UpdateAvailable: true);
     private static readonly PackageInfo Vlc = new("VideoLAN.VLC", "VLC media player", "3.0.20", "3.0.21", "winget", UpdateAvailable: true);
     private static readonly DateTimeOffset T0 = new(2026, 11, 13, 10, 0, 0, TimeSpan.Zero);
