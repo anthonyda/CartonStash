@@ -26,13 +26,13 @@ Tick a task only when its verification passes. Keep tasks small enough for one c
 - [ ] **T9.** End check in the test VM: Update all with two all-users installers; prompt left over a minute, then
   accepted; again declined; Narrator; dark and high contrast; taskbar badge unchanged. *(R1.1–R1.5, R1.8)*
   - Verify: manual, recorded below.
-- [ ] **T10.** CHANGELOG entry; roadmap status. 
+- [x] **T10.** CHANGELOG entry (1.4.3); roadmap status.
 
 ## Manual verification log
 
 | Criterion | Date | Result | Notes |
 |-----------|------|--------|-------|
-| Q1 (T1) | 2026-11-13 | Pass | Test VM, Store test build 1.4.3 (`builds8`), tester unelevated (`t018p-run.ps1`). VLC 3.0.23 and 7-Zip 26.05 installed for all users; Update all. `consent.exe` was in tester's process list 3 s later; the prompt was deferred to the taskbar (flashing shield), as the user reported. The Store build's own probe found it (banner shown). Portable build not run separately: an unelevated PowerShell (same integrity as the portable exe) saw it |
+| Q1 (T1) | 2026-11-13 | Pass | Test VM, Store test build 1.4.3 (`C:\VMs\CartonStash-Test\builds\018`), tester unelevated (`t018p-run.ps1`). VLC 3.0.23 and 7-Zip 26.05 installed for all users; Update all. `consent.exe` was in tester's process list 3 s later; the prompt was deferred to the taskbar (flashing shield), as the user reported. The Store build's own probe found it (banner shown). Portable build not run separately: an unelevated PowerShell (same integrity as the portable exe) saw it. The secure-desktop case (prompt not deferred) not produced in this run |
 | R1.1, R1.2 (T9) | 2026-11-13 | Pass | 3 s after the prompt opened: banner "Windows is waiting for your permission to continue / Select the flashing shield in the taskbar to answer it." on Updates; 7-Zip's row and card read "Waiting for your permission…" with the shield; VLC stayed "Queued" (`p1-banner.png`, `p2-activity.png`) |
 | R1.4 (T9) | 2026-11-13 | Pass | Notification "Windows is waiting for your permission" at 61 s, not before; one only (`p3-notification.png`). Selecting it (opens Activity) not checked |
 | R1.3 (T9) | 2026-11-13 | Pass | Prompt declined (host ended `consent.exe` as admin): banner and waiting text gone within 2 s; 7-Zip's card shows its result; VLC went on with 003 R8.3's line (`p4-closed.png`). Accepting the prompt not checked (no click on the secure prompt from a script). Finding, outside 018: a declined MSI prompt ends as "Failed, error code 1625" instead of Cancelled |
