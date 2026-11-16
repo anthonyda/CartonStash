@@ -21,6 +21,9 @@ public sealed class DialogService(IClipboardService clipboard) : IDialogService
     /// <summary>Set by the main window once its content is loaded.</summary>
     public XamlRoot? XamlRoot { get; set; }
 
+    /// <summary>True while a dialog is shown; keyboard shortcuts wait for it (019 R5.1).</summary>
+    public bool IsOpen { get; private set; }
+
     public async Task<bool> ConfirmAsync(string title, string message, string confirmText, string cancelText = "Cancel")
     {
         var dialog = new ContentDialog
@@ -182,10 +185,12 @@ public sealed class DialogService(IClipboardService clipboard) : IDialogService
         {
             dialog.XamlRoot = XamlRoot ?? throw new InvalidOperationException("The main window isn't ready yet.");
             dialog.RequestedTheme = (XamlRoot.Content as FrameworkElement)?.RequestedTheme ?? ElementTheme.Default;
+            IsOpen = true;
             return await dialog.ShowAsync();
         }
         finally
         {
+            IsOpen = false;
             _oneAtATime.Release();
         }
     }
