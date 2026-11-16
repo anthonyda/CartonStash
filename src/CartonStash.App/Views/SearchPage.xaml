@@ -33,6 +33,7 @@
                 </Grid.ColumnDefinitions>
                 <TextBox
                     x:Name="QueryBox"
+                    AutomationProperties.AcceleratorKey="Control+F"
                     AutomationProperties.Name="Search packages"
                     KeyDown="QueryBox_KeyDown"
                     PlaceholderText="Name, ID or moniker (e.g. git, vscode, 7zip)"

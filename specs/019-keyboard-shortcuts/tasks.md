@@ -1,6 +1,6 @@
 # 019 – Keyboard shortcuts: Tasks
 
-**Status:** Draft
+**Status:** In progress
 **Design:** [design.md](design.md)
 
 Tick a task only when its verification passes. Keep tasks small enough for one commit.
@@ -15,13 +15,13 @@ Tick a task only when its verification passes. Keep tasks small enough for one c
   `KeyboardAcceleratorPlacementMode = Hidden`, one `Shortcut_Invoked` handler with the dialog guard; `ToggleActivity`;
   Ctrl+F goes to `ActivityFilter` when the focus is inside the Activity pane. *(R1.1–R1.3, R2.3, R3.1, R4.3, R5.1, R5.2)*
   - Verify: build; manual in T7.
-- [ ] **T4.** Tooltips: navigation items "Search (Ctrl+1)" to "Activity (Ctrl+4)" in XAML, "Settings (Ctrl+5)" on
+- [x] **T4.** Tooltips: navigation items "Search (Ctrl+1)" to "Activity (Ctrl+4)" in XAML, "Settings (Ctrl+5)" on
   `Nav.SettingsItem` once `Nav` is loaded; "Refresh (F5)" on the Installed and Updates Refresh buttons. *(R4.1, R4.2)*
   - Verify: build; manual in T7.
-- [ ] **T5.** `AutomationProperties.AcceleratorKey` on the navigation items (Settings in code), both Refresh buttons,
+- [x] **T5.** `AutomationProperties.AcceleratorKey` on the navigation items (Settings in code), both Refresh buttons,
   QueryBox, the Installed filter box and the Activity filter box. *(R5.3)*
   - Verify: build; manual in T7.
-- [ ] **T6.** `dotnet build` and `dotnet test --filter "Category!=Integration"` pass (Q4).
+- [x] **T6.** `dotnet build` and `dotnet test --filter "Category!=Integration"` pass (Q4).
   - Verify: command output.
 - [ ] **T7.** End check in the test VM (AZERTY): *(all)*
   - Ctrl+1 to Ctrl+5 (top row and number pad) from the search box, a list, the details pane and the Activity filter.

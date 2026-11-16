@@ -60,6 +60,15 @@ public sealed partial class MainWindow : Window
                 _ = agreements.RunAsync();
             }
         };
+        Nav.Loaded += (_, _) =>
+        {
+            // 019 R4.2, R5.3: the built-in Settings item only exists once the navigation is loaded (BR-32).
+            if (Nav.SettingsItem is NavigationViewItem settingsItem)
+            {
+                ToolTipService.SetToolTip(settingsItem, "Settings (Ctrl+5)");
+                Microsoft.UI.Xaml.Automation.AutomationProperties.SetAcceleratorKey(settingsItem, "Control+5");
+            }
+        };
         Root.SizeChanged += (_, _) => ApplyActivityPin();
         ActivitySplit.PaneClosing += (_, e) => e.Cancel = ActivitySplit.DisplayMode == SplitViewDisplayMode.Inline; // 009 R3.2
         ActivitySplit.PaneOpening += (_, _) => Activity.RefreshTimes(); // BR-33: yesterday's cards show their date
