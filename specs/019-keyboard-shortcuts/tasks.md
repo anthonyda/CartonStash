@@ -11,7 +11,7 @@ Tick a task only when its verification passes. Keep tasks small enough for one c
   `InstalledPage`: `FocusSearch` on the filter box (`x:Name="FilterBox"`), `Refresh` skips while `IsLoading`, else runs
   `RefreshCommand`. `UpdatesPage`: `Refresh` the same way. *(R2.1, R2.2, R3.1, R3.2)*
   - Verify: build; manual in T7.
-- [ ] **T3.** `MainWindow`: accelerators on `Root` (Ctrl+1 to Ctrl+5 on both number rows, Ctrl+F, F5, Ctrl+R),
+- [x] **T3.** `MainWindow`: accelerators on `Root` (Ctrl+1 to Ctrl+5 on both number rows, Ctrl+F, F5, Ctrl+R),
   `KeyboardAcceleratorPlacementMode = Hidden`, one `Shortcut_Invoked` handler with the dialog guard; `ToggleActivity`;
   Ctrl+F goes to `ActivityFilter` when the focus is inside the Activity pane. *(R1.1–R1.3, R2.3, R3.1, R4.3, R5.1, R5.2)*
   - Verify: build; manual in T7.

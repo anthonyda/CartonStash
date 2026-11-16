@@ -191,7 +191,9 @@
                         </Grid>
                         <!-- 009 R4.1; Esc clears it (R4.10) -->
                         <TextBox
+                            x:Name="ActivityFilter"
                             Grid.Row="1"
+                            AutomationProperties.AcceleratorKey="Control+F"
                             AutomationProperties.Name="Filter activity by name or ID"
                             KeyDown="ActivityFilter_KeyDown"
                             PlaceholderText="Filter by name or ID"
