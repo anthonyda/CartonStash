@@ -2,6 +2,16 @@
 
 What's new in each version of CartonStash. Get it from the [Microsoft Store](https://apps.microsoft.com/detail/9MT37M7DBZRK).
 
+## 1.6.0
+
+### New
+
+- **Keyboard shortcuts.** Ctrl+1, Ctrl+2 and Ctrl+3 open Search, Installed and Updates, Ctrl+4 opens or closes the Activity pane, and Ctrl+5 opens Settings. Ctrl+F puts the cursor in the search box, the Installed filter, or the Activity filter when you're in that pane. F5 or Ctrl+R refreshes the Installed and Updates lists. The tooltips show each shortcut, and Narrator reads them out.
+
+### Fixed
+
+- **Narrator reads the Refresh button on the Installed page.** It had no name, so Narrator said nothing for it.
+
 ## 1.5.1
 
 (1.5.0 was never released.)

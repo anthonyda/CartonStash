@@ -35,7 +35,7 @@ Tick a task only when its verification passes. Keep tasks small enough for one c
   - Verify: manual, recorded below.
   - Fix found in T7: the Installed page's Refresh button had no accessible name (its content is an icon and a text
     block), so Narrator read nothing for it. It now has `AutomationProperties.Name="Refresh"` (R5.3, Q5).
-- [ ] **T8.** CHANGELOG entry (next version); roadmap status.
+- [x] **T8.** CHANGELOG entry (next version); roadmap status.
 
 ## Manual verification log
 
