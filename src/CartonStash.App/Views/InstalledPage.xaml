@@ -95,7 +95,9 @@
                 </Grid.RowDefinitions>
                 <!-- R2.1 -->
                 <TextBox
+                    x:Name="FilterBox"
                     MinWidth="160"
+                    AutomationProperties.AcceleratorKey="Control+F"
                     AutomationProperties.Name="Filter installed packages"
                     PlaceholderText="Filter by name or ID"
                     Text="{x:Bind ViewModel.Filter, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />

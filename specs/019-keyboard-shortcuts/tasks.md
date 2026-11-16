@@ -7,7 +7,7 @@ Tick a task only when its verification passes. Keep tasks small enough for one c
 
 - [x] **T1.** `DialogService.IsOpen`, true around `dialog.ShowAsync()` in `ShowAsync`. *(R5.1)*
   - Verify: build; manual in T7.
-- [ ] **T2.** `IShortcutTarget` (`FocusSearch`, `Refresh`). `SearchPage`: `FocusSearch` focuses and selects QueryBox.
+- [x] **T2.** `IShortcutTarget` (`FocusSearch`, `Refresh`). `SearchPage`: `FocusSearch` focuses and selects QueryBox.
   `InstalledPage`: `FocusSearch` on the filter box (`x:Name="FilterBox"`), `Refresh` skips while `IsLoading`, else runs
   `RefreshCommand`. `UpdatesPage`: `Refresh` the same way. *(R2.1, R2.2, R3.1, R3.2)*
   - Verify: build; manual in T7.
