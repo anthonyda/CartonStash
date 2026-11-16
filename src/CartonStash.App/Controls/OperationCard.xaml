@@ -35,7 +35,7 @@
         x:Name="Card"
         Padding="12"
         BorderThickness="1"
-        CornerRadius="8"
+        CornerRadius="{StaticResource OverlayCornerRadius}"
         Style="{StaticResource NormalCard}">
         <Grid ColumnSpacing="12" RowSpacing="4">
             <Grid.ColumnDefinitions>
