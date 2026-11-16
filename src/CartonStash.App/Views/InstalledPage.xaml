@@ -75,6 +75,7 @@
                 <Button
                     HorizontalAlignment="Right"
                     AutomationProperties.AcceleratorKey="F5"
+                    AutomationProperties.Name="Refresh"
                     Command="{x:Bind ViewModel.RefreshCommand}"
                     ToolTipService.ToolTip="Refresh (F5)">
                     <StackPanel Orientation="Horizontal" Spacing="8">
