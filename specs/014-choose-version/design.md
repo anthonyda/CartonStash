@@ -1,6 +1,6 @@
 # 014 – Install a chosen version: Design
 
-**Status:** Done (2026-11-09). Approved 2026-11-08. **Amendment R1.6, R1.7 (2026-11-09): Done**, approved with the proposed answer to Q6. **Amendment R2.6, R2.7, R3.8, R3.9 (2026-11-10): Done**, approved 2026-11-10, with Q7's notice added. R3.8's scope source changed after T18 (Windows Installer first), approved 2026-11-10. **Amendment R2.9 (the fresh read is of the row's own program): Done (2026-11-17)**, approved 2026-11-17, fresh connections added after T28, Q9: the row's own entry
+**Status:** Done (2026-11-09). Approved 2026-11-08. **Amendment R1.6, R1.7 (2026-11-09): Done**, approved with the proposed answer to Q6. **Amendment R2.6, R2.7, R3.8, R3.9 (2026-11-10): Done**, approved 2026-11-10, with Q7's notice added. R3.8's scope source changed after T18 (Windows Installer first), approved 2026-11-10. **Amendment R2.9 (the fresh read is of the row's own program): Done (2026-11-17)**, approved 2026-11-17, fresh connections added after T28, Q9: the row's own entry. **Amendment R3.10, R3.11: Done (2026-11-17)**, approved 2026-11-17, Q10 "can't tell", short; Q11 no box
 **Requirements:** [requirements.md](requirements.md)
 
 ## Overview
@@ -474,6 +474,78 @@ Measured in the VM (WinGet 1.29, five rounds after a warm-up): a fresh local-fir
 Nothing changes in `PackageActions`, `PackageRowViewModel` or the details pane: they already compare the version,
 refresh the row with what they get, and treat null as "couldn't read".
 
+## Amendment R3.10, R3.11: a version chosen on a row that shares its ID (approved 2026-11-17)
+
+Which rows: `package.IsInstalled && !package.IsPrimaryMatch` (002 R6.3). Their direction is always `Unknown`
+(`Direction`, "WinGet API usage"), so the version list, the action text ("Install this version") and the queued kind
+(`Install`, `GoingBack = true`) don't change. Only what the app says and which installed program it works from.
+
+### R3.10, the confirmation
+
+`PackageActions.InstallVersionAsync`, in the `Older or Unknown` branch: for these rows, a plain `ConfirmAsync`
+instead of `ConfirmWithOptionAsync`, and `ExcludeOnSuccess` stays false (Q11).
+
+```csharp
+// 014 R3.10: a row that isn't WinGet's own match can't say what the chosen version does to it.
+internal static (string Title, string Message, string ConfirmText) SharedIdQuestion(PackageInfo package, PackageVersion version,
+    IReadOnlyList<PackageInfo> others, string? scopeNotice = null)
+
+// The other installed programs under the row's ID, by name (from InstalledPackagesStore.Packages).
+internal static IReadOnlyList<PackageInfo> SharingId(PackageInfo package, IReadOnlyList<PackageInfo> installed)
+```
+
+- Title: "Install version {version}?"
+- Message (option G of the wordings page, chosen 2026-11-17):
+
+  ```
+  WinGet lists these programs under {id}:
+  • {name} ({installed}), this one
+  • {other name} ({other version})
+
+  It doesn't say which one {version} replaces, so it may be installed next to {name}. If both stay, you can
+  uninstall {installed} from the Installed page.
+  ```
+
+  R3.8's notice, if any, ends the last paragraph. The dialog's text block keeps line breaks, so the list is plain text.
+- Buttons: "Install {version}", "Cancel".
+- **Where the list comes from.** `PackageActions` takes the `InstalledPackagesStore` (optional constructor parameter;
+  DI already has it as a singleton). The other programs are the store's installed packages with the same `Id`
+  (`OrdinalIgnoreCase`) and another `InstalledId`, ordered by name. The row's own line comes first and uses the row's
+  version, which R2.7 has just read fresh. The others are as current as the Installed list (it reloads after every
+  operation, 002 R1.3); no extra WinGet call. A version that's missing leaves out its brackets.
+- **No other program known** (the Installed list not loaded yet): "{version} may be installed next
+  to {name} ({installed}) instead of replacing it. If both stay, you can uninstall {installed} from the Installed page.
+  WinGet lists several programs under {id} and doesn't say which one a version replaces." (option A).
+
+R3.5's **Uninstall, then install** after a failure stays: it uninstalls the row's own entry (002 R6.5), which is
+what the user would do by hand.
+
+### R3.11, the installed program the installer works from
+
+`RunAsync` keeps finding the package by ID: the install needs the source's `CatalogPackage` for `PackageVersionId`
+and the chosen version's product codes. What changes is the installed version it reads alongside:
+
+- New: `PackageVersionInfo? own` = `found.InstalledVersion` when `package.IsPrimaryMatch` or `InstalledId` is null
+  (today's behaviour); otherwise `FindInstalledEntryAsync(package.InstalledId).InstalledVersion`, null when it throws.
+- `InstallAsync` gains the `PackageVersionInfo? installed` parameter and reads R3.8's MSI context and WinGet scope from
+  it instead of `package.InstalledVersion`. Null → `ScopeFor` with no context and no WinGet scope: the setting (as
+  today when nothing is known).
+- `MsiProductsOf(own)` before the install (R3.9's products). `CountInstalledAsync(id)` is unchanged: it counts every
+  entry under the ID, not one program.
+- `InstalledAfterUpdateAsync(package)`: for these rows, after `Invalidate`, `FindInstalledEntryAsync(InstalledId)` and
+  its `InstalledVersion.Version`, with `UpdateAvailable: false` (going back ignores it, R2.8); null when it throws or
+  the entry is gone. Primary rows keep the by-ID read.
+
+Order after a success is unchanged: R3.9 first; R2.8's check runs only when the outcome is still `Succeeded`
+(`CheckAfter`). For the OpenSSL case, R3.9's "installed next to 3.6.2, not over it" is then about OpenSSL 3's own
+product, which is still installed. R2.8's wording ("Going back to {version} may not have worked") reads oddly for these
+rows but is only reached when R3.9 found nothing; it stays.
+
+| Layer | Type | Change |
+|-------|------|--------|
+| Core/ViewModels | `PackageActions` | `SharedIdQuestion` with the programs sharing the ID (from `InstalledPackagesStore`); `ConfirmAsync`, no exclusion, for shared-ID rows |
+| Core/Services | `WinGetPackageInstaller` | `OwnInstalledAsync`; `InstallAsync(…, installed)`; `MsiProductsOf(own)`; `InstalledAfterUpdateAsync` reads the own entry for shared-ID rows |
+
 ## Testing
 
 | Requirement | Test |
@@ -499,6 +571,8 @@ refresh the row with what they get, and treat null as "couldn't read".
 | R2.6 | `PackageRowViewModel`: after a success, `Refresh` with the read package updates the badge and texts; a null read leaves the row; a failure reads nothing (unit, fake service). `PackageDetailsViewModel` reloads when `Row.Package` changes (unit). VM: update Pandoc from Search, the row and the pane show 3.13 |
 | R2.7 | `PackageActions`: installed version read differs → no dialog, nothing queued, the row refreshed; same → as today; null → as today (unit) |
 | R2.9 | `OwnMatch`: the row's ID first, second, in another case, absent, null entries (unit). `FromOwnEntry`: name, version and scope from the entry; ID, source, available version, update flag, primary flag and status kept (unit). `PackageActionsVersionTests` with the fake service: own entry at the shown version → the action is queued; at another version → nothing queued, the row refreshed with the own entry, never the other program; null → queued (unit). Integration: `ReadInstalledAsync` with an `InstalledId` returns that entry's version. VM: OpenSSL 3.6.2 and 4.1.0 side by side, **Install this version** on 4.1.0 from the OpenSSL 3 row → the row keeps 3.6.2 and an operation appears in Activity; OpenSSL 3's version changed in the registry → the action refreshes the row to it; an operation on the OpenSSL 4 row refreshes that row alone |
+| R3.10 | `SharedIdQuestion` wording: the list with the row's own line first and marked, others by name, a missing version, the fallback with no other program, with and without R3.8's notice (unit). `PackageActions`: a non-primary installed row with `Unknown` → `ConfirmAsync`, no option prompt, `ExcludeOnSuccess` false; a primary row with `Unknown` → today's dialog with the box (unit) |
+| R3.11 | `WinGetPackageInstaller`: which installed version is used, as a pure choice over (primary, `InstalledId`) (unit). Integration: `InstalledAfterUpdateAsync` on an unmanaged entry's `InstalledId` returns that entry's version. VM: OpenSSL pair, the OpenSSL 3 row, 4.1.0 → the new confirmation, no box; with the UAC prompt answered (by the maintainer), the result is R3.9's "installed next to 3.6.2" and nothing is excluded |
 
 ## Risks
 

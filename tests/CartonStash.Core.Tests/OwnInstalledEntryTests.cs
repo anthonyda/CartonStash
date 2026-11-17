@@ -81,7 +81,7 @@ public class OwnInstalledEntryTests
     {
         var (app, row) = await InstallFourFromThree(p => WinGetPackageService.FromOwnEntry(p, "FireDaemon OpenSSL 3", "3.6.2", InstallScope.System));
 
-        Assert.Single(app.Dialogs.OptionPrompts);
+        Assert.Single(app.Dialogs.Confirmations); // R3.10: the shared-ID confirmation
         Assert.Single(app.Installer.Calls);
         Assert.Equal("FireDaemon OpenSSL 3", row.Package.Name);
         Assert.Equal("3.6.2", row.Package.InstalledVersion);
@@ -92,7 +92,7 @@ public class OwnInstalledEntryTests
     {
         var (app, row) = await InstallFourFromThree(p => WinGetPackageService.FromOwnEntry(p, "FireDaemon OpenSSL 3", "3.6.3", InstallScope.System));
 
-        Assert.Empty(app.Dialogs.OptionPrompts);
+        Assert.Empty(app.Dialogs.Confirmations);
         Assert.Empty(app.Installer.Calls);
         Assert.Equal("FireDaemon OpenSSL 3", row.Package.Name);
         Assert.Equal("3.6.3", row.Package.InstalledVersion);
@@ -104,7 +104,7 @@ public class OwnInstalledEntryTests
     {
         var (app, row) = await InstallFourFromThree(_ => null);
 
-        Assert.Single(app.Dialogs.OptionPrompts);
+        Assert.Single(app.Dialogs.Confirmations); // R3.10
         Assert.Single(app.Installer.Calls);
         Assert.Equal("3.6.2", row.Package.InstalledVersion);
     }

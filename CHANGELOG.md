@@ -2,6 +2,12 @@
 
 What's new in each version of CartonStash. Get it from the [Microsoft Store](https://apps.microsoft.com/detail/9MT37M7DBZRK).
 
+## 1.6.1
+
+### Fixed
+
+- **Choosing a version of a program that shares its WinGet ID asks the right question.** For a program like FireDaemon OpenSSL 3, which WinGet lists under OpenSSL 4's ID, the confirmation said the new version would replace it and warned about going back to an older version, and its box could stop update checks for the other program. It now lists the programs WinGet keeps under that ID, says the version may be installed next to yours, and how to remove the old one if both stay. The checks after the install look at the right program.
+
 ## 1.6.0
 
 ### New

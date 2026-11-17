@@ -276,6 +276,22 @@ public class WinGetPackageServiceIntegrationTests
     }
 
     [Fact]
+    public async Task The_check_after_installing_reads_the_rows_own_entry_on_a_shared_ID_row() // 014 R3.11
+    {
+        var installed = await _service.GetInstalledAsync();
+        var git = Assert.Single(installed, p => p.Id == "Git.Git");
+        var other = installed.First(p => !p.IsManaged && p.InstalledId is not null && p.InstalledVersion is not null);
+        var row = git with { InstalledId = other.InstalledId, IsPrimaryMatch = false };
+        var installer = new WinGetPackageInstaller(new CatalogConnection(new FakeSettings()), new FakeSettings(), new RunningPrograms());
+
+        var after = await installer.InstalledAfterUpdateAsync(row);
+
+        Assert.NotNull(after);
+        Assert.Equal(other.InstalledVersion, after.Version); // not Git's
+        Assert.False(after.UpdateAvailable);
+    }
+
+    [Fact]
     public async Task ReadInstalled_of_a_package_that_isnt_installed_is_null() // 014 R2.6: the row stays as it is
     {
         Assert.Null(await _service.ReadInstalledAsync(new PackageInfo("CartonStash.NoSuchPackage", "x", "1.0", "1.0", "winget")));
