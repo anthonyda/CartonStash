@@ -1,6 +1,6 @@
 # 014 – Install a chosen version: Design
 
-**Status:** Done (2026-11-09). Approved 2026-11-08. **Amendment R1.6, R1.7 (2026-11-09): Done**, approved with the proposed answer to Q6. **Amendment R2.6, R2.7, R3.8, R3.9 (2026-11-10): Done**, approved 2026-11-10, with Q7's notice added. R3.8's scope source changed after T18 (Windows Installer first), approved 2026-11-10
+**Status:** Done (2026-11-09). Approved 2026-11-08. **Amendment R1.6, R1.7 (2026-11-09): Done**, approved with the proposed answer to Q6. **Amendment R2.6, R2.7, R3.8, R3.9 (2026-11-10): Done**, approved 2026-11-10, with Q7's notice added. R3.8's scope source changed after T18 (Windows Installer first), approved 2026-11-10. **Amendment R2.9 (the fresh read is of the row's own program): approved 2026-11-17**, Q9: the row's own entry
 **Requirements:** [requirements.md](requirements.md)
 
 ## Overview
@@ -410,6 +410,51 @@ today. With R2.6 in place this is rare: it covers changes made outside the app s
   to `"1.0"` with `"1.0"` listed it doesn't; an update with `("2.0", false)` after `"2.0"` still doesn't (013). The
   status text per kind.
 
+## Amendment R2.9: the fresh read is of the row's own program (approved 2026-11-17)
+
+Today `WinGetPackageService.ReadInstalledAsync` calls `FindByIdAsync(id, source, localFirst: true)`, takes WinGet's
+first match from that source, and copies the row's `InstalledId` onto the result. That copy is what makes another
+program's state look like the row's own.
+
+New rule, only when `package.InstalledId` is set (Installed and Updates rows; Search rows keep today's read):
+
+- Search the local-first catalog by ID as today (`FindAsync(localFirst: true, ById(id))`), and read the matches **by
+  index** (W2).
+- Take the match from the package's source whose `InstalledVersion.Id` equals `package.InstalledId`
+  (`OrdinalIgnoreCase`, as `IsSamePackage`). Map it as today.
+- No such match (Q9, decided: the row's own entry) → `CatalogConnection.FindInstalledEntryAsync(package.InstalledId)`,
+  which reads the installed-only catalog and already serves uninstalls (002 R6.5). The fresh package is the row's own
+  with the entry's name, `InstalledVersion.Version` and `InstalledScope` (as today, `InstalledScopes.Read`); `Id`,
+  `Source`, `AvailableVersion`, `UpdateAvailable`, `IsPrimaryMatch` and `VersionStatus` stay the row's. For the rows
+  that reach this case (manifest matches) the row already shows Windows' version and `VersionStatus` is `Unknown`
+  (002 R6.2, R7.2), so R2.7 compares like with like.
+- The entry isn't found (`WinGetException`, "no longer installed") or the read throws → `null`, as for any failed
+  read. The row's `InstalledId` is never copied onto another program's data.
+
+This covers both cases seen with shared IDs: a manifest-match row (002 R6.3, `IsPrimaryMatch = false`) never has
+WinGet's match, so it always takes the own-entry read; a primary-match row finds itself even when WinGet returns
+several matches for the ID.
+
+```csharp
+// 014 R2.9: the row's own installed program among WinGet's matches. By index (W2).
+internal static int OwnMatch(IReadOnlyList<string?> installedIds, string installedId) // index, or -1
+
+// 014 R2.9, Q9: the row as Windows lists its own program; everything else stays the row's.
+internal static PackageInfo FromOwnEntry(PackageInfo row, string name, string version, InstallScope? scope)
+```
+
+`OwnMatch` takes the matches' `InstalledVersion?.Id` values in order, and `FromOwnEntry` takes plain strings, so both
+are unit tested without COM. `CatalogConnection` gains a `FindAllByIdAsync(id, source, localFirst)` that returns
+every match from that source (today's `FindByIdInCatalogAsync` stops at the first).
+
+| Layer | Type | Change |
+|-------|------|--------|
+| Core/Services | `CatalogConnection` | `FindAllByIdAsync` |
+| Core/Services | `WinGetPackageService` | `ReadInstalledAsync` picks the row's own match (`OwnMatch`), else reads its own entry (`FromOwnEntry`), else null |
+
+Nothing changes in `PackageActions`, `PackageRowViewModel` or the details pane: they already compare the version,
+refresh the row with what they get, and treat null as "couldn't read".
+
 ## Testing
 
 | Requirement | Test |
@@ -434,6 +479,7 @@ today. With R2.6 in place this is rare: it covers changes made outside the app s
 | R3.9 | `AfterGoingBack`: more entries after → warning text and `SucceededUnconfirmed`; same count, fewer, or a null count → unchanged (unit). `PackageActions`: no exclusion after the warning (unit) |
 | R2.6 | `PackageRowViewModel`: after a success, `Refresh` with the read package updates the badge and texts; a null read leaves the row; a failure reads nothing (unit, fake service). `PackageDetailsViewModel` reloads when `Row.Package` changes (unit). VM: update Pandoc from Search, the row and the pane show 3.13 |
 | R2.7 | `PackageActions`: installed version read differs → no dialog, nothing queued, the row refreshed; same → as today; null → as today (unit) |
+| R2.9 | `OwnMatch`: the row's ID first, second, in another case, absent, null entries (unit). `FromOwnEntry`: name, version and scope from the entry; ID, source, available version, update flag, primary flag and status kept (unit). `PackageActionsVersionTests` with the fake service: own entry at the shown version → the action is queued; at another version → nothing queued, the row refreshed with the own entry, never the other program; null → queued (unit). Integration: `ReadInstalledAsync` with an `InstalledId` returns that entry's version. VM: OpenSSL 3.6.2 and 4.1.0 side by side, **Install this version** on 4.1.0 from the OpenSSL 3 row → the row keeps 3.6.2 and an operation appears in Activity; OpenSSL 3's version changed in the registry → the action refreshes the row to it; an operation on the OpenSSL 4 row refreshes that row alone |
 
 ## Risks
 

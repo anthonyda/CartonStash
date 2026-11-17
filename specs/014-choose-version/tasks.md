@@ -1,6 +1,6 @@
 # 014 – Install a chosen version: Tasks
 
-**Status:** Done (2026-11-09). Amendment T18 to T24: done (2026-11-10)
+**Status:** Done (2026-11-09). Amendment T18 to T24: done (2026-11-10). Amendment R2.9 (T26 to T28): in progress
 **Design:** [design.md](design.md)
 
 Tick a task only when its verification passes. Keep tasks small enough for one commit, and keep the build green at
@@ -212,3 +212,25 @@ Approved 2026-11-10: Q7 with a notice in the confirmation, Q8 as proposed.
 - [x] **T25.** `AfterUpdate` takes the chosen version when going back and compares the installed version alone; "Not
   confirmed" for an install. *(R2.8)*
   - Verify: `AfterGoingBackVersionTests`.
+
+## Amendment R2.9 (2026-11-17, from use, approved 2026-11-17)
+
+Approved 2026-11-17, Q9: the row's own entry.
+
+- [ ] **T26.** VM, measure first: OpenSSL 3.6.2 (`--scope machine`), then `winget upgrade` to 4.1.0 (`guest\openssl-sxs.ps1`,
+  elevated). With the T1 console tool, search the local-first catalog by `FireDaemon.OpenSSL` and record each
+  match's `InstalledVersion.Id` and version, and each row's `InstalledId` as the Installed page builds it. Update
+  design.md if WinGet's matches differ from what it expects. *(R2.9)*
+  - Verify: an entry in the log.
+- [ ] **T27.** `OwnMatch`, `FromOwnEntry`; `CatalogConnection.FindAllByIdAsync`; `ReadInstalledAsync` picks the
+  row's own match, else reads its own entry, else returns null, when the package has an `InstalledId` (Q9). *(R2.9)*
+  - Verify: `OwnMatchTests`, `FromOwnEntryTests` (`*_R2_9`); `PackageActionsVersionTests`: own entry at the shown
+    version → queued; at another version → nothing queued, row refreshed with the own entry; null → queued; existing
+    `PackageRowRefreshTests` and R2.7 tests pass; integration: `ReadInstalledAsync` with an `InstalledId` on a
+    package installed on the runner; `dotnet test`.
+- [ ] **T28.** VM, on a build from this branch, the OpenSSL pair from T26: from the OpenSSL 3 row's details,
+  **Install this version** on 4.1.0 → the row keeps "FireDaemon OpenSSL 3, Installed 3.6.2", the operation shows in
+  Activity. Then with the list loaded, change OpenSSL 3's `DisplayVersion` in its uninstall key (as 013's EA app run
+  did) and choose a version again → nothing queued, the row shows the new version (Q9). An operation on the OpenSSL
+  4 row refreshes that row alone. Changelog line. *(R2.9)*
+  - Verify: entries in the log.
