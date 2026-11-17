@@ -1,6 +1,6 @@
 # 019 – Keyboard shortcuts: Requirements
 
-**Status:** Approved
+**Status:** Done
 **Depends on:** 001, 002, 004, 006, 009
 
 ## Problem

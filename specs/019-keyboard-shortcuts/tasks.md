@@ -1,6 +1,6 @@
 # 019 – Keyboard shortcuts: Tasks
 
-**Status:** In progress
+**Status:** Done
 **Design:** [design.md](design.md)
 
 Tick a task only when its verification passes. Keep tasks small enough for one commit.
@@ -23,7 +23,7 @@ Tick a task only when its verification passes. Keep tasks small enough for one c
   - Verify: build; manual in T7.
 - [x] **T6.** `dotnet build` and `dotnet test --filter "Category!=Integration"` pass (Q4).
   - Verify: command output.
-- [ ] **T7.** End check in the test VM (AZERTY): *(all)*
+- [x] **T7.** End check in the test VM (AZERTY): *(all)*
   - Ctrl+1 to Ctrl+5 (top row and number pad) from the search box, a list, the details pane and the Activity filter.
   - Ctrl+4 opens and closes the overlay pane; does nothing while pinned.
   - Ctrl+F on Search, Installed, Updates (nothing), Settings (nothing), and inside the Activity pane.
@@ -47,5 +47,5 @@ Tick a task only when its verification passes. Keep tasks small enough for one c
 | R4.1–R4.3 | 2026-11-16 | Pass | Tooltips "Search (Ctrl+1)" … "Settings (Ctrl+5)", "Activity (Ctrl+4)", "Refresh (F5)" on both pages; no Esc tooltip on a row; Esc still closes the details pane |
 | R5.1 | 2026-11-16 | Pass | Uninstall confirmation open: Ctrl+1, F5, Ctrl+4 change nothing behind it |
 | R5.2 | 2026-11-16 | Pass | Shortcuts work with the focus in the search box, a filter box, a row and the Activity pane |
-| R5.3 | 2026-11-16 | Pass (UIA) | `AcceleratorKey` exposed on the navigation items, Refresh and the filter boxes (after the Refresh name fix). Narrator itself not listened to |
-| Q5 themes | — | Not checked | Dark and high contrast for the new tooltips (standard ToolTip, no custom colors) |
+| R5.3 | 2026-11-16, 2026-11-17 | Pass | `AcceleratorKey` exposed on the navigation items, Refresh and the filter boxes (after the Refresh name fix). Narrator checked by the maintainer on 2026-11-17 |
+| Q5 themes | 2026-11-17 | Pass | Dark and high contrast for the new tooltips, checked by the maintainer |

@@ -1,6 +1,6 @@
 # 019 – Keyboard shortcuts: Design
 
-**Status:** Approved
+**Status:** Done
 **Requirements:** [requirements.md](requirements.md)
 
 ## Overview
