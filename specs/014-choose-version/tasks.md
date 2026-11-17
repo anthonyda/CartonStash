@@ -1,6 +1,6 @@
 # 014 – Install a chosen version: Tasks
 
-**Status:** Done (2026-11-09). Amendment T18 to T24: done (2026-11-10). Amendment R2.9 (T26 to T28): in progress
+**Status:** Done (2026-11-09). Amendment T18 to T24: done (2026-11-10). Amendment R2.9 (T26 to T29): done (2026-11-17)
 **Design:** [design.md](design.md)
 
 Tick a task only when its verification passes. Keep tasks small enough for one commit, and keep the build green at
@@ -209,6 +209,7 @@ Approved 2026-11-10: Q7 with a notice in the confirmation, Q8 as proposed.
 | T26, shared ID (R2.9) | 2026-11-17 | Measured | OpenSSL 3.6.2 `--scope machine`, then `winget upgrade` → 4.1.0 beside it (two ARP entries, two folders, `winget list` shows both). Local-first search by `FireDaemon.OpenSSL`: **1 match**, `InstalledVersion.Id` = `ARP\Machine\X64\{5BA06AD7…}` (OpenSSL 4), 4.1.0. Installed-only catalog: `{0E95226A…}` "FireDaemon OpenSSL 3" 3.6.2 and `{5BA06AD7…}` "FireDaemon OpenSSL 4" 4.1.0, each found again by its own ID. So the OpenSSL 3 row is a manifest match that only its own entry can read, as the design expects |
 | T28, the recording (R2.9) | 2026-11-17 | Pass | Build 1.6.1 of this branch, OpenSSL 3.6.2 and 4.1.0 side by side. Installed page, filter "OpenSSL": two rows. OpenSSL 3's details, 4.1.0 → **Install FireDaemon OpenSSL 3 4.1.0**: the confirmation "Install FireDaemon OpenSSL 3 4.1.0? FireDaemon OpenSSL 3 3.6.2 is installed…" (R2.7 went on); Cancel, since the machine-wide installer waits for a UAC prompt nobody answers. Both rows unchanged: "FireDaemon OpenSSL 3, Installed 3.6.2, winget has 4.1.0", "FireDaemon OpenSSL 4, Installed 4.1.0, same as winget". No crashes |
 | T28, changed outside the app (R2.9, Q9) | 2026-11-17 | Fail (found) | With the list loaded, OpenSSL 3's `DisplayVersion` set to 3.6.3 in its uninstall key; the same action again → the confirmation still says 3.6.2, nothing refreshed. `winget list` in a new process shows 3.6.3. The read uses `CatalogConnection`'s cached installed-only catalog, a snapshot renewed only by Refresh and after operations; the cached local-first catalog behind primary-match rows is the same. design.md R2.6 says the read comes "after `Invalidate`", and `ReadInstalledAsync` never did: R2.7 hasn't caught changes made outside the app since T22 (T24 checked R2.6 through an operation only). Open: needs a design change |
+| T28, run 2 (R2.9, T29) | 2026-11-17 | Pass | Build 1.6.1 with T29, clean VM, the OpenSSL pair. OpenSSL 3 row, **Install FireDaemon OpenSSL 3 4.1.0** → the confirmation names 3.6.2 (R2.7 went on), Cancel; both rows unchanged. Then `DisplayVersion` 3.6.3 set outside the app, the same action → no dialog, nothing queued; the row and the pane read "Installed 3.6.3, winget has 4.1.0" and the version list no longer marks 3.6.2 installed (R2.7, Q9). OpenSSL 4's row unchanged throughout. No crashes. Not run: the install itself and an operation on the OpenSSL 4 row, since both installers are machine-wide and wait for a UAC prompt the test can't answer; R2.6's refresh after a success is the unit tests' (`PackageRowRefreshTests`) and T24's |
 
 ## Amendment R2.8 (2026-11-12, bug review BR-02)
 
@@ -240,7 +241,7 @@ Approved 2026-11-17, Q9: the row's own entry.
     installed version for Git and an own entry; `dotnet test`. The change made outside the app is T28's, in the VM.
     *Done 2026-11-17: the three `ReadInstalled_*` integration tests now run on fresh connections and pass; the cache
     isn't touched by construction (the fresh catalogs are never kept), so no test of its own. 1009 tests pass.*
-- [ ] **T28.** VM, on a build from this branch, the OpenSSL pair from T26: from the OpenSSL 3 row's details,
+- [x] **T28.** VM, on a build from this branch, the OpenSSL pair from T26: from the OpenSSL 3 row's details,
   **Install this version** on 4.1.0 → the row keeps "FireDaemon OpenSSL 3, Installed 3.6.2", the operation shows in
   Activity. Then with the list loaded, change OpenSSL 3's `DisplayVersion` in its uninstall key (as 013's EA app run
   did) and choose a version again → nothing queued, the row shows the new version (Q9). An operation on the OpenSSL
