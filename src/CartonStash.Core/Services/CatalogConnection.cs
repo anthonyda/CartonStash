@@ -156,13 +156,19 @@ public sealed class CatalogConnection(ISettings settings)
 
         // A rare double connect while two loads race is harmless; the last one is kept, unless an Invalidate came between.
         var generation = _installedOnly.Begin();
+        return _installedOnly.Keep(generation, await ConnectInstalledOnlyAsync(cancellationToken));
+    }
+
+    /// <summary>A new connection to the installed-only catalog, not kept: a snapshot of what Windows lists now (014 T29).</summary>
+    private async Task<PackageCatalog> ConnectInstalledOnlyAsync(CancellationToken cancellationToken)
+    {
         var reference = Manager.GetLocalPackageCatalog(LocalPackageCatalog.InstalledPackages);
         var connect = await reference.ConnectAsync().AsTask(cancellationToken);
         if (connect.Status != ConnectResultStatus.Ok)
         {
             throw new WinGetException(WinGetPackageService.DescribeConnectFailure(connect.Status), connect.ExtendedErrorCode);
         }
-        return _installedOnly.Keep(generation, connect.PackageCatalog);
+        return connect.PackageCatalog;
     }
 
     /// <param name="localFirst">
@@ -337,9 +343,11 @@ public sealed class CatalogConnection(ISettings settings)
     }
 
     /// <summary>Finds one installed program by its installed entry ID (<c>ARP\...</c>, <c>MSIX\...</c>) (002 R6.5).</summary>
-    internal async Task<CatalogPackage> FindInstalledEntryAsync(string installedId, CancellationToken cancellationToken)
+    /// <param name="fresh">Read on a new connection instead of the session's snapshot, which never sees a change made
+    /// outside the app (014 T29). The cached catalog is left as it is.</param>
+    internal async Task<CatalogPackage> FindInstalledEntryAsync(string installedId, CancellationToken cancellationToken, bool fresh = false)
     {
-        var catalog = await GetInstalledOnlyAsync(cancellationToken);
+        var catalog = fresh ? await ConnectInstalledOnlyAsync(cancellationToken) : await GetInstalledOnlyAsync(cancellationToken);
         var matches = await FindMatchesAsync(catalog, ById(installedId), cancellationToken);
         return matches.Count > 0
             ? matches[0].CatalogPackage
@@ -364,6 +372,29 @@ public sealed class CatalogConnection(ISettings settings)
     {
         var found = installed ? await FindByIdInCatalogAsync(localFirst: true, id, source, cancellationToken) : null;
         return found ?? await FindByIdInCatalogAsync(localFirst: false, id, source, cancellationToken) ?? throw NotFound(id, source);
+    }
+
+    /// <summary>
+    /// 014 R2.9: every package WinGet matches to the ID, from that source when one is given. Several installed programs
+    /// can share an ID (002 R6.5); <see cref="FindByIdAsync"/> stops at the first. By index (W2).
+    /// </summary>
+    /// <param name="fresh">Search on catalogs connected for this call and then dropped, so a change made outside the app is
+    /// seen (014 T29). No source probing: the caller treats a failure as a read that couldn't be made.</param>
+    internal async Task<IReadOnlyList<CatalogPackage>> FindAllByIdAsync(string id, string? source, bool localFirst, CancellationToken cancellationToken, bool fresh = false)
+    {
+        IReadOnlyList<MatchResult> matches = fresh
+            ? await ConnectAsync(localFirst, IsInUse, cancellationToken) is { } catalog ? await FindMatchesAsync(catalog, ById(id), cancellationToken) : []
+            : await FindAsync(localFirst, () => ById(id), cancellationToken);
+        var packages = new List<CatalogPackage>(matches.Count);
+        for (var i = 0; i < matches.Count; i++)
+        {
+            var package = matches[i].CatalogPackage;
+            if (IsFromSource(source, package.DefaultInstallVersion?.PackageCatalog.Info.Name))
+            {
+                packages.Add(package);
+            }
+        }
+        return packages;
     }
 
     private async Task<CatalogPackage?> FindByIdInCatalogAsync(bool localFirst, string id, string? source, CancellationToken cancellationToken)

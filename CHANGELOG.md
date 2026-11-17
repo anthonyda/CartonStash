@@ -11,6 +11,8 @@ What's new in each version of CartonStash. Get it from the [Microsoft Store](htt
 ### Fixed
 
 - **Narrator reads the Refresh button on the Installed page.** It had no name, so Narrator said nothing for it.
+- **Programs that share one WinGet ID keep their own details.** Some publishers list several programs under one ID, such as FireDaemon OpenSSL 3 and OpenSSL 4. Choosing a version in one of them could give its row the other program's name and version, and nothing was installed. Each row now keeps its own program, and the version you chose is installed.
+- **A version changed outside CartonStash is noticed.** If a program was updated by something else while CartonStash was open, choosing a version used the version from when the list loaded. CartonStash now checks what Windows lists before going on, and shows the new version so you can choose again.
 
 ## 1.5.1
 

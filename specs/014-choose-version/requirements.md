@@ -1,6 +1,6 @@
 # 014 – Install a chosen version: Requirements
 
-**Status:** Done (2026-11-09). Approved 2026-11-08, with the proposed answers to Q1, Q2 and Q4; Q3 and Q5 decided after T1 (amendments R2.5, R3.3 to R3.7). **Amendment R1.6, R1.7 (2026-11-09): Done**, approved with the proposed answer to Q6. **Amendment R2.6, R2.7, R3.8, R3.9 (2026-11-10): Done**, approved 2026-11-10, Q7 with a notice to the user, Q8 as proposed. **Amendment R2.8 (going back from the newest version, bug review BR-02): approved 2026-11-12**
+**Status:** Done (2026-11-09). Approved 2026-11-08, with the proposed answers to Q1, Q2 and Q4; Q3 and Q5 decided after T1 (amendments R2.5, R3.3 to R3.7). **Amendment R1.6, R1.7 (2026-11-09): Done**, approved with the proposed answer to Q6. **Amendment R2.6, R2.7, R3.8, R3.9 (2026-11-10): Done**, approved 2026-11-10, Q7 with a notice to the user, Q8 as proposed. **Amendment R2.8 (going back from the newest version, bug review BR-02): approved 2026-11-12**. **Amendment R2.9 (the fresh read is of the row's own program): Done (2026-11-17)**, approved 2026-11-17, Q9: the row's own entry
 **Depends on:** 003 (operation queue, agreements, results), 004 (updates), 005 (details pane, R2.1 version list),
 010 (R5 exclusions from update checks)
 **Replaces:** 005's out-of-scope line "Installing a specific (older) version. The version list is information only in v1."
@@ -153,6 +153,41 @@ updating: "Update not confirmed" and "may update itself the next time it starts"
 
 Updates keep 013's rule unchanged: there, an unchanged version with no update offered can be a good update whose
 installer lists another version.
+
+## Amendment R2.9 (2026-11-17, from use, approved 2026-11-17)
+
+R2.6 and R2.7 read "the installed state WinGet reports" by **WinGet ID**. When two installed programs share one ID
+(002 R6.5), that read returns WinGet's own match, which can be the *other* program. The row then takes on the other
+program's name, version and badge.
+
+**Example (screen recording 2026-11-17, reproduced in the VM).** FireDaemon publishes OpenSSL 3 and OpenSSL 4 under one
+ID, `FireDaemon.OpenSSL`, as two MSI products (different UpgradeCodes, `UpgradeBehavior: install`), so they install side
+by side; plain `winget upgrade` from 3.6.2 to 4.1.0 leaves both. The Installed page rightly shows two rows: "FireDaemon
+OpenSSL 3", Installed 3.6.2, and "FireDaemon OpenSSL 4", Installed 4.1.0. In the OpenSSL 3 row's details, the user
+chooses **Install this version** on 4.1.0:
+
+1. R2.7 reads the installed state by ID. WinGet's match is OpenSSL 4, so the read says "Installed 4.1.0".
+2. 4.1.0 differs from the 3.6.2 the pane shows, so the app queues nothing and refreshes the row with that read.
+3. The OpenSSL 3 row now reads "FireDaemon OpenSSL, Installed 4.1.0, same as winget", still under the **Other** chip;
+   its pane says the same. Nothing appears in Activity. OpenSSL 3 is still installed, 3.6.2. Only a reload of the list
+   (Refresh) brings the right row back.
+
+R2.6's read after a successful operation has the same fault for any row that shares its ID with another program.
+
+| ID   | Story    | Criterion |
+|------|----------|-----------|
+| R2.9 | US1, US2 | The fresh read of R2.6 and R2.7 shall be of the row's own installed program (002 R6.5). When WinGet's match for the package's ID is another installed program, the app shall read the row's own program as Windows lists it (its name and version), and R2.6 and R2.7 shall use that; the row keeps its source and what it shows about the available version. If the row's own program can't be found, the read shall count as one that couldn't be made. The read shall never give a row another program's name, version or state. |
+
+Not in this amendment: OpenSSL 3 and 4 installing side by side. That's how the package is published (the VM run
+reproduced it with `winget upgrade` alone), and 014 leaves several versions side by side out of scope.
+
+- **Q9. A read that can't be made, or the program's own version?** When WinGet's match is another program, the app
+  can either count the read as failed, or read the row's own entry from the installed-only catalog and use its
+  version. Counting it as failed skips R2.7's check for every row that shares an ID, so a change made outside the app
+  goes unnoticed, and R2.6 leaves the row stale until the next reload. Reading the own entry compares like with like:
+  the rows that reach this case are manifest matches, which already show Windows' version (002 R6.2); a primary-match
+  row finds itself in WinGet's answer. Mockups of both: https://claude.ai/artifact/8H1jJxziDK1LWjTL7NLPaU.
+  **Decided 2026-11-17: read the row's own entry.**
 
 ## Out of scope
 
