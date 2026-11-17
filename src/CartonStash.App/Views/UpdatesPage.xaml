@@ -47,9 +47,10 @@
                     Style="{StaticResource AccentButtonStyle}" />
                 <Button
                     Grid.Column="3"
+                    AutomationProperties.AcceleratorKey="F5"
                     AutomationProperties.Name="Refresh"
                     Command="{x:Bind ViewModel.RefreshCommand}"
-                    ToolTipService.ToolTip="Refresh">
+                    ToolTipService.ToolTip="Refresh (F5)">
                     <FontIcon FontSize="14" Glyph="&#xE72C;" />
                 </Button>
             </Grid>

@@ -1,6 +1,9 @@
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Media;
+using Windows.System;
 using CartonStash.App.Services;
 using CartonStash.App.Views;
 using CartonStash.Core.Models;
@@ -24,6 +27,7 @@ public sealed partial class MainWindow : Window
     private const int MinRestoreWidth = 500, MinRestoreHeight = 400;
 
     private readonly ISettings _settings;
+    private readonly DialogService _dialogs;
     private bool _closeConfirmed;
     private bool _checkedAgreements;
     private Windows.Graphics.RectInt32 _normalBounds;
@@ -34,7 +38,9 @@ public sealed partial class MainWindow : Window
         Shell = shell;
         Activity = activity;
         _settings = settings;
+        _dialogs = dialogs;
         InitializeComponent();
+        AddShortcuts();
 
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
@@ -52,6 +58,15 @@ public sealed partial class MainWindow : Window
             {
                 _checkedAgreements = true;
                 _ = agreements.RunAsync();
+            }
+        };
+        Nav.Loaded += (_, _) =>
+        {
+            // 019 R4.2, R5.3: the built-in Settings item only exists once the navigation is loaded (BR-32).
+            if (Nav.SettingsItem is NavigationViewItem settingsItem)
+            {
+                ToolTipService.SetToolTip(settingsItem, "Settings (Ctrl+5)");
+                Microsoft.UI.Xaml.Automation.AutomationProperties.SetAcceleratorKey(settingsItem, "Control+5");
             }
         };
         Root.SizeChanged += (_, _) => ApplyActivityPin();
@@ -123,6 +138,96 @@ public sealed partial class MainWindow : Window
         {
             ContentFrame.Navigate(page);
         }
+    }
+
+    // 019 R1 to R3: window-wide, so they work from any control, text boxes included (R5.2).
+    private void AddShortcuts()
+    {
+        var keys = new (VirtualKey Key, VirtualKeyModifiers Modifiers)[]
+        {
+            (VirtualKey.Number1, VirtualKeyModifiers.Control), (VirtualKey.NumberPad1, VirtualKeyModifiers.Control),
+            (VirtualKey.Number2, VirtualKeyModifiers.Control), (VirtualKey.NumberPad2, VirtualKeyModifiers.Control),
+            (VirtualKey.Number3, VirtualKeyModifiers.Control), (VirtualKey.NumberPad3, VirtualKeyModifiers.Control),
+            (VirtualKey.Number4, VirtualKeyModifiers.Control), (VirtualKey.NumberPad4, VirtualKeyModifiers.Control),
+            (VirtualKey.Number5, VirtualKeyModifiers.Control), (VirtualKey.NumberPad5, VirtualKeyModifiers.Control),
+            (VirtualKey.F, VirtualKeyModifiers.Control),
+            (VirtualKey.F5, VirtualKeyModifiers.None),
+            (VirtualKey.R, VirtualKeyModifiers.Control),
+        };
+        foreach (var (key, modifiers) in keys)
+        {
+            var accelerator = new KeyboardAccelerator { Key = key, Modifiers = modifiers };
+            accelerator.Invoked += Shortcut_Invoked;
+            Root.KeyboardAccelerators.Add(accelerator);
+        }
+        // Tooltips name the keys by hand (R4.1, R4.2); WinUI's own would show on unrelated controls (R4.3).
+        Root.KeyboardAcceleratorPlacementMode = KeyboardAcceleratorPlacementMode.Hidden;
+    }
+
+    private void Shortcut_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
+    {
+        if (_dialogs.IsOpen)
+        {
+            return; // R5.1
+        }
+
+        var page = ContentFrame.Content as IShortcutTarget;
+        args.Handled = sender.Key switch
+        {
+            VirtualKey.Number1 or VirtualKey.NumberPad1 => Open("search"),
+            VirtualKey.Number2 or VirtualKey.NumberPad2 => Open("installed"),
+            VirtualKey.Number3 or VirtualKey.NumberPad3 => Open("updates"),
+            VirtualKey.Number4 or VirtualKey.NumberPad4 => ToggleActivity(),
+            VirtualKey.Number5 or VirtualKey.NumberPad5 => Open("settings"),
+            VirtualKey.F => IsFocusInActivity() ? FocusActivityFilter() : page?.FocusSearch() ?? false,
+            VirtualKey.F5 or VirtualKey.R => page?.Refresh() ?? false,
+            _ => false,
+        };
+
+        bool Open(string key)
+        {
+            OpenPage(key);
+            return true;
+        }
+    }
+
+    // R1.3: what the Activity item does; a pinned pane beside the page stays open.
+    private bool ToggleActivity()
+    {
+        if (!ActivitySplit.IsPaneOpen)
+        {
+            ActivitySplit.IsPaneOpen = true;
+        }
+        else if (ActivitySplit.DisplayMode == SplitViewDisplayMode.Overlay)
+        {
+            ActivitySplit.IsPaneOpen = false;
+        }
+        return true;
+    }
+
+    private bool IsFocusInActivity()
+    {
+        if (!ActivitySplit.IsPaneOpen)
+        {
+            return false;
+        }
+        for (var element = FocusManager.GetFocusedElement(Root.XamlRoot) as DependencyObject; element is not null;
+            element = VisualTreeHelper.GetParent(element))
+        {
+            if (element == ActivitySplit.Pane)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // R2.3
+    private bool FocusActivityFilter()
+    {
+        ActivityFilter.Focus(FocusState.Keyboard);
+        ActivityFilter.SelectAll();
+        return true;
     }
 
     // 006 R5.2: open the saved start page and select its navigation item.

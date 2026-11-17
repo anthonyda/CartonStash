@@ -48,18 +48,30 @@
             PaneDisplayMode="Auto"
             SelectionChanged="Nav_SelectionChanged">
             <NavigationView.MenuItems>
-                <NavigationViewItem Content="Search" Tag="search">
+                <NavigationViewItem
+                    AutomationProperties.AcceleratorKey="Control+1"
+                    Content="Search"
+                    Tag="search"
+                    ToolTipService.ToolTip="Search (Ctrl+1)">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE721;" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
-                <NavigationViewItem Content="Installed" Tag="installed">
+                <NavigationViewItem
+                    AutomationProperties.AcceleratorKey="Control+2"
+                    Content="Installed"
+                    Tag="installed"
+                    ToolTipService.ToolTip="Installed (Ctrl+2)">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE7B8;" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
                 <!-- 004 R4.1 -->
-                <NavigationViewItem Content="Updates" Tag="updates">
+                <NavigationViewItem
+                    AutomationProperties.AcceleratorKey="Control+3"
+                    Content="Updates"
+                    Tag="updates"
+                    ToolTipService.ToolTip="Updates (Ctrl+3)">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE777;" />
                     </NavigationViewItem.Icon>
@@ -74,8 +86,10 @@
             <NavigationView.FooterMenuItems>
                 <!-- 003: opens the Activity pane instead of navigating (see Nav_SelectionChanged) -->
                 <NavigationViewItem
+                    AutomationProperties.AcceleratorKey="Control+4"
                     Content="{x:Bind Shell.ActivityText, Mode=OneWay}"
-                    Tag="activity">
+                    Tag="activity"
+                    ToolTipService.ToolTip="Activity (Ctrl+4)">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE9D5;" />
                     </NavigationViewItem.Icon>
@@ -191,7 +205,9 @@
                         </Grid>
                         <!-- 009 R4.1; Esc clears it (R4.10) -->
                         <TextBox
+                            x:Name="ActivityFilter"
                             Grid.Row="1"
+                            AutomationProperties.AcceleratorKey="Control+F"
                             AutomationProperties.Name="Filter activity by name or ID"
                             KeyDown="ActivityFilter_KeyDown"
                             PlaceholderText="Filter by name or ID"

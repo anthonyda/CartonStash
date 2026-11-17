@@ -29,7 +29,7 @@
         x:Name="Chip"
         Padding="6,1"
         BorderThickness="1"
-        CornerRadius="4"
+        CornerRadius="{StaticResource ControlCornerRadius}"
         Style="{StaticResource NeutralStyle}">
         <TextBlock
             x:Name="Label"

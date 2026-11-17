@@ -5,7 +5,7 @@ using CartonStash.Core.ViewModels;
 
 namespace CartonStash.App.Views;
 
-public sealed partial class UpdatesPage : Page
+public sealed partial class UpdatesPage : Page, IShortcutTarget
 {
     public UpdatesPage()
     {
@@ -17,6 +17,18 @@ public sealed partial class UpdatesPage : Page
     }
 
     public UpdatesViewModel ViewModel { get; }
+
+    public bool FocusSearch() => false; // no search or filter box (019 R2.2)
+
+    // 019 R3.1, R3.2: a held F5 doesn't restart a running refresh.
+    public bool Refresh()
+    {
+        if (!ViewModel.IsLoading)
+        {
+            ViewModel.RefreshCommand.Execute(null);
+        }
+        return true;
+    }
 
     protected override async void OnNavigatedTo(NavigationEventArgs e)
     {
