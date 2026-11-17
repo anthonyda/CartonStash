@@ -233,6 +233,12 @@ Approved 2026-11-17, Q9: the row's own entry.
     package installed on the runner; `dotnet test`.
     *Done 2026-11-17: `OwnInstalledEntryTests` (8, the R2.7 cases with the fake service included) and the integration
     test `ReadInstalled_reads_the_rows_own_entry_when_WinGets_match_is_another_program`. 1009 tests pass.*
+- [ ] **T29.** `ReadInstalledAsync` reads on fresh connections (design, "Fresh connections", from T28's finding,
+  approved 2026-11-17): `fresh` on `FindAllByIdAsync` and `FindInstalledEntryAsync`, `ConnectInstalledOnlyAsync`;
+  Search rows through `FindAllByIdAsync` too. *(R2.6, R2.7, R2.9)*
+  - Verify: existing R2.6, R2.7 and R2.9 unit tests pass; integration: `ReadInstalledAsync` still returns the
+    installed version for Git and an own entry, and leaves the cached catalogs in place (a second read through the
+    cache returns the same); `dotnet test`. The change made outside the app is T28's, in the VM.
 - [ ] **T28.** VM, on a build from this branch, the OpenSSL pair from T26: from the OpenSSL 3 row's details,
   **Install this version** on 4.1.0 → the row keeps "FireDaemon OpenSSL 3, Installed 3.6.2", the operation shows in
   Activity. Then with the list loaded, change OpenSSL 3's `DisplayVersion` in its uninstall key (as 013's EA app run

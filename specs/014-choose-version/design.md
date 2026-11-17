@@ -361,9 +361,12 @@ notification follows it. No new result kind.
 `PackageRowViewModel.Package` becomes settable from inside the class, with `Refresh(PackageInfo)` raising every
 property that reads it (badge, texts, `Show*`). The row already watches its operation's `Result`; when it becomes a
 success (`IsSuccess`), the row asks `PackageActions.ReadInstalledAsync(Package)` and refreshes itself with what comes
-back. The call is a new `IPackageService.ReadInstalledAsync(PackageInfo)`: `FindByIdAsync(id, source, localFirst:
-true)` after `Invalidate`, mapped as a search row is, or null when it fails (the row stays as it is: a failed read is
-never an error of its own, 013 R2.3).
+back. The call is a new `IPackageService.ReadInstalledAsync(PackageInfo)`: a search by ID on the local-first catalog,
+mapped as a search row is, or null when it fails (the row stays as it is: a failed read is never an error of its own,
+013 R2.3). *(Changed 2026-11-17, T28: was "`FindByIdAsync` after `Invalidate`". The code never invalidated, so the
+read used the session's cached catalogs, snapshots that never see a change made outside the app. The read now
+connects its own catalogs and drops them afterwards, leaving the shared cache as it is; see "Fresh connections"
+under R2.9.)*
 
 - The Search page's rows are the ones this fixes. Installed and Updates rows refresh too, and are then replaced by
   the store's reload (002 R1.3); the extra read is one `FindByIdAsync`.
@@ -447,10 +450,26 @@ internal static PackageInfo FromOwnEntry(PackageInfo row, string name, string ve
 are unit tested without COM. `CatalogConnection` gains a `FindAllByIdAsync(id, source, localFirst)` that returns
 every match from that source (today's `FindByIdInCatalogAsync` stops at the first).
 
+### Fresh connections (T28 finding, approved 2026-11-17)
+
+T28 changed OpenSSL 3's version outside the app while the list was loaded. The read still saw 3.6.2: `CatalogConnection`
+keeps its catalogs connected for the session, and a connected catalog is a snapshot, renewed only by Refresh and after
+the app's own operations. A new process saw 3.6.3. Proposal with mockups and the options weighed:
+https://claude.ai/artifact/Pdr3GoapsBgySv1YAXcFwX.
+
+So every lookup of `ReadInstalledAsync` connects its own catalogs and drops them afterwards: `FindAllByIdAsync` and
+`FindInstalledEntryAsync` take `fresh: true`. A fresh local-first connection is made as the cached one is
+(`ConnectAsync` with the sources in use, 011 R1.3), without `SourceIsolation`'s probing: a read that fails is null.
+The shared cache isn't touched, so the list, Search, details and the uninstall path behave as before. Search rows
+(no `InstalledId`) take the first match from the source, as `FindByIdAsync` did.
+
+Measured in the VM (WinGet 1.29, five rounds after a warm-up): a fresh local-first connection and search by ID 43 to
+51 ms, a fresh installed-only connection and entry read 10 ms. Both saw the changed version.
+
 | Layer | Type | Change |
 |-------|------|--------|
-| Core/Services | `CatalogConnection` | `FindAllByIdAsync` |
-| Core/Services | `WinGetPackageService` | `ReadInstalledAsync` picks the row's own match (`OwnMatch`), else reads its own entry (`FromOwnEntry`), else null |
+| Core/Services | `CatalogConnection` | `FindAllByIdAsync`; `fresh` on it and on `FindInstalledEntryAsync`; `ConnectInstalledOnlyAsync` |
+| Core/Services | `WinGetPackageService` | `ReadInstalledAsync` reads fresh: the row's own match (`OwnMatch`), else its own entry (`FromOwnEntry`), else null |
 
 Nothing changes in `PackageActions`, `PackageRowViewModel` or the details pane: they already compare the version,
 refresh the row with what they get, and treat null as "couldn't read".
