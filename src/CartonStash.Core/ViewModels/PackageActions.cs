@@ -219,7 +219,9 @@ public sealed class PackageActions(PackageOperationQueue queue, IPackageInstalle
             $"Install version {v}?",
             $"{v} may be installed next to {package.Name} ({installed}) instead of replacing it. "
                 + $"If both stay, you can uninstall {installed} from the Installed page."
-                + (scopeNotice is null ? "" : $" {scopeNotice}"),
+                + (scopeNotice is null ? "" : $" {scopeNotice}")
+                + $"\n\nWhy: WinGet lists {package.Name} under the same ID as another program ({package.Id}), "
+                + $"so CartonStash can't tell which one {v} is for.",
             $"Install {v}");
     }
 

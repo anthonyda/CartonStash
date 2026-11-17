@@ -492,15 +492,18 @@ internal static (string Title, string Message, string ConfirmText) SharedIdQuest
 
 - Title: "Install version {version}?"
 - Message: "{version} may be installed next to {name} ({installed}) instead of replacing it. If both stay, you can
-  uninstall {installed} from the Installed page." Then R3.8's notice, if any, as today.
+  uninstall {installed} from the Installed page." Then R3.8's notice, if any, as today. Then, after a blank line (the
+  dialog's text block keeps line breaks): "Why: WinGet lists {name} under the same ID as another program ({id}), so
+  CartonStash can't tell which one {version} is for." *(Added 2026-11-17 after T32, the maintainer.)*
 - Buttons: "Install {version}", "Cancel".
 
 For the recording: **Install version 4.1.0?** "4.1.0 may be installed next to FireDaemon OpenSSL 3 (3.6.2) instead of
-replacing it. If both stay, you can uninstall 3.6.2 from the Installed page."
+replacing it. If both stay, you can uninstall 3.6.2 from the Installed page. / Why: WinGet lists FireDaemon OpenSSL 3
+under the same ID as another program (FireDaemon.OpenSSL), so CartonStash can't tell which one 4.1.0 is for."
 
 Short on purpose (Q10): the version leads, the name appears once, in brackets so the two version numbers don't run
-together ("FireDaemon OpenSSL 3 3.6.2"), and why the app can't tell (the shared ID) is left out: it doesn't change what
-the user decides. The title names the version only; the dialog opens from that program's details.
+together ("FireDaemon OpenSSL 3 3.6.2"), and why the app can't tell (the shared ID) gets one line of its own at the end, so
+the user knows the uncertainty is WinGet's listing, not the app's. The title names the version only; the dialog opens from that program's details.
 
 R3.5's **Uninstall, then install** after a failure stays: it uninstalls the row's own entry (002 R6.5), which is
 what the user would do by hand.
