@@ -1,6 +1,6 @@
 # 014 – Install a chosen version: Requirements
 
-**Status:** Done (2026-11-09). Approved 2026-11-08, with the proposed answers to Q1, Q2 and Q4; Q3 and Q5 decided after T1 (amendments R2.5, R3.3 to R3.7). **Amendment R1.6, R1.7 (2026-11-09): Done**, approved with the proposed answer to Q6. **Amendment R2.6, R2.7, R3.8, R3.9 (2026-11-10): Done**, approved 2026-11-10, Q7 with a notice to the user, Q8 as proposed. **Amendment R2.8 (going back from the newest version, bug review BR-02): approved 2026-11-12**. **Amendment R2.9 (the fresh read is of the row's own program): Done (2026-11-17)**, approved 2026-11-17, Q9: the row's own entry
+**Status:** Done (2026-11-09). Approved 2026-11-08, with the proposed answers to Q1, Q2 and Q4; Q3 and Q5 decided after T1 (amendments R2.5, R3.3 to R3.7). **Amendment R1.6, R1.7 (2026-11-09): Done**, approved with the proposed answer to Q6. **Amendment R2.6, R2.7, R3.8, R3.9 (2026-11-10): Done**, approved 2026-11-10, Q7 with a notice to the user, Q8 as proposed. **Amendment R2.8 (going back from the newest version, bug review BR-02): approved 2026-11-12**. **Amendment R2.9 (the fresh read is of the row's own program): Done (2026-11-17)**, approved 2026-11-17, Q9: the row's own entry. **Amendment R3.10, R3.11 (a version chosen on a row that shares its ID): Proposed 2026-11-17**, Q10 and Q11 open
 **Depends on:** 003 (operation queue, agreements, results), 004 (updates), 005 (details pane, R2.1 version list),
 010 (R5 exclusions from update checks)
 **Replaces:** 005's out-of-scope line "Installing a specific (older) version. The version list is information only in v1."
@@ -188,6 +188,52 @@ reproduced it with `winget upgrade` alone), and 014 leaves several versions side
   the rows that reach this case are manifest matches, which already show Windows' version (002 R6.2); a primary-match
   row finds itself in WinGet's answer. Mockups of both: https://claude.ai/artifact/8H1jJxziDK1LWjTL7NLPaU.
   **Decided 2026-11-17: read the row's own entry.**
+
+## Amendment R3.10, R3.11 (2026-11-17, from use, proposed)
+
+After R2.9, in the same OpenSSL case: the OpenSSL 3 row keeps its own data and 4.1.0 is queued, but what the app says
+around that install is about the wrong program.
+
+**Example (the maintainer, 1.6.0, 2026-11-17).** OpenSSL 3.6.2 and 4.1.0 installed side by side. In the OpenSSL 3 row's
+details, **Install this version** on 4.1.0. The row is a manifest match (002 R6.3), so its direction is `Unknown`
+(design, "WinGet API usage": only a primary match gets one), and `Unknown` gets the going-back confirmation (R1.2,
+R3.1):
+
+> **Install FireDaemon OpenSSL 3 4.1.0?** FireDaemon OpenSSL 3 3.6.2 is installed. Installing 4.1.0 runs that
+> version's installer over it. Some installers can't go back, and FireDaemon OpenSSL 3's settings may not carry over to
+> an older version.
+
+with **Leave FireDaemon OpenSSL 3 out of update checks**, checked. After the install, OpenSSL 3 is still there.
+
+1. **It promises a replacement that the package doesn't do.** OpenSSL 3 and 4 are different MSI products (T26), so
+   4.1.0's installer goes in next to 3.6.2, as plain `winget upgrade` does. For a row WinGet doesn't evaluate itself,
+   the app can't know whether the chosen version replaces the row's program, and must not say it will.
+2. **It talks about an older version.** 4.1.0 is newer than 3.6.2. The app gave no direction on purpose (002 R6.4),
+   but the going-back text then implies one.
+3. **The box excludes the other program.** Exclusions are by WinGet ID (010 R5). `FireDaemon.OpenSSL`'s updates are
+   OpenSSL 4's, WinGet's own match, so the box ticked by default would stop update checks for OpenSSL 4, a program the
+   user didn't touch.
+4. **The installer checks the other program.** `WinGetPackageInstaller.RunAsync` finds the package by ID, so for this
+   row the installed version it works from is WinGet's match, OpenSSL 4: R3.8's scope, R3.9's "was the previous one
+   replaced?" products and R2.8's after-check (`InstalledAfterUpdateAsync`) are all OpenSSL 4's, the same fault R2.9
+   fixed for the fresh read. Here the scope is right by chance (both are machine-wide), and the warnings after the
+   install can come out wrong either way.
+
+| ID    | Story    | Criterion |
+|-------|----------|-----------|
+| R3.10 | US1      | When the user chooses a version on a row that isn't WinGet's own match for its ID (002 R6.3, R6.4), R3.1's confirmation shall name the package, its installed version and the chosen one, and say that {name} shares its WinGet ID with another program, so the app can't tell whether {version} replaces {name} {installed} or installs next to it, and that if both stay installed, {name} {installed} can be uninstalled from the Installed page afterward. It shall not say the version is older, nor that it runs over the installed one, and shall not offer R3.2's box. R3.8's notice still applies. Rows that are WinGet's own match keep R3.1 and R3.2 unchanged, including a version WinGet can't compare (R1.2). |
+| R3.11 | US1, US2 | When a chosen version is installed over an installed package, the installed program the app works from (R3.8's scope, R3.9's products, and R2.5 and R2.8's check after the install) shall be the row's own program (002 R6.5), as for R2.9's read. If it can't be found, the app shall go on as when the scope or the check can't be read (R3.8: the setting; R2.5, R3.9: no warning). |
+
+After the install, R3.9 then says what happened when both stay: "{version} was installed next to {installed}, not over
+it… To keep only {version}, uninstall {name} {installed} from the Installed page." That text is unchanged.
+
+- **Q10. Predict it?** WinGet's manifest for the chosen version lists its installers' product and upgrade codes
+  (`AppsAndFeaturesEntries`), and Windows Installer knows the installed program's, so for MSI packages the app could
+  sometimes say "will install next to" instead of "can't tell". *Proposed: no, R3.10's "can't tell" only.* Many
+  manifests leave the codes out, the COM API exposes product codes but not upgrade codes, and a wrong prediction is
+  worse than an honest "can't tell" that R3.9 settles after the install.
+- **Q11. The box (R3.10).** *Proposed: not offered on these rows.* The ID's updates belong to WinGet's own match, so
+  excluding it hides another program's updates. The alternative is to show it unchecked, with that said in its text.
 
 ## Out of scope
 

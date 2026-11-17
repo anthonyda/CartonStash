@@ -1,6 +1,6 @@
 # 014 – Install a chosen version: Tasks
 
-**Status:** Done (2026-11-09). Amendment T18 to T24: done (2026-11-10). Amendment R2.9 (T26 to T29): done (2026-11-17)
+**Status:** Done (2026-11-09). Amendment T18 to T24: done (2026-11-10). Amendment R2.9 (T26 to T29): done (2026-11-17). Amendment R3.10, R3.11 (T30 to T32): proposed
 **Design:** [design.md](design.md)
 
 Tick a task only when its verification passes. Keep tasks small enough for one commit, and keep the build green at
@@ -246,4 +246,23 @@ Approved 2026-11-17, Q9: the row's own entry.
   Activity. Then with the list loaded, change OpenSSL 3's `DisplayVersion` in its uninstall key (as 013's EA app run
   did) and choose a version again → nothing queued, the row shows the new version (Q9). An operation on the OpenSSL
   4 row refreshes that row alone. Changelog line. *(R2.9)*
+  - Verify: entries in the log.
+
+## Amendment R3.10, R3.11 (2026-11-17, from use, proposed)
+
+Waiting for approval, and for Q10 and Q11.
+
+- [ ] **T30.** `SharedIdQuestion`; `InstallVersionAsync` asks it with `ConfirmAsync` and no exclusion for an installed
+  row that isn't a primary match. *(R3.10, Q11)*
+  - Verify: unit tests `*_R3_10`: the wording with and without the scope notice; a shared-ID row → one plain prompt, no
+    option prompt, `ExcludeOnSuccess` false; a primary row with `Unknown` → today's dialog and box; existing
+    `PackageActionsVersionTests` pass.
+- [ ] **T31.** `WinGetPackageInstaller`: the row's own installed version for R3.8's scope and R3.9's products, and the
+  own entry for the after-check on shared-ID rows. *(R3.11)*
+  - Verify: unit test of the choice (`*_R3_11`); integration: the after-check read on an unmanaged entry's
+    `InstalledId`; existing R3.8, R3.9, R2.8 tests pass; `dotnet test`.
+- [ ] **T32.** VM, on a build from this branch, the OpenSSL pair: the OpenSSL 3 row, **Install this version** on
+  4.1.0 → the R3.10 confirmation, no box. If the maintainer answers the UAC prompt: the result is R3.9's "installed next
+  to 3.6.2", OpenSSL 4 isn't excluded. A primary row with a version WinGet can't compare still gets the box. Changelog
+  line. *(R3.10, R3.11)*
   - Verify: entries in the log.
