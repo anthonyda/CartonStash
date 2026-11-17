@@ -23,24 +23,23 @@ public sealed class WinGetPackageService(CatalogConnection connection, IInstallC
     {
         try
         {
-            // The installed catalog correlated with the sources, as the Installed page reads it. The queue's operations
-            // invalidate the cache when they finish, so this is fresh after one (002 R1.3).
+            // The installed catalog correlated with the sources, as the Installed page reads it, on connections of its
+            // own: the session's cached catalogs are snapshots that never see a change made outside the app (014 T29).
             var source = package.IsManaged ? package.Source : null;
+            var matches = await connection.FindAllByIdAsync(package.Id, source, localFirst: true, cancellationToken, fresh: true);
             if (package.InstalledId is not { } installedId)
             {
-                var found = await connection.FindByIdAsync(package.Id, source, localFirst: true, cancellationToken);
-                return await Task.Run(() => Fresh(found, package), cancellationToken);
+                return matches.Count > 0 ? await Task.Run(() => Fresh(matches[0], package), cancellationToken) : null;
             }
 
             // 014 R2.9: the row's own program. Several programs can share the ID (002 R6.5), and WinGet's match for it
             // may be another one: then read the row's own entry as Windows lists it (Q9).
-            var matches = await connection.FindAllByIdAsync(package.Id, source, localFirst: true, cancellationToken);
             var own = await Task.Run(() => OwnMatch(InstalledIds(matches), installedId), cancellationToken);
             if (own >= 0)
             {
                 return await Task.Run(() => Fresh(matches[own], package), cancellationToken);
             }
-            var entry = await connection.FindInstalledEntryAsync(installedId, cancellationToken);
+            var entry = await connection.FindInstalledEntryAsync(installedId, cancellationToken, fresh: true);
             return await Task.Run(() => entry.InstalledVersion is { } version
                 ? FromOwnEntry(package, entry.Name, version.Version, InstalledScopes.Read(version, _installContext))
                 : null, cancellationToken);
