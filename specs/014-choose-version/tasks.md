@@ -212,6 +212,7 @@ Approved 2026-11-10: Q7 with a notice in the confirmation, Q8 as proposed.
 | T28, run 2 (R2.9, T29) | 2026-11-17 | Pass | Build 1.6.1 with T29, clean VM, the OpenSSL pair. OpenSSL 3 row, **Install FireDaemon OpenSSL 3 4.1.0** → the confirmation names 3.6.2 (R2.7 went on), Cancel; both rows unchanged. Then `DisplayVersion` 3.6.3 set outside the app, the same action → no dialog, nothing queued; the row and the pane read "Installed 3.6.3, winget has 4.1.0" and the version list no longer marks 3.6.2 installed (R2.7, Q9). OpenSSL 4's row unchanged throughout. No crashes. Not run: the install itself and an operation on the OpenSSL 4 row, since both installers are machine-wide and wait for a UAC prompt the test can't answer; R2.6's refresh after a success is the unit tests' (`PackageRowRefreshTests`) and T24's |
 | T32, shared-ID confirmation (R3.10) | 2026-11-17 | Pass | Build 1.6.1 of this branch, OpenSSL 3.6.2 and 4.1.0 side by side. OpenSSL 3 row, **Install FireDaemon OpenSSL 3 4.1.0** → "Install version 4.1.0?" / "4.1.0 may be installed next to FireDaemon OpenSSL 3 (3.6.2) instead of replacing it. If both stay, you can uninstall 3.6.2 from the Installed page.", buttons **Install 4.1.0** and **Cancel**, no box. Cancel: both rows unchanged, nothing in Activity. No crashes. Not run: the install (UAC) |
 | T32, run 2 (R3.10 amended) | 2026-11-17 | Pass | Build 1.6.1 with the reason line. The same action → the same message, then after a blank line "Why: WinGet lists FireDaemon OpenSSL 3 under the same ID as another program (FireDaemon.OpenSSL), so CartonStash can't tell which one 4.1.0 is for." (screenshot). No box; Cancel; both rows unchanged; no crashes |
+| T32, run 3 (R3.10, option G) | 2026-11-17 | Pass | Build 1.6.1 with option G. The same action → "Install version 4.1.0?" listing "FireDaemon OpenSSL 3 (3.6.2), this one" and "FireDaemon OpenSSL 4 (4.1.0)" under FireDaemon.OpenSSL, then "It doesn't say which one 4.1.0 replaces, so it may be installed next to FireDaemon OpenSSL 3. If both stay, you can uninstall 3.6.2 from the Installed page." (screenshot). No box; Cancel; both rows unchanged; no crashes |
 
 ## Amendment R2.8 (2026-11-12, bug review BR-02)
 
@@ -259,7 +260,7 @@ Approved 2026-11-17: Q10 "can't tell", with a clear and short confirmation; Q11 
   - Verify: unit tests `*_R3_10`: the wording with and without the scope notice; a shared-ID row → one plain prompt, no
     option prompt, `ExcludeOnSuccess` false; a primary row with `Unknown` → today's dialog and box; existing
     `PackageActionsVersionTests` pass.
-    *Done 2026-11-17: `SharedIdConfirmationTests` (6 for R3.10); `OwnInstalledEntryTests`' three R2.9 cases now expect the
+    *Done 2026-11-17: `SharedIdConfirmationTests` (R3.10, option G after T32: the list, the fallback, `SharingId`); `OwnInstalledEntryTests`' three R2.9 cases now expect the
     plain confirmation.*
 - [x] **T31.** `WinGetPackageInstaller`: the row's own installed version for R3.8's scope and R3.9's products, and the
   own entry for the after-check on shared-ID rows. *(R3.11)*

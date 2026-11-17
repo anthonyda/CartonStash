@@ -19,7 +19,7 @@ public enum RowActions
 /// and the Updates page. The queue does the actual work.
 /// </summary>
 public sealed class PackageActions(PackageOperationQueue queue, IPackageInstaller installer, IDialogService dialogs, IPackageService packages,
-    ISettings? settings = null, WinGetHost? host = null)
+    ISettings? settings = null, WinGetHost? host = null, InstalledPackagesStore? installed = null)
 {
     public PackageOperationQueue Queue => queue;
 
@@ -166,7 +166,7 @@ public sealed class PackageActions(PackageOperationQueue queue, IPackageInstalle
             if (SharesId(package))
             {
                 // 014 R3.10, Q11: no going-back wording and no box; the ID's updates are another program's.
-                var (title, message, confirmText) = SharedIdQuestion(package, version, notice);
+                var (title, message, confirmText) = SharedIdQuestion(package, version, SharingId(package, installed?.Packages ?? []), notice);
                 (confirmed, exclude) = (await dialogs.ConfirmAsync(title, message, confirmText), false);
             }
             else
@@ -207,22 +207,53 @@ public sealed class PackageActions(PackageOperationQueue queue, IPackageInstalle
     /// <summary>014 R3.10: an installed row that isn't WinGet's own match for its ID (002 R6.3).</summary>
     internal static bool SharesId(PackageInfo package) => package.IsInstalled && !package.IsPrimaryMatch;
 
+    /// <summary>014 R3.10: the other installed programs WinGet lists under the row's ID, by name.</summary>
+    internal static IReadOnlyList<PackageInfo> SharingId(PackageInfo package, IReadOnlyList<PackageInfo> installed)
+    {
+        var others = new List<PackageInfo>();
+        for (var i = 0; i < installed.Count; i++)
+        {
+            var p = installed[i];
+            if (p.IsInstalled && string.Equals(p.Id, package.Id, StringComparison.OrdinalIgnoreCase)
+                && !string.Equals(p.InstalledId, package.InstalledId, StringComparison.OrdinalIgnoreCase))
+            {
+                others.Add(p);
+            }
+        }
+        others.Sort((a, b) => StringComparer.CurrentCultureIgnoreCase.Compare(a.Name, b.Name));
+        return others;
+    }
+
     /// <summary>
-    /// 014 R3.10, Q10: what a version chosen on a row that shares its ID does to that row's program can't be known, so
-    /// the confirmation says so, briefly. The name once, in brackets so the two version numbers don't run together.
+    /// 014 R3.10: what a version chosen on a row that shares its ID does to that row's program can't be known, so the
+    /// confirmation names the programs under the ID (option G) and says so. With none known, the short form (option A).
     /// </summary>
-    internal static (string Title, string Message, string ConfirmText) SharedIdQuestion(PackageInfo package, PackageVersion version, string? scopeNotice = null)
+    internal static (string Title, string Message, string ConfirmText) SharedIdQuestion(PackageInfo package, PackageVersion version,
+        IReadOnlyList<PackageInfo> others, string? scopeNotice = null)
     {
         var v = version.Version;
+        var name = package.Name;
         var installed = package.InstalledVersion;
-        return (
-            $"Install version {v}?",
-            $"{v} may be installed next to {package.Name} ({installed}) instead of replacing it. "
-                + $"If both stay, you can uninstall {installed} from the Installed page."
-                + (scopeNotice is null ? "" : $" {scopeNotice}")
-                + $"\n\nWhy: WinGet lists {package.Name} under the same ID as another program ({package.Id}), "
-                + $"so CartonStash can't tell which one {v} is for.",
+        var notice = scopeNotice is null ? "" : $" {scopeNotice}";
+        var uninstall = $"If both stay, you can uninstall {installed} from the Installed page.";
+        if (others.Count == 0)
+        {
+            return ($"Install version {v}?",
+                $"{v} may be installed next to {name} ({installed}) instead of replacing it. {uninstall}{notice}"
+                    + $"\n\nWinGet lists several programs under {package.Id} and doesn't say which one a version replaces.",
+                $"Install {v}");
+        }
+        var lines = new System.Text.StringBuilder($"WinGet lists these programs under {package.Id}:\n• {Program(name, installed)}, this one");
+        for (var i = 0; i < others.Count; i++)
+        {
+            lines.Append($"\n• {Program(others[i].Name, others[i].InstalledVersion)}");
+        }
+        return ($"Install version {v}?",
+            $"{lines}\n\nIt doesn't say which one {v} replaces, so it may be installed next to {name}. {uninstall}{notice}",
             $"Install {v}");
+
+        static string Program(string programName, string? programVersion) =>
+            string.IsNullOrWhiteSpace(programVersion) ? programName : $"{programName} ({programVersion})";
     }
 
     /// <summary>The going-back confirmation (014 R3.1): names the package and both versions; R3.8's notice when there is one.</summary>

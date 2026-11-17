@@ -13,41 +13,81 @@ public class SharedIdConfirmationTests
         IsPrimaryMatch = false,
     };
 
-    // The reason, in a line of its own (R3.10, amended after T32).
-    private const string Why = "\n\nWhy: WinGet lists FireDaemon OpenSSL 3 under the same ID as another program (FireDaemon.OpenSSL), "
-        + "so CartonStash can't tell which one 4.1.0 is for.";
+    private static readonly PackageInfo OpenSsl4 = new("FireDaemon.OpenSSL", "FireDaemon OpenSSL 4", "4.1.0", "4.1.0", "winget")
+    {
+        InstalledId = @"ARP\Machine\X64\{5BA06AD7-0000-0000-0000-000000000000}",
+    };
+
+    // Option G, as the wordings page shows it.
+    private const string Named = "WinGet lists these programs under FireDaemon.OpenSSL:\n"
+        + "• FireDaemon OpenSSL 3 (3.6.2), this one\n"
+        + "• FireDaemon OpenSSL 4 (4.1.0)\n\n"
+        + "It doesn't say which one 4.1.0 replaces, so it may be installed next to FireDaemon OpenSSL 3. "
+        + "If both stay, you can uninstall 3.6.2 from the Installed page.";
 
     [Fact]
-    public void The_confirmation_is_short_and_promises_nothing_R3_10()
+    public void The_confirmation_names_the_programs_sharing_the_ID_R3_10()
     {
-        var (title, message, confirm) = PackageActions.SharedIdQuestion(OpenSsl3, new("4.1.0", VersionDirection.Unknown));
+        var (title, message, confirm) = PackageActions.SharedIdQuestion(OpenSsl3, new("4.1.0", VersionDirection.Unknown), [OpenSsl4]);
 
         Assert.Equal("Install version 4.1.0?", title);
-        Assert.Equal("4.1.0 may be installed next to FireDaemon OpenSSL 3 (3.6.2) instead of replacing it. "
-            + "If both stay, you can uninstall 3.6.2 from the Installed page." + Why, message);
+        Assert.Equal(Named, message);
         Assert.Equal("Install 4.1.0", confirm);
         Assert.DoesNotContain("over it", message);
         Assert.DoesNotContain("older", message);
     }
 
     [Fact]
-    public void The_scope_notice_is_added_R3_10()
+    public void The_scope_notice_ends_the_last_paragraph_R3_10()
     {
-        var (_, message, _) = PackageActions.SharedIdQuestion(OpenSsl3, new("4.1.0", VersionDirection.Unknown), "Notice.");
+        var (_, message, _) = PackageActions.SharedIdQuestion(OpenSsl3, new("4.1.0", VersionDirection.Unknown), [OpenSsl4], "Notice.");
 
-        Assert.EndsWith("from the Installed page. Notice." + Why, message);
+        Assert.Equal(Named + " Notice.", message);
+    }
+
+    [Fact]
+    public void A_program_without_a_version_has_no_brackets_R3_10()
+    {
+        var (_, message, _) = PackageActions.SharedIdQuestion(OpenSsl3, new("4.1.0", VersionDirection.Unknown),
+            [OpenSsl4 with { InstalledVersion = null }]);
+
+        Assert.Contains("\n• FireDaemon OpenSSL 4\n\n", message);
+    }
+
+    [Fact] // the Installed list isn't loaded: option A
+    public void With_no_other_program_known_the_short_form_R3_10()
+    {
+        var (_, message, _) = PackageActions.SharedIdQuestion(OpenSsl3, new("4.1.0", VersionDirection.Unknown), [], "Notice.");
+
+        Assert.Equal("4.1.0 may be installed next to FireDaemon OpenSSL 3 (3.6.2) instead of replacing it. "
+            + "If both stay, you can uninstall 3.6.2 from the Installed page. Notice.\n\n"
+            + "WinGet lists several programs under FireDaemon.OpenSSL and doesn't say which one a version replaces.", message);
+    }
+
+    [Fact]
+    public void Sharing_ID_takes_the_other_installed_programs_by_name_R3_10()
+    {
+        var zed = OpenSsl4 with { Name = "FireDaemon OpenSSL Zed", InstalledId = "z" };
+        var otherId = OpenSsl4 with { Id = "Someone.Else", InstalledId = "x" };
+        var notInstalled = OpenSsl4 with { InstalledVersion = null, InstalledId = "n" };
+        var ownInAnotherCase = OpenSsl3 with { Id = "firedaemon.openssl", InstalledId = OpenSsl3.InstalledId!.ToLowerInvariant() };
+
+        var others = PackageActions.SharingId(OpenSsl3, [zed, otherId, ownInAnotherCase, notInstalled, OpenSsl4]);
+
+        Assert.Equal(["FireDaemon OpenSSL 4", "FireDaemon OpenSSL Zed"], others.Select(p => p.Name));
     }
 
     [Fact]
     public async Task A_shared_ID_row_gets_the_plain_confirmation_and_no_box_R3_10()
     {
         var app = new TestApp();
+        app.Packages.Installed = _ => Task.FromResult<IReadOnlyList<PackageInfo>>([OpenSsl3, OpenSsl4]);
+        await app.Store.ReloadAsync();
 
         await app.Actions.InstallVersionAsync(OpenSsl3, new("4.1.0", VersionDirection.Unknown));
 
         Assert.Empty(app.Dialogs.OptionPrompts);
-        Assert.Equal(["Install version 4.1.0? | 4.1.0 may be installed next to FireDaemon OpenSSL 3 (3.6.2) instead of replacing it. "
-            + "If both stay, you can uninstall 3.6.2 from the Installed page." + Why], app.Dialogs.Confirmations);
+        Assert.Equal(["Install version 4.1.0? | " + Named], app.Dialogs.Confirmations);
         Assert.Equal(OperationKind.Install, app.Installer.Calls.Single().Kind);
         Assert.Equal(["4.1.0"], app.Installer.Versions);
     }

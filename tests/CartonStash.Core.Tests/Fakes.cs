@@ -305,8 +305,8 @@ internal sealed class TestApp
         // The app runs the queue on the UI thread; here, run posted callbacks inline so tests are deterministic.
         SynchronizationContext.SetSynchronizationContext(new InlineSynchronizationContext());
         Queue = new PackageOperationQueue(Installer);
-        Actions = new PackageActions(Queue, Installer, Dialogs, Packages, Settings);
         Store = new InstalledPackagesStore(Packages, Queue);
+        Actions = new PackageActions(Queue, Installer, Dialogs, Packages, Settings, installed: Store);
         Agreements = new SourceAgreementCheck(Packages, Dialogs, Store);
     }
 
