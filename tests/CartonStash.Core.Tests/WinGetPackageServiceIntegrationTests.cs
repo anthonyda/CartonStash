@@ -256,6 +256,26 @@ public class WinGetPackageServiceIntegrationTests
     }
 
     [Fact]
+    public async Task ReadInstalled_reads_the_rows_own_entry_when_WinGets_match_is_another_program() // 014 R2.9, Q9
+    {
+        var installed = await _service.GetInstalledAsync();
+        var git = Assert.Single(installed, p => p.Id == "Git.Git");
+        // An unmanaged row shows Windows' own name and version (002 R6.2). Give Git's row its entry: WinGet's match for
+        // Git.Git is Git itself, so the row's own program can only be read from the installed-only catalog.
+        var other = installed.First(p => !p.IsManaged && p.InstalledId is not null && p.InstalledVersion is not null);
+        var row = git with { InstalledId = other.InstalledId, IsPrimaryMatch = false };
+
+        var fresh = await _service.ReadInstalledAsync(row);
+
+        Assert.NotNull(fresh);
+        Assert.Equal(other.Name, fresh.Name);
+        Assert.Equal(other.InstalledVersion, fresh.InstalledVersion);
+        Assert.Equal(other.InstalledId, fresh.InstalledId);
+        Assert.Equal("Git.Git", fresh.Id); // the row's identity and source stay
+        Assert.Equal(git.Source, fresh.Source);
+    }
+
+    [Fact]
     public async Task ReadInstalled_of_a_package_that_isnt_installed_is_null() // 014 R2.6: the row stays as it is
     {
         Assert.Null(await _service.ReadInstalledAsync(new PackageInfo("CartonStash.NoSuchPackage", "x", "1.0", "1.0", "winget")));

@@ -366,6 +366,25 @@ public sealed class CatalogConnection(ISettings settings)
         return found ?? await FindByIdInCatalogAsync(localFirst: false, id, source, cancellationToken) ?? throw NotFound(id, source);
     }
 
+    /// <summary>
+    /// 014 R2.9: every package WinGet matches to the ID, from that source when one is given. Several installed programs
+    /// can share an ID (002 R6.5); <see cref="FindByIdAsync"/> stops at the first. By index (W2).
+    /// </summary>
+    internal async Task<IReadOnlyList<CatalogPackage>> FindAllByIdAsync(string id, string? source, bool localFirst, CancellationToken cancellationToken)
+    {
+        var matches = await FindAsync(localFirst, () => ById(id), cancellationToken);
+        var packages = new List<CatalogPackage>(matches.Count);
+        for (var i = 0; i < matches.Count; i++)
+        {
+            var package = matches[i].CatalogPackage;
+            if (IsFromSource(source, package.DefaultInstallVersion?.PackageCatalog.Info.Name))
+            {
+                packages.Add(package);
+            }
+        }
+        return packages;
+    }
+
     private async Task<CatalogPackage?> FindByIdInCatalogAsync(bool localFirst, string id, string? source, CancellationToken cancellationToken)
     {
         var matches = await FindAsync(localFirst, () => ById(id), cancellationToken);

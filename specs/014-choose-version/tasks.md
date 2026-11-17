@@ -206,6 +206,7 @@ Approved 2026-11-10: Q7 with a notice in the confirmation, Q8 as proposed.
 | T24, R3.8 all users | 2026-11-10 | Pass | Pandoc 3.13 `--scope machine` (elevated setup); Windows Installer: Machine only. Settings "Let WinGet decide": no notice. Go back to 3.12 → UAC prompt, answered by the maintainer → log "Scope: for all users, as installed", Installed; one entry, Pandoc 3.12 in `C:\Program Files\Pandoc\`; Windows Installer has 3.12 (Machine) and no longer 3.13 |
 | T24, portable | 2026-11-10 | Pass | jq 1.8.2 → 1.8.1 still goes back directly; log "Scope: for the current user, as installed" (WinGet's scope for a portable package) |
 | T24, second copy (R3.9 parts) | 2026-11-10 | Measured | The T1 tool, elevated: `PackageInstallScope.System` 3.13 over the per-user 3.12 → two uninstall entries, both folders, `winget list` shows Pandoc 3.12 and 3.13, but the by-ID search counts 1. Not reproduced through the app (R3.8 prevents it); `AfterGoingBack` and `StillInstalled` are unit tested. No crashes in any T24 run |
+| T26, shared ID (R2.9) | 2026-11-17 | Measured | OpenSSL 3.6.2 `--scope machine`, then `winget upgrade` → 4.1.0 beside it (two ARP entries, two folders, `winget list` shows both). Local-first search by `FireDaemon.OpenSSL`: **1 match**, `InstalledVersion.Id` = `ARP\Machine\X64\{5BA06AD7…}` (OpenSSL 4), 4.1.0. Installed-only catalog: `{0E95226A…}` "FireDaemon OpenSSL 3" 3.6.2 and `{5BA06AD7…}` "FireDaemon OpenSSL 4" 4.1.0, each found again by its own ID. So the OpenSSL 3 row is a manifest match that only its own entry can read, as the design expects |
 
 ## Amendment R2.8 (2026-11-12, bug review BR-02)
 
@@ -217,17 +218,19 @@ Approved 2026-11-10: Q7 with a notice in the confirmation, Q8 as proposed.
 
 Approved 2026-11-17, Q9: the row's own entry.
 
-- [ ] **T26.** VM, measure first: OpenSSL 3.6.2 (`--scope machine`), then `winget upgrade` to 4.1.0 (`guest\openssl-sxs.ps1`,
+- [x] **T26.** VM, measure first: OpenSSL 3.6.2 (`--scope machine`), then `winget upgrade` to 4.1.0 (`guest\openssl-sxs.ps1`,
   elevated). With the T1 console tool, search the local-first catalog by `FireDaemon.OpenSSL` and record each
   match's `InstalledVersion.Id` and version, and each row's `InstalledId` as the Installed page builds it. Update
   design.md if WinGet's matches differ from what it expects. *(R2.9)*
   - Verify: an entry in the log.
-- [ ] **T27.** `OwnMatch`, `FromOwnEntry`; `CatalogConnection.FindAllByIdAsync`; `ReadInstalledAsync` picks the
+- [x] **T27.** `OwnMatch`, `FromOwnEntry`; `CatalogConnection.FindAllByIdAsync`; `ReadInstalledAsync` picks the
   row's own match, else reads its own entry, else returns null, when the package has an `InstalledId` (Q9). *(R2.9)*
   - Verify: `OwnMatchTests`, `FromOwnEntryTests` (`*_R2_9`); `PackageActionsVersionTests`: own entry at the shown
     version → queued; at another version → nothing queued, row refreshed with the own entry; null → queued; existing
     `PackageRowRefreshTests` and R2.7 tests pass; integration: `ReadInstalledAsync` with an `InstalledId` on a
     package installed on the runner; `dotnet test`.
+    *Done 2026-11-17: `OwnInstalledEntryTests` (8, the R2.7 cases with the fake service included) and the integration
+    test `ReadInstalled_reads_the_rows_own_entry_when_WinGets_match_is_another_program`. 1009 tests pass.*
 - [ ] **T28.** VM, on a build from this branch, the OpenSSL pair from T26: from the OpenSSL 3 row's details,
   **Install this version** on 4.1.0 → the row keeps "FireDaemon OpenSSL 3, Installed 3.6.2", the operation shows in
   Activity. Then with the list loaded, change OpenSSL 3's `DisplayVersion` in its uninstall key (as 013's EA app run

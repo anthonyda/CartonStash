@@ -25,13 +25,25 @@ public sealed class WinGetPackageService(CatalogConnection connection, IInstallC
         {
             // The installed catalog correlated with the sources, as the Installed page reads it. The queue's operations
             // invalidate the cache when they finish, so this is fresh after one (002 R1.3).
-            var found = await connection.FindByIdAsync(package.Id, package.IsManaged ? package.Source : null, localFirst: true, cancellationToken);
-            return await Task.Run(() => ToPackageInfo(found) with
+            var source = package.IsManaged ? package.Source : null;
+            if (package.InstalledId is not { } installedId)
             {
-                InstalledId = package.InstalledId,
-                IsPrimaryMatch = package.IsPrimaryMatch,
-                InstalledScope = found.InstalledVersion is null ? null : InstalledScopes.Read(found.InstalledVersion, _installContext),
-            }, cancellationToken);
+                var found = await connection.FindByIdAsync(package.Id, source, localFirst: true, cancellationToken);
+                return await Task.Run(() => Fresh(found, package), cancellationToken);
+            }
+
+            // 014 R2.9: the row's own program. Several programs can share the ID (002 R6.5), and WinGet's match for it
+            // may be another one: then read the row's own entry as Windows lists it (Q9).
+            var matches = await connection.FindAllByIdAsync(package.Id, source, localFirst: true, cancellationToken);
+            var own = await Task.Run(() => OwnMatch(InstalledIds(matches), installedId), cancellationToken);
+            if (own >= 0)
+            {
+                return await Task.Run(() => Fresh(matches[own], package), cancellationToken);
+            }
+            var entry = await connection.FindInstalledEntryAsync(installedId, cancellationToken);
+            return await Task.Run(() => entry.InstalledVersion is { } version
+                ? FromOwnEntry(package, entry.Name, version.Version, InstalledScopes.Read(version, _installContext))
+                : null, cancellationToken);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -428,6 +440,46 @@ public sealed class WinGetPackageService(CatalogConnection connection, IInstallC
             "Searching is blocked by a group policy on this PC.",
         _ => $"The search failed (WinGet reported {status}).",
     };
+
+    /// <summary>WinGet's match as the row's fresh state (014 R2.6); the row's own identity carries over.</summary>
+    private PackageInfo Fresh(CatalogPackage found, PackageInfo row) => ToPackageInfo(found) with
+    {
+        InstalledId = row.InstalledId,
+        IsPrimaryMatch = row.IsPrimaryMatch,
+        InstalledScope = found.InstalledVersion is null ? null : InstalledScopes.Read(found.InstalledVersion, _installContext),
+    };
+
+    /// <summary>The matches' installed entry IDs, in order. By index (W2).</summary>
+    private static List<string?> InstalledIds(IReadOnlyList<CatalogPackage> matches)
+    {
+        var ids = new List<string?>(matches.Count);
+        for (var i = 0; i < matches.Count; i++)
+        {
+            ids.Add(matches[i].InstalledVersion?.Id);
+        }
+        return ids;
+    }
+
+    /// <summary>014 R2.9: the index of the row's own installed program among WinGet's matches, or -1.</summary>
+    internal static int OwnMatch(IReadOnlyList<string?> installedIds, string installedId)
+    {
+        for (var i = 0; i < installedIds.Count; i++)
+        {
+            if (string.Equals(installedIds[i], installedId, StringComparison.OrdinalIgnoreCase))
+            {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    /// <summary>
+    /// 014 R2.9, Q9: the row as Windows lists its own program. The name, version and scope are the entry's; the ID,
+    /// source, available version, update verdict and comparison stay the row's, which for a manifest match already
+    /// show Windows' version (002 R6.2, R7.2).
+    /// </summary>
+    internal static PackageInfo FromOwnEntry(PackageInfo row, string name, string version, InstallScope? scope) =>
+        row with { Name = name, InstalledVersion = version, InstalledScope = scope };
 
     private static PackageInfo ToPackageInfo(CatalogPackage package)
     {
