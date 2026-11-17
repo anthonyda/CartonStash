@@ -162,10 +162,20 @@ public sealed class PackageActions(PackageOperationQueue queue, IPackageInstalle
         {
             options = options with { GoingBack = package.IsInstalled, PreviousVersion = package.InstalledVersion };
             var notice = ScopeNotice(package.Name, version.Version, settings?.Current.InstallScope ?? InstallScope.Any, fresh?.InstalledScope);
-            var (title, message, confirmText) = GoingBackQuestion(package, version, notice);
-            var alreadyExcluded = settings?.Current.IsExcluded(package.Id) ?? true;
-            var (confirmed, exclude) = await dialogs.ConfirmWithOptionAsync(title, message, confirmText,
-                alreadyExcluded ? null : $"Leave {package.Name} out of update checks", optionChecked: true);
+            bool confirmed, exclude;
+            if (SharesId(package))
+            {
+                // 014 R3.10, Q11: no going-back wording and no box; the ID's updates are another program's.
+                var (title, message, confirmText) = SharedIdQuestion(package, version, notice);
+                (confirmed, exclude) = (await dialogs.ConfirmAsync(title, message, confirmText), false);
+            }
+            else
+            {
+                var (title, message, confirmText) = GoingBackQuestion(package, version, notice);
+                var alreadyExcluded = settings?.Current.IsExcluded(package.Id) ?? true;
+                (confirmed, exclude) = await dialogs.ConfirmWithOptionAsync(title, message, confirmText,
+                    alreadyExcluded ? null : $"Leave {package.Name} out of update checks", optionChecked: true);
+            }
             if (!confirmed)
             {
                 return;
@@ -193,6 +203,25 @@ public sealed class PackageActions(PackageOperationQueue queue, IPackageInstalle
         : installed == InstallScope.System
             ? $"{name} is installed for all users, so {version} will be installed for all users too, not for the current user as set in Settings."
             : $"{name} is installed for the current user, so {version} will be installed for the current user too, not for all users as set in Settings.";
+
+    /// <summary>014 R3.10: an installed row that isn't WinGet's own match for its ID (002 R6.3).</summary>
+    internal static bool SharesId(PackageInfo package) => package.IsInstalled && !package.IsPrimaryMatch;
+
+    /// <summary>
+    /// 014 R3.10, Q10: what a version chosen on a row that shares its ID does to that row's program can't be known, so
+    /// the confirmation says so, briefly. The name once, in brackets so the two version numbers don't run together.
+    /// </summary>
+    internal static (string Title, string Message, string ConfirmText) SharedIdQuestion(PackageInfo package, PackageVersion version, string? scopeNotice = null)
+    {
+        var v = version.Version;
+        var installed = package.InstalledVersion;
+        return (
+            $"Install version {v}?",
+            $"{v} may be installed next to {package.Name} ({installed}) instead of replacing it. "
+                + $"If both stay, you can uninstall {installed} from the Installed page."
+                + (scopeNotice is null ? "" : $" {scopeNotice}"),
+            $"Install {v}");
+    }
 
     /// <summary>The going-back confirmation (014 R3.1): names the package and both versions; R3.8's notice when there is one.</summary>
     internal static (string Title, string Message, string ConfirmText) GoingBackQuestion(PackageInfo package, PackageVersion version, string? scopeNotice = null)

@@ -56,11 +56,13 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
             // 015 R3.1: an update may run as an install, which skips uninstallPrevious, so it gets the MSI half of the check.
             var updating = kind == OperationKind.Upgrade && package.IsInstalled;
             var entriesBefore = goingBack ? await CountInstalledAsync(package.Id) : null;
-            var msiBefore = goingBack || updating ? await Task.Run(() => MsiProductsOf(found.InstalledVersion), cancellationToken) : [];
+            // 014 R3.11: on a row that shares its ID, the installed program is the row's own, not WinGet's match.
+            var installed = goingBack && UsesOwnEntry(package) ? await OwnInstalledAsync(package.InstalledId!, cancellationToken) : found.InstalledVersion;
+            var msiBefore = goingBack || updating ? await Task.Run(() => MsiProductsOf(installed), cancellationToken) : [];
             var outcome = kind switch
             {
                 OperationKind.Uninstall => await UninstallAsync(found, package.Name, logPath, progress, cancellationToken),
-                _ => await InstallAsync(kind, found, package, acceptAgreements, version, scope, scopeSource, logPath, progress, cancellationToken),
+                _ => await InstallAsync(kind, found, installed, package, acceptAgreements, version, scope, scopeSource, logPath, progress, cancellationToken),
             };
             if (goingBack && outcome.Result == OperationResult.Succeeded)
             {
@@ -98,7 +100,7 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
         }
     }
 
-    private async Task<OperationOutcome> InstallAsync(OperationKind kind, CatalogPackage package, PackageInfo info, bool acceptAgreements, string? version,
+    private async Task<OperationOutcome> InstallAsync(OperationKind kind, CatalogPackage package, PackageVersionInfo? installed, PackageInfo info, bool acceptAgreements, string? version,
         InstallScope? explicitScope, ScopeSource explicitSource, string? logPath, IProgress<OperationProgress> progress, CancellationToken cancellationToken)
     {
         var name = info.Name;
@@ -106,7 +108,6 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
         // the setting (006 R2.1).
         var goingBack = GoesBack(kind, info, version);
         var keepsInstalled = goingBack || (kind == OperationKind.Upgrade && info.IsInstalled);
-        var installed = package.InstalledVersion;
         // One read of Windows Installer's context serves both 014 R3.8 and 003 R8.1.
         var msiContext = installed is null ? null : await Task.Run(() => InstalledScopes.MsiContextOf(installed, _installContext), cancellationToken);
         var (scope, scopeSource) = keepsInstalled && explicitScope is null
@@ -497,10 +498,16 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
     internal sealed record InstalledAfterUpdate(string? Version, bool UpdateAvailable);
 
     /// <summary>013 R2.1: reads the package again. Null when it can't be read: a failed check is never an error of its own (R2.3).</summary>
-    private async Task<InstalledAfterUpdate?> InstalledAfterUpdateAsync(PackageInfo package)
+    internal async Task<InstalledAfterUpdate?> InstalledAfterUpdateAsync(PackageInfo package)
     {
         try
         {
+            if (UsesOwnEntry(package))
+            {
+                // 014 R3.11: the row's own program; going back ignores the update flag (R2.8).
+                var own = await connection.FindInstalledEntryAsync(package.InstalledId!, CancellationToken.None, fresh: true);
+                return new InstalledAfterUpdate(own.InstalledVersion?.Version, false);
+            }
             var found = await connection.FindByIdAsync(package.Id, package.Source, localFirst: true, CancellationToken.None);
             return new InstalledAfterUpdate(found.InstalledVersion?.Version, found.IsUpdateAvailable);
         }
@@ -559,6 +566,27 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
     /// Uninstall removes the row's own program, found by its installed entry ID, never another program WinGet merged
     /// under the same package ID (002 R6.5). Install and upgrade still go through the WinGet ID.
     /// </summary>
+    /// <summary>014 R3.11: a row that isn't WinGet's own match for its ID works from its own installed entry (002 R6.5).</summary>
+    internal static bool UsesOwnEntry(PackageInfo package) => package.InstalledId is not null && !package.IsPrimaryMatch;
+
+    /// <summary>014 R3.11: the row's own installed version; null when it can't be read, as for a scope WinGet doesn't know (R3.8).</summary>
+    private async Task<PackageVersionInfo?> OwnInstalledAsync(string installedId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var entry = await connection.FindInstalledEntryAsync(installedId, cancellationToken);
+            return await Task.Run(() => entry.InstalledVersion, cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
+
     internal static bool UninstallsInstalledEntry(OperationKind kind, PackageInfo package) =>
         kind == OperationKind.Uninstall && !string.IsNullOrEmpty(package.InstalledId);
 
