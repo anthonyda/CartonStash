@@ -1,6 +1,6 @@
 # 014 – Install a chosen version: Tasks
 
-**Status:** Done (2026-11-09). Amendment T18 to T24: done (2026-11-10). Amendment R2.9 (T26 to T29): done (2026-11-17). Amendment R3.10, R3.11 (T30 to T32): proposed
+**Status:** Done (2026-11-09). Amendment T18 to T24: done (2026-11-10). Amendment R2.9 (T26 to T29): done (2026-11-17). Amendment R3.10, R3.11 (T30 to T32): approved 2026-11-17, in progress
 **Design:** [design.md](design.md)
 
 Tick a task only when its verification passes. Keep tasks small enough for one commit, and keep the build green at
@@ -248,9 +248,9 @@ Approved 2026-11-17, Q9: the row's own entry.
   4 row refreshes that row alone. Changelog line. *(R2.9)*
   - Verify: entries in the log.
 
-## Amendment R3.10, R3.11 (2026-11-17, from use, proposed)
+## Amendment R3.10, R3.11 (2026-11-17, from use, approved 2026-11-17)
 
-Waiting for approval, and for Q10 and Q11.
+Approved 2026-11-17: Q10 "can't tell", with a clear and short confirmation; Q11 no box.
 
 - [ ] **T30.** `SharedIdQuestion`; `InstallVersionAsync` asks it with `ConfirmAsync` and no exclusion for an installed
   row that isn't a primary match. *(R3.10, Q11)*

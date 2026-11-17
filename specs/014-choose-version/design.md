@@ -1,6 +1,6 @@
 # 014 – Install a chosen version: Design
 
-**Status:** Done (2026-11-09). Approved 2026-11-08. **Amendment R1.6, R1.7 (2026-11-09): Done**, approved with the proposed answer to Q6. **Amendment R2.6, R2.7, R3.8, R3.9 (2026-11-10): Done**, approved 2026-11-10, with Q7's notice added. R3.8's scope source changed after T18 (Windows Installer first), approved 2026-11-10. **Amendment R2.9 (the fresh read is of the row's own program): Done (2026-11-17)**, approved 2026-11-17, fresh connections added after T28, Q9: the row's own entry. **Amendment R3.10, R3.11: proposed 2026-11-17**
+**Status:** Done (2026-11-09). Approved 2026-11-08. **Amendment R1.6, R1.7 (2026-11-09): Done**, approved with the proposed answer to Q6. **Amendment R2.6, R2.7, R3.8, R3.9 (2026-11-10): Done**, approved 2026-11-10, with Q7's notice added. R3.8's scope source changed after T18 (Windows Installer first), approved 2026-11-10. **Amendment R2.9 (the fresh read is of the row's own program): Done (2026-11-17)**, approved 2026-11-17, fresh connections added after T28, Q9: the row's own entry. **Amendment R3.10, R3.11: approved 2026-11-17**, Q10 "can't tell", short; Q11 no box
 **Requirements:** [requirements.md](requirements.md)
 
 ## Overview
@@ -474,7 +474,7 @@ Measured in the VM (WinGet 1.29, five rounds after a warm-up): a fresh local-fir
 Nothing changes in `PackageActions`, `PackageRowViewModel` or the details pane: they already compare the version,
 refresh the row with what they get, and treat null as "couldn't read".
 
-## Amendment R3.10, R3.11: a version chosen on a row that shares its ID (proposed 2026-11-17)
+## Amendment R3.10, R3.11: a version chosen on a row that shares its ID (approved 2026-11-17)
 
 Which rows: `package.IsInstalled && !package.IsPrimaryMatch` (002 R6.3). Their direction is always `Unknown`
 (`Direction`, "WinGet API usage"), so the version list, the action text ("Install this version") and the queued kind
@@ -490,15 +490,17 @@ instead of `ConfirmWithOptionAsync`, and `ExcludeOnSuccess` stays false (Q11).
 internal static (string Title, string Message, string ConfirmText) SharedIdQuestion(PackageInfo package, PackageVersion version, string? scopeNotice = null)
 ```
 
-- Title: "Install {name} {version}?"
-- Message: "{name} {installed} is installed. {name} shares its WinGet ID with another program, so CartonStash can't
-  tell whether {version} will replace {installed} or be installed next to it. If both stay installed, you can
-  uninstall {name} {installed} from the Installed page afterward." Then R3.8's notice, if any, as today.
+- Title: "Install version {version}?"
+- Message: "{version} may be installed next to {name} ({installed}) instead of replacing it. If both stay, you can
+  uninstall {installed} from the Installed page." Then R3.8's notice, if any, as today.
 - Buttons: "Install {version}", "Cancel".
 
-For the recording: "FireDaemon OpenSSL 3 3.6.2 is installed. FireDaemon OpenSSL 3 shares its WinGet ID with another
-program, so CartonStash can't tell whether 4.1.0 will replace 3.6.2 or be installed next to it. If both stay
-installed, you can uninstall FireDaemon OpenSSL 3 3.6.2 from the Installed page afterward."
+For the recording: **Install version 4.1.0?** "4.1.0 may be installed next to FireDaemon OpenSSL 3 (3.6.2) instead of
+replacing it. If both stay, you can uninstall 3.6.2 from the Installed page."
+
+Short on purpose (Q10): the version leads, the name appears once, in brackets so the two version numbers don't run
+together ("FireDaemon OpenSSL 3 3.6.2"), and why the app can't tell (the shared ID) is left out: it doesn't change what
+the user decides. The title names the version only; the dialog opens from that program's details.
 
 R3.5's **Uninstall, then install** after a failure stays: it uninstalls the row's own entry (002 R6.5), which is
 what the user would do by hand.
