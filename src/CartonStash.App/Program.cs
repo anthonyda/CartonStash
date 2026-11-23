@@ -52,7 +52,7 @@ public static class Program
         if (Restart is not null)
         {
             // 004 R6.3: the old copy is ending; it must be gone before this one takes the "main" key (010 R2.2).
-            AppRestarter.WaitForExit([Restart.AppProcessId], TimeSpan.FromSeconds(10));
+            AppRestarter.WaitForExit((int[])[Restart.AppProcessId], TimeSpan.FromSeconds(10));
         }
         if (AppPackage.IsPackaged)
         {
