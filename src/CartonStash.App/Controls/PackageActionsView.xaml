@@ -44,19 +44,13 @@
                     </MenuFlyout>
                 </SplitButton.Flyout>
             </SplitButton>
-            <!-- 020 R1.1: in place of Update; R5.1: before it -->
+            <!-- 020 R1.1: in place of Update -->
             <Button
                 AutomationProperties.Name="{x:Bind Row.UninstallThenUpdateName, Mode=OneWay}"
                 Command="{x:Bind Row.UninstallThenUpdateCommand, Mode=OneWay}"
                 Content="Uninstall, then update"
                 Style="{StaticResource AccentButtonStyle}"
                 Visibility="{x:Bind Row.ShowUninstallThenUpdate, Mode=OneWay}" />
-            <Button
-                AutomationProperties.Name="{x:Bind Row.InstallOverName, Mode=OneWay}"
-                Command="{x:Bind Row.InstallOverCommand, Mode=OneWay}"
-                Content="Install over it"
-                Style="{StaticResource AccentButtonStyle}"
-                Visibility="{x:Bind Row.ShowInstallOver, Mode=OneWay}" />
             <Button
                 AutomationProperties.Name="{x:Bind ui:Ui.Format('Update {0}', Row.Name), Mode=OneWay}"
                 Command="{x:Bind Row.UpdateCommand, Mode=OneWay}"

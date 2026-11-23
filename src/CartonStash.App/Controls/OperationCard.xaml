@@ -177,19 +177,13 @@
                     Content="Retry as administrator"
                     Style="{StaticResource AccentButtonStyle}"
                     Visibility="{x:Bind Operation.CanRetryAsAdmin, Mode=OneWay}" />
-                <!-- 020 R1.1, R5.1 -->
+                <!-- 020 R1.1 -->
                 <Button
                     AutomationProperties.Name="{x:Bind Operation.UninstallThenUpdateName, Mode=OneWay}"
                     Command="{x:Bind Operation.UninstallThenUpdateCommand, Mode=OneWay}"
                     Content="{x:Bind Operation.UninstallThenUpdateText, Mode=OneWay}"
                     Style="{StaticResource AccentButtonStyle}"
                     Visibility="{x:Bind Operation.CanUninstallThenUpdate, Mode=OneWay}" />
-                <Button
-                    AutomationProperties.Name="{x:Bind Operation.InstallOverName, Mode=OneWay}"
-                    Command="{x:Bind Operation.InstallOverCommand, Mode=OneWay}"
-                    Content="{x:Bind Operation.InstallOverText, Mode=OneWay}"
-                    Style="{StaticResource AccentButtonStyle}"
-                    Visibility="{x:Bind Operation.CanInstallOver, Mode=OneWay}" />
                 <Button
                     AutomationProperties.Name="{x:Bind ui:Ui.Format('Retry {0}', Operation.Title), Mode=OneWay}"
                     Command="{x:Bind Operation.RetryCommand, Mode=OneWay}"

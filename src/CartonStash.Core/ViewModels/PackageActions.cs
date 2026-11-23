@@ -98,17 +98,6 @@ public sealed class PackageActions(PackageOperationQueue queue, IPackageInstalle
                     }
                     break;
                 }
-                case OperationFollowUp.InstallOver when operation.CanInstallOver:
-                {
-                    var (overTitle, overMessage, overConfirm) = InstallOverQuestion(operation, ScopeToKeep(operation));
-                    if (await dialogs.ConfirmAsync(overTitle, overMessage, overConfirm))
-                    {
-                        // R5.3: the same update, run as an install of its target version.
-                        queue.Enqueue(OperationKind.Upgrade, operation.Package, operation.AcceptAgreements,
-                            new OperationOptions { Version = operation.UpdateTarget, InstallOver = true });
-                    }
-                    break;
-                }
                 case OperationFollowUp.RetryAsAdmin when operation.CanRetryAsAdmin:
                     // 017 R1.4: the same operation, version and scope, now with administrator rights (P2: the user's press).
                     queue.Enqueue(operation.Kind, operation.Package, operation.AcceptAgreements, operation.Options with { Elevated = true });
@@ -169,19 +158,6 @@ public sealed class PackageActions(PackageOperationQueue queue, IPackageInstalle
             $"{operation.Package.NameWith(operation.Package.InstalledVersion)} will be uninstalled, then {target} installed{ScopeWords(scope)}{asNow}. "
                 + $"Settings and data that {name} keeps may be lost. Apps that come as an MSIX package always lose them.",
             "Uninstall, then update");
-    }
-
-    /// <summary>020 R5.3: names the package and the version, and says nothing is uninstalled first.</summary>
-    internal static (string Title, string Message, string ConfirmText) InstallOverQuestion(PackageOperation operation, InstallScope? scope)
-    {
-        var name = operation.Package.Name;
-        var target = operation.UpdateTarget;
-        var asNow = scope is InstallScope.User or InstallScope.System ? $", as {name} is now" : "";
-        return (
-            $"Install {name} {target} over the installed one?",
-            $"{target} will be installed{ScopeWords(scope)}{asNow}. Nothing is uninstalled first: the installed version's uninstaller "
-                + $"is missing. If {name} is running, close it first.",
-            "Install over it");
     }
 
     /// <summary>The R3.5 confirmation: names the package and both versions, and says what may be lost.</summary>

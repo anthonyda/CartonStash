@@ -2,6 +2,12 @@
 
 What's new in each version of CartonStash. Get it from the [Microsoft Store](https://apps.microsoft.com/detail/9MT37M7DBZRK).
 
+## 1.7.1
+
+### Fixed
+
+- **No more Install over it for the EA app.** 1.7.0 offered it when the EA app's update couldn't start, but the EA app's installer, started that way, quits without installing anything and can open File Explorer on its folder instead. The failed update now says again that a program WinGet needed wasn't found and that repairing or reinstalling the EA app from its publisher may fix it. Uninstall, then update is unchanged.
+
 ## 1.7.0
 
 ### New

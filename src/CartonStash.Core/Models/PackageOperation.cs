@@ -121,9 +121,6 @@ public sealed record OperationOptions
     /// install after it: the card and the result read as an update (R3.3).
     /// </summary>
     public bool AsUpdate { get; init; }
-
-    /// <summary>020 R5.3: an update run as an install of the target version, which skips the installed version's uninstaller.</summary>
-    public bool InstallOver { get; init; }
 }
 
 /// <summary>The buttons a finished card may offer after going back failed (014 R3.5, R3.7).</summary>
@@ -137,9 +134,6 @@ public enum OperationFollowUp
 
     /// <summary>020 R1.1: uninstall, then install the version the update would have installed.</summary>
     UninstallThenUpdate,
-
-    /// <summary>020 R5.1: install the update's version over the installed one.</summary>
-    InstallOver,
 }
 
 /// <summary>How an operation ended, with a message the user can read (003 R5.2).</summary>
@@ -157,9 +151,6 @@ public sealed record OperationOutcome(OperationResult Result, string Message, st
 
     /// <summary>017 R1.1: the installer lacked administrator rights; the card and row offer Retry as administrator.</summary>
     public bool OffersRetryAsAdmin { get; init; }
-
-    /// <summary>020 R5.1: the update couldn't start the installed version's uninstaller; the card and row offer Install over it.</summary>
-    public bool OffersInstallOver { get; init; }
 
     /// <summary>
     /// 018 R2.2: a result a declined permission prompt gives. The queue makes it Cancelled only if the prompt was seen
@@ -251,16 +242,12 @@ public sealed partial class PackageOperation : ObservableObject
     /// <summary>From the outcome: the installer lacked administrator rights (017 R1.1). Set before <see cref="Result"/>.</summary>
     public bool OffersRetryAsAdmin { get; internal set; }
 
-    /// <summary>From the outcome: the update couldn't start the old uninstaller (020 R5.1). Set before <see cref="Result"/>.</summary>
-    public bool OffersInstallOver { get; internal set; }
-
     /// <summary>
-    /// 020: a newer operation for the same package was queued, so this card's Uninstall, then update and Install over it
-    /// would act on a package that has changed since (T11: after the chain, the old card still offered to uninstall).
+    /// 020: a newer operation for the same package was queued, so this card's Uninstall, then update would act on a package that has changed since (T11: after the chain, the old card still offered to uninstall).
     /// </summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(CanUninstallThenUpdate), nameof(CanInstallOver))]
-    [NotifyCanExecuteChangedFor(nameof(UninstallThenUpdateCommand), nameof(InstallOverCommand))]
+    [NotifyPropertyChangedFor(nameof(CanUninstallThenUpdate))]
+    [NotifyCanExecuteChangedFor(nameof(UninstallThenUpdateCommand))]
     public partial bool IsSuperseded { get; internal set; }
 
     /// <summary>From the outcome: the scope asked for, and whether it's the installed one (014 R3.8).</summary>
@@ -277,8 +264,8 @@ public sealed partial class PackageOperation : ObservableObject
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(StatusText), nameof(IsSuccess), nameof(IsFailure), nameof(CanRetry), nameof(State), nameof(CanRestartApp),
-        nameof(CanUninstallThenInstall), nameof(CanInstallPrevious), nameof(CanRetryAsAdmin), nameof(CanUninstallThenUpdate), nameof(CanInstallOver))]
-    [NotifyCanExecuteChangedFor(nameof(RetryCommand), nameof(RetryAsAdminCommand), nameof(UninstallThenUpdateCommand), nameof(InstallOverCommand))]
+        nameof(CanUninstallThenInstall), nameof(CanInstallPrevious), nameof(CanRetryAsAdmin), nameof(CanUninstallThenUpdate))]
+    [NotifyCanExecuteChangedFor(nameof(RetryCommand), nameof(RetryAsAdminCommand), nameof(UninstallThenUpdateCommand))]
     public partial OperationResult? Result { get; internal set; }
 
     /// <summary>The outcome message once finished (success, failure reason, restart note).</summary>
@@ -386,15 +373,6 @@ public sealed partial class PackageOperation : ObservableObject
     /// <summary>The button's accessible name (R4.3).</summary>
     public string UninstallThenUpdateName => $"Uninstall {Package.Name}, then update to {UpdateTarget}";
 
-    /// <summary>020 R5.1: the update couldn't start the old uninstaller; not after a run that already installed over it.</summary>
-    public bool CanInstallOver => Result is OperationResult.Failed && Kind == OperationKind.Upgrade && OffersInstallOver
-        && !Options.InstallOver && UpdateTarget is not null && !IsSuperseded;
-
-    public string InstallOverText => "Install over it";
-
-    /// <summary>The button's accessible name (R4.3).</summary>
-    public string InstallOverName => $"Install {Package.Name} {UpdateTarget} over the installed one";
-
     /// <summary>
     /// 020, UI 3: what follows a chained uninstall, under its progress: "Then installs 26.9.4 for the current user." Null
     /// for other operations.
@@ -498,6 +476,4 @@ public sealed partial class PackageOperation : ObservableObject
     [RelayCommand(CanExecute = nameof(CanUninstallThenUpdate))]
     private void UninstallThenUpdate() => _followUp(this, OperationFollowUp.UninstallThenUpdate);
 
-    [RelayCommand(CanExecute = nameof(CanInstallOver))]
-    private void InstallOver() => _followUp(this, OperationFollowUp.InstallOver);
 }

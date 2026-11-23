@@ -56,6 +56,6 @@ If implementation reveals the spec is wrong, **stop, update the spec first**, th
 | 017 | [Retry as administrator](017-retry-as-admin/) | Done (2026-11-12); the permission prompt itself and declining it checked by unit tests only |
 | 018 | [Say when Windows' permission prompt is waiting](018-permission-prompt-waiting/) | In progress: code done, VM check passed (banner, card, row, notification after a minute, prompt declined); amendment R2 (a declined prompt is Cancelled): done; the maintainer's VM run: accept, decline and the notification click (fixed twice) pass; Narrator, dark and high contrast not checked |
 | 019 | [Keyboard shortcuts](019-keyboard-shortcuts/) | Done (2026-11-17) |
-| 020 | [Uninstall, then update](020-uninstall-then-update/) | Done (2026-11-23); R3.1, R3.2 and R2.5's timeout checked by unit tests only; keyboard, Narrator, dark and high contrast not checked; EA app's real upgrade not measured (VM limit) |
+| 020 | [Uninstall, then update](020-uninstall-then-update/) | Done (2026-11-23); R3.1, R3.2 and R2.5's timeout checked by unit tests only; keyboard, Narrator, dark and high contrast not checked; R5 (Install over it) withdrawn after release: EA app's installer installs nothing that way; removed in 1.7.1 |
 
 Suggested build order: 002 → 003 → 004 → 005 → 006 → 007 (006's scope setting slots into 003's installer when it lands).

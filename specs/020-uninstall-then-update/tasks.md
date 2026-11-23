@@ -115,6 +115,12 @@
 - [x] **T15.** CHANGELOG entry; set statuses to Done; roadmap row.
   - 2026-11-23: CHANGELOG 1.7.0 (version number for the maintainer to confirm).
 
+## After release
+
+- [x] **T16.** 1.7.1: withdraw R5. Remove `OffersInstallOver`, the `InstallOver` option, follow-up, buttons, `RunAsync` and
+  `ElevatedRequest` argument; 0x800401F5 / 0x80070002 on an update keep 013 R1.2. *(R5 withdrawn)*
+  - Verify: `WinGetErrorMessageTests` (`A_missing_program_says_so` for updates again); the R5 tests removed.
+
 ## Manual verification log
 
 | Requirement | Date | Result | Notes |
