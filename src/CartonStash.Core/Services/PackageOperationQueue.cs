@@ -250,12 +250,12 @@ public sealed class PackageOperationQueue(IPackageInstaller installer, IOperatio
                     operation.MayAskPermission = true;
                     operation.Phase = OperationPhase.Running;
                     outcome = await elevated.RunAsync(new ElevatedRequest(operation.Kind, operation.Package, operation.AcceptAgreements, operation.Version,
-                        operation.LogFilePath, scope, scopeSource, InstallOver: operation.Options.InstallOver), cancellation.Token);
+                        operation.LogFilePath, scope, scopeSource), cancellation.Token);
                 }
                 else
                 {
                     outcome = await installer.RunAsync(operation.Kind, operation.Package, operation.AcceptAgreements, operation.Version, operation.LogFilePath, progress, cancellation.Token,
-                        scope, scopeSource, operation.Options.InstallOver);
+                        scope, scopeSource);
                 }
                 if (operation.Kind == OperationKind.Uninstall && operation.Options.ThenInstall is { } next && outcome.Result == OperationResult.Succeeded)
                 {
@@ -331,7 +331,6 @@ public sealed class PackageOperationQueue(IPackageInstaller installer, IOperatio
                 Message = ElevatedProtocol.DeclinedMessage,
                 OffersRetryAsAdmin = false, // R2.4: the user declined the rights
                 OffersUninstallFirst = false,
-                OffersInstallOver = false,
             }
             : outcome;
 
@@ -382,7 +381,6 @@ public sealed class PackageOperationQueue(IPackageInstaller installer, IOperatio
         operation.Retryable = outcome.Retryable; // before Result, which notifies CanRetry
         operation.OffersUninstallFirst = outcome.OffersUninstallFirst;
         operation.OffersRetryAsAdmin = outcome.OffersRetryAsAdmin;
-        operation.OffersInstallOver = outcome.OffersInstallOver;
         operation.Scope = outcome.Scope;
         operation.ScopeSource = outcome.ScopeSource;
         operation.Mode = outcome.Mode;

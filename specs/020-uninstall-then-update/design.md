@@ -1,6 +1,6 @@
 # 020 – Uninstall, then update: Design
 
-**Status:** Done (2026-11-23). Approved (2026-11-23)
+**Status:** Done (2026-11-23); everything about Install over it (R5) withdrawn and removed in 1.7.1, see the requirements. Approved (2026-11-23)
 **Requirements:** [requirements.md](requirements.md)
 **UI proposal:** https://claude.ai/artifact/ETzZwt1k6qDum2Y8AJsggq (approved with the requirements, 2026-11-23)
 

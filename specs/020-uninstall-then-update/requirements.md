@@ -1,6 +1,6 @@
 # 020 – Uninstall, then update: Requirements
 
-**Status:** Done (2026-11-23). Approved (2026-11-23), with the UI proposal; Q1, Q3 and Q6 answered by the maintainer, Q2, Q4 and Q5 as proposed. Q7 is measured in T1
+**Status:** Done (2026-11-23); R5 (Install over it) withdrawn 2026-11-23, removed in 1.7.1. Approved (2026-11-23), with the UI proposal; Q1, Q3 and Q6 answered by the maintainer, Q2, Q4 and Q5 as proposed. Q7 is measured in T1
 **Depends on:** 003 (queue, uninstall, results), 004 (updates), 009 (Activity card, logs), 013 (R1.2, R3.1), 014
 (R3.5 to R3.8: the uninstall-then-install chain this reuses), 017 (a follow-up button on a failed result)
 **Amends:** 013's out-of-scope lines "An **Uninstall and reinstall** action for R3.1" (deferred then as "a later
@@ -51,7 +51,10 @@ the install only if the uninstall succeeded, and **Install {previous version}** 
 | R3.2 | US2   | If the install fails or is cancelled after the uninstall succeeded, then the result shall say that {name} is no longer installed, and offer **Install {previous version}**, the version that was installed before (014 R3.7). |
 | R3.3 | US1   | When the install succeeds, the result shall read as an update, "Updated to {version}.", and the row shall leave Updates. *(Amended 2026-11-23 during T7: was "with 013 R2's check of the installed version". That check looks for the old version still listed after an update; after the uninstall nothing was listed before the install, so it can't apply. Install over it (R5) is an update and keeps it.)* |
 
-### Install over it (EA app)
+### Install over it (EA app): withdrawn 2026-11-23, released in 1.7.0, removed in 1.7.1
+
+*Withdrawn after release.* On the maintainer's PC, EA app's installer, started by Install over it, exited 0 in half a second without installing anything (it didn't ask for administrator rights and couldn't open `HKLM\Software\Electronic Arts\EA Desktop`), then opened File Explorer on the install folder: its registry key there holds only `InstallLocation`. In the VM, with `EADesktop.exe` and `EAUninstall.exe` deleted, the same install did nothing either way, without or with administrator rights. T1 had only checked that WinGet skips the uninstall step, not that the installer then installs. So R5.1 to R5.4 no longer apply: an update that fails with `0x800401F5` or `0x80070002` keeps 013 R1.2's message and Retry, and offers nothing else.
+
 
 | ID   | Story | Criterion |
 |------|-------|-----------|

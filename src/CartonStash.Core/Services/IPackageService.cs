@@ -75,11 +75,8 @@ public interface IPackageInstaller
     /// <param name="scope">A scope to ask for whatever else applies: the one the user chose (015 R1.5), or the installed one
     /// carried across the uninstall of 014 R3.5. Null otherwise.</param>
     /// <param name="scopeSource">Where <paramref name="scope"/> came from: <see cref="ScopeSource.Chosen"/> or <see cref="ScopeSource.Installed"/>.</param>
-    /// <param name="installOver">020 R5.3: run an update as an install of the target version, which skips WinGet's uninstall of
-    /// the installed version.</param>
     Task<OperationOutcome> RunAsync(OperationKind kind, PackageInfo package, bool acceptAgreements, string? version, string? logPath,
-        IProgress<OperationProgress> progress, CancellationToken cancellationToken, InstallScope? scope = null, ScopeSource scopeSource = ScopeSource.Installed,
-        bool installOver = false);
+        IProgress<OperationProgress> progress, CancellationToken cancellationToken, InstallScope? scope = null, ScopeSource scopeSource = ScopeSource.Installed);
 
     /// <summary>
     /// 020 R2.5: after an uninstall WinGet reported done, waits until WinGet no longer lists <paramref name="package"/> as

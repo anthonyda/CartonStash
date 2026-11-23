@@ -93,7 +93,7 @@ public sealed partial class PackageRowViewModel : ObservableObject
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsBusy), nameof(ShowInstall), nameof(ShowUpdate), nameof(ShowRestart), nameof(ShowUninstall), nameof(ResultText), nameof(HasResult), nameof(ShowRetryAsAdmin),
-        nameof(ShowUninstallThenUpdate), nameof(ShowInstallOver))]
+        nameof(ShowUninstallThenUpdate))]
     public partial PackageOperation? Operation { get; set; }
 
     /// <summary>Badge color: WinGet's comparison, and amber only when WinGet also offers the update (R7.1, R7.2).</summary>
@@ -177,14 +177,6 @@ public sealed partial class PackageRowViewModel : ObservableObject
     [RelayCommand]
     private void UninstallThenUpdate() => Operation?.UninstallThenUpdateCommand.Execute(null);
 
-    /// <summary>020 R5.1: before Update, after the update couldn't start the old uninstaller.</summary>
-    public bool ShowInstallOver => Operation?.CanInstallOver == true;
-
-    public string InstallOverName => Operation?.InstallOverName ?? "";
-
-    [RelayCommand]
-    private void InstallOver() => Operation?.InstallOverCommand.Execute(null);
-
     [RelayCommand]
     private Task InstallAsync() => _actions.InstallAsync(Package);
 
@@ -237,8 +229,6 @@ public sealed partial class PackageRowViewModel : ObservableObject
         OnPropertyChanged(nameof(ShowRetryAsAdmin));
         OnPropertyChanged(nameof(ShowUninstallThenUpdate));
         OnPropertyChanged(nameof(UninstallThenUpdateName));
-        OnPropertyChanged(nameof(ShowInstallOver));
-        OnPropertyChanged(nameof(InstallOverName));
     }
 
     private void OnOperationPropertyChanged(object? sender, PropertyChangedEventArgs e)

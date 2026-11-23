@@ -3,7 +3,7 @@ using CartonStash.Core.Services;
 
 namespace CartonStash.Core.Tests;
 
-/// <summary>020: Uninstall, then update (R1 to R4) and Install over it (R5), from a failed update's card and row.</summary>
+/// <summary>020: Uninstall, then update (R1 to R4), from a failed update's card and row. R5 was withdrawn in 1.7.1.</summary>
 public class UninstallThenUpdateTests
 {
     private static readonly PackageInfo Miniconda = new("Anaconda.Miniconda3", "Miniconda3", "py312_24.11.1-0", "py314_26.9.4-1", "winget", true)
@@ -11,21 +11,12 @@ public class UninstallThenUpdateTests
         InstalledId = @"ARP\User\X64\Miniconda3 py312_24.11.1-0 (Python 3.12.8 64-bit)",
     };
 
-    private static readonly PackageInfo Ea = new("ElectronicArts.EADesktop", "EA app", "13.813.1.6327", "13.832.0.6345", "winget", true);
-
     /// <summary>013 R3.1's result, as the installer maps it now (T3), with the installed scope it asked for.</summary>
     private static readonly OperationOutcome Refused = new(OperationResult.Failed, "Miniconda3 can't be updated in place.")
     {
         Retryable = false,
         OffersUninstallFirst = true,
         Scope = InstallScope.User,
-        ScopeSource = ScopeSource.Installed,
-    };
-
-    private static readonly OperationOutcome NoUninstaller = new(OperationResult.Failed, "EA app's update couldn't start.")
-    {
-        OffersInstallOver = true,
-        Scope = InstallScope.System,
         ScopeSource = ScopeSource.Installed,
     };
 
@@ -221,73 +212,8 @@ public class UninstallThenUpdateTests
     public void A_refused_update_does_nothing_on_its_own()
     {
         var (app, _) = FailedUpdate(Miniconda, Refused);
-        var (app2, _) = FailedUpdate(Ea, NoUninstaller);
 
         Assert.Single(app.Installer.Calls);
-        Assert.Single(app2.Installer.Calls);
         Assert.Empty(app.Dialogs.Confirmations);
     }
-
-    // --- R5
-
-    [Fact] // R5.1
-    public void An_update_without_its_uninstaller_offers_install_over_it_next_to_retry()
-    {
-        var (app, failed) = FailedUpdate(Ea, NoUninstaller);
-        var row = new CartonStash.Core.ViewModels.PackageRowViewModel(Ea, app.Actions, CartonStash.Core.ViewModels.RowActions.All) { Operation = failed };
-
-        Assert.True(failed.CanInstallOver);
-        Assert.True(failed.CanRetry);
-        Assert.Equal("Install EA app 13.832.0.6345 over the installed one", failed.InstallOverName);
-        Assert.True(row.ShowInstallOver);
-        Assert.True(row.ShowUpdate);
-    }
-
-    [Fact] // R5.3
-    public void Install_over_it_asks_then_runs_the_update_as_an_install()
-    {
-        var (app, failed) = FailedUpdate(Ea, NoUninstaller);
-
-        failed.InstallOverCommand.Execute(null);
-
-        Assert.Equal("Install EA app 13.832.0.6345 over the installed one? | 13.832.0.6345 will be installed for all users, as EA app "
-            + "is now. Nothing is uninstalled first: the installed version's uninstaller is missing. If EA app is running, close it first.",
-            Assert.Single(app.Dialogs.Confirmations));
-        Assert.Equal(OperationKind.Upgrade, app.Installer.Calls[^1].Kind);
-        Assert.True(app.Installer.InstallOvers[^1]);
-        Assert.Equal("13.832.0.6345", app.Installer.Versions[^1]);
-    }
-
-    [Fact] // R5.3: Cancel queues nothing; a failed install over it offers only Retry
-    public void Install_over_it_is_offered_once()
-    {
-        var (app, failed) = FailedUpdate(Ea, NoUninstaller);
-        app.Dialogs.Answer = false;
-        failed.InstallOverCommand.Execute(null);
-        Assert.Single(app.Installer.Calls);
-
-        app.Dialogs.Answer = true;
-        failed.InstallOverCommand.Execute(null);
-        app.Installer.Complete(Ea.Id, NoUninstaller);
-
-        var again = app.Queue.Find(Ea)!;
-        Assert.False(again.CanInstallOver);
-        Assert.True(again.CanRetry);
-    }
-}
-
-/// <summary>020 R5.3: which call WinGet gets.</summary>
-public class InstallOverCallTests
-{
-    [Theory]
-    [InlineData(OperationKind.Upgrade, true, ScopeSource.Installed, true)]    // Install over it
-    [InlineData(OperationKind.Upgrade, true, ScopeSource.Setting, true)]      // whatever the scope's source
-    [InlineData(OperationKind.Upgrade, false, ScopeSource.Installed, false)]  // an ordinary update
-    [InlineData(OperationKind.Install, true, ScopeSource.Installed, false)]   // only for an update
-    public void Install_over_it_runs_the_update_as_an_install(OperationKind kind, bool installOver, ScopeSource source, bool expected) =>
-        Assert.Equal(expected, WinGetPackageInstaller.RunsAsInstall(kind, installOver, source, InstallScope.System, InstallScope.System));
-
-    [Fact] // 015 R3.1 unchanged
-    public void A_scope_mismatch_still_runs_as_an_install() =>
-        Assert.True(WinGetPackageInstaller.RunsAsInstall(OperationKind.Upgrade, false, ScopeSource.Installed, InstallScope.User, InstallScope.System));
 }
