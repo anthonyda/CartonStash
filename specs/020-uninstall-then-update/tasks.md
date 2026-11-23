@@ -1,15 +1,29 @@
 # 020 – Uninstall, then update: Tasks
 
-**Status:** Approved (2026-11-23), not started
+**Status:** In progress: T1 done (2026-11-23)
 
 ## Measure first
 
-- [ ] **T1.** VM: set EA app up as on the maintainer's PC (013's recipe: install `ElectronicArts.EADesktop`, ARP
+- [x] **T1.** VM: set EA app up as on the maintainer's PC (013's recipe: install `ElectronicArts.EADesktop`, ARP
   `DisplayVersion` set back to 13.813.1.6327, `EAUninstall.exe` deleted). From a small unpackaged console app using
   Core's `WinGetPackageInstaller`, run (a) the update as today → expect `0x800401F5`; (b) `InstallPackageAsync` with the
   target version's `PackageVersionId` and the installed scope. Record the result and WinGet's log: does (b) run
   `uninstallPrevious`? Only if (b) runs it, try (c) the same with `Force`. Record the outcome in Q7 and the design;
   set `InstallOverSupported`. *(R5.4, Q7)*
+  - 2026-11-23: **Pass for R5.4; R5 kept, no Force.** VM, WinGet 1.29.380, 014's `goback` probe as tester (not
+    elevated), EA app installed then set to the host's state (ARP `DisplayVersion` 13.813.1.6327, `EAUninstall.exe`
+    deleted). (a) `UpgradePackageAsync`: `InstallError`, exit 0, `0x800401F5` at `ShellExecuteInstallerHandler.cpp(353)`
+    in 4 s, as on the host. (b) `InstallPackageAsync` with 13.832.0.6345's `PackageVersionId`, scope System: WinGet's log
+    goes straight to "Starting: EAappInstaller-13.832.0.6345 … /passive /norestart", no uninstall step; status `Ok`,
+    exit 0. (c) not needed.
+  - Limit: the VM's EA app is really 13.832 underneath (Burn's `BundleVersion` 13.832.0.6345, `EADesktop.exe`
+    13.832), because EA's thin installer always installs the newest client; only the ARP version was set back. So in
+    (b) the installer found nothing to do and exited 0 in half a second, and WinGet still lists 13.813.1.6327: the app
+    would show 013 R2.2's "not confirmed" warning. A real upgrade over an old bundle can't be set up in the VM. The
+    host (read only, 2026-11-23) has the old bundle for real: `{250aff32-…}`, `BundleVersion` 13.813.1.6327, its cached
+    `EAappInstaller.exe` present, the client in `EA Desktop\13.813.1.6327\` (no `EA Desktop\EA Desktop\` folder, hence
+    the missing `EAUninstall.exe`). Burn upgrades a related bundle through that cached copy, not `EAUninstall.exe`, so
+    (b) should work there, but that is not measured. See T13.
 - [ ] **T2.** VM: `winget install Anaconda.Miniconda3 --version py312_24.11.1-0 --scope user`, update from the same
   console app → `0x8A150114`; then uninstall and install the target version with the installed scope → installed,
   WinGet lists no update. Confirms R2's chain before it's built. *(R1.2, R2.2, R2.3)*
@@ -61,8 +75,10 @@
 - [ ] **T12.** VM: R3.1 and R3.2 by forcing failures (uninstall: keep Miniconda's `python.exe` running if it blocks; install:
   block the download with a firewall rule on WinGet's server after the uninstall) → the messages and **Install
   {previous}**. Record what could only be checked by unit tests. *(R3.1, R3.2)*
-- [ ] **T13.** VM, if R5 kept: EA app as in T1 → R5.2 message; Install over it → confirmation → updated (the burn
-  installer may ask for permission). *(R5.1 to R5.3)*
+- [ ] **T13.** VM: EA app as in T1 → R5.2 message, Install over it on card and row, confirmation, the install runs
+  without the uninstall step (WinGet's log) and ends with 013 R2.2's warning (T1's limit: nothing to upgrade). A real
+  upgrade of an old EA app bundle is not reproducible in the VM; open question for the maintainer how to check it.
+  *(R5.1 to R5.3)*
 - [ ] **T14.** Keyboard and Narrator on the new buttons and dialogs; light, dark, high contrast. *(R4.3)*
 - [ ] **T15.** CHANGELOG entry; set statuses to Done; roadmap row.
 
@@ -70,3 +86,4 @@
 
 | Requirement | Date | Result | Notes |
 |-------------|------|--------|-------|
+| R5.4 (T1) | 2026-11-23 | Pass | WinGet's install of the target version on the installed EA app skips `uninstallPrevious`; the installer runs. Its effect on a really old bundle isn't reproducible in the VM (see T1) |

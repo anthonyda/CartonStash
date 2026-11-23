@@ -94,4 +94,6 @@ the install only if the uninstall succeeded, and **Install {previous version}** 
   `py312_24.11.1-0` then update (R1 to R3), and EA app with its ARP version set back and `EAUninstall.exe` deleted
   (R5). The maintainer's PC isn't used for tests.
 - **Q7. R5 in WinGet (T1).** Does `InstallPackageAsync` on an installed package with `InstallOptions.Force` (or an
-  install of the exact version) skip the old uninstaller for EA app? Measured in the VM before the design is approved.
+  install of the exact version) skip the old uninstaller for EA app? *Measured 2026-11-23 (T1):* yes, without `Force`:
+  WinGet runs EA's new installer directly. R5 is kept. Not measured: what that installer does over a really old EA app
+  bundle, which the VM can't reproduce (tasks T1, T13).

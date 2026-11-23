@@ -26,9 +26,15 @@ Nothing new talks to WinGet: both reuse `IPackageInstaller.RunAsync`.
 | `Anaconda.Miniconda3` | Refuses the update in place | `CatalogError`, exit code 0, `0x8A150114` |
 | `ElectronicArts.EADesktop` 13.832.0.6345 | `InstallerType: burn`, `Scope: machine`, `UpgradeBehavior: uninstallPrevious` (winget-pkgs, read 2026-11-23) | `InstallError`, exit code 0, `0x800401F5` from `ShellExecuteInstallerHandler.cpp(353)`: WinGet's `uninstallPrevious` step can't start `EAUninstall.exe` |
 
-So EA app's failure is WinGet's `uninstallPrevious`, which runs in WinGet's *upgrade* flow. T1 checks whether an
-*install* of the target version on the installed package (`InstallPackageAsync` with `PackageVersionId`) runs the
-installer without that step.
+So EA app's failure is WinGet's `uninstallPrevious`, which runs in WinGet's *upgrade* flow.
+
+**T1 (VM, 2026-11-23):** an *install* of the target version on the installed package (`InstallPackageAsync` with
+`PackageVersionId`, scope System, no `Force`) runs EA's new installer directly, with no uninstall step; the update
+(`UpgradePackageAsync`) fails with `0x800401F5` as on the host. `InstallOverSupported` is true. The VM's EA app is
+the newest client underneath (EA's thin installer), so there the installer had nothing to do, and the result was `Ok`
+with WinGet still listing 13.813.1.6327: the app shows 013 R2.2's "not confirmed" warning in that case, which is
+honest. On the host the old bundle is real (`BundleVersion` 13.813.1.6327, its cached installer present); Burn
+upgrades a related bundle through that cached copy, so Install over it should update it there. Not measured.
 
 ## Components
 
@@ -98,8 +104,7 @@ nothing queued.
 No new calls. `UninstallPackageAsync` (003), `InstallPackageAsync` with `PackageVersionId` and `PackageInstallScope`
 (014, 015 R3.1), `UpgradePackageAsync` (004). Collections by index (W2), statuses checked (W3).
 
-`Force` stays off (014 T1: it never helped and lets other warnings through). T1 tries it for EA app only if the plain
-install still runs the uninstaller; if `Force` is what works, this design is amended before it's used.
+`Force` stays off (014 T1: it never helped and lets other warnings through; 020 T1: not needed).
 
 ## UI
 
