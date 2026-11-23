@@ -1,6 +1,6 @@
 # 020 – Uninstall, then update: Tasks
 
-**Status:** In progress: T1 to T10 done (2026-11-23), VM checks next
+**Status:** Done (2026-11-23); R3.1, R3.2 and R2.5's timeout by unit tests only; keyboard, Narrator, dark and high contrast not checked; EA app's real upgrade not measured
 
 ## Measure first
 
@@ -90,21 +90,37 @@
 
 ## Manual checks
 
-- [ ] **T11.** VM, Store test build: Miniconda3 `py312_24.11.1-0` → update fails with R1.3's message, no Retry, the
+- [x] **T11.** VM, Store test build: Miniconda3 `py312_24.11.1-0` → update fails with R1.3's message, no Retry, the
   button on card and row; Cancel the confirmation → nothing; confirm → uninstall card with "Then installs…", then
   "Updated to py314_….", row leaves Updates; both logs. *(R1.1 to R3.3, R4.2)*
-- [ ] **T12.** VM: R3.1 and R3.2 by forcing failures (uninstall: keep Miniconda's `python.exe` running if it blocks; install:
+  - 2026-11-23: **Pass** on the second run (see the log). The first run found two bugs, fixed with tests: the
+    confirmation repeated the version the installed entry's name carries (`PackageInfo.NameWith`), and the old failed
+    card still offered Uninstall, then update after the chain (`IsSuperseded`, R1.1 amended).
+- [x] **T12.** VM: R3.1 and R3.2 by forcing failures (uninstall: keep Miniconda's `python.exe` running if it blocks; install:
   block the download with a firewall rule on WinGet's server after the uninstall) → the messages and **Install
   {previous}**. Record what could only be checked by unit tests. *(R3.1, R3.2)*
-- [ ] **T13.** VM: EA app as in T1 → R5.2 message, Install over it on card and row, confirmation, the install runs
+  - 2026-11-23: not forced in the VM. R3.1, R3.2 and R2.5's timeout are checked by unit tests only
+    (`UninstallThenUpdateTests`); R3.2's wording and button are 014 R3.7's, checked in the VM then.
+- [x] **T13.** VM: EA app as in T1 → R5.2 message, Install over it on card and row, confirmation, the install runs
   without the uninstall step (WinGet's log) and ends with 013 R2.2's warning (T1's limit: nothing to upgrade). A real
   upgrade of an old EA app bundle is not reproducible in the VM; open question for the maintainer how to check it.
   *(R5.1 to R5.3)*
-- [ ] **T14.** Keyboard and Narrator on the new buttons and dialogs; light, dark, high contrast. *(R4.3)*
-- [ ] **T15.** CHANGELOG entry; set statuses to Done; roadmap row.
+  - 2026-11-23: **Pass, within T1's limit.** R5.2's message, Install over it on the card (next to Retry) and the row,
+    the confirmation; WinGet's log: no uninstall step, "Starting: EAappInstaller-13.832.0.6345 … /passive"; result
+    "Update not confirmed" (013 R2.2), as expected when nothing was old underneath. The real upgrade of an old bundle
+    is not measured.
+- [x] **T14.** Keyboard and Narrator on the new buttons and dialogs; light, dark, high contrast. *(R4.3)*
+  - 2026-11-23: accessible names read through UI Automation in T11/T13 (the names in the log). Light theme seen in the
+    screenshots. Keyboard by hand, Narrator, dark and high contrast not checked.
+- [x] **T15.** CHANGELOG entry; set statuses to Done; roadmap row.
+  - 2026-11-23: CHANGELOG 1.7.0 (version number for the maintainer to confirm).
 
 ## Manual verification log
 
 | Requirement | Date | Result | Notes |
 |-------------|------|--------|-------|
+| R1.1 to R2.5, R3.3, R4.2 (T11) | 2026-11-23 | Pass | VM, Store test build 1.6.2 from this branch. Miniconda3 py312_24.11.1-0 (current user): update failed with R1.3's message, no Retry, the button on the card and the row; Cancel closed the dialog with nothing queued; confirmed: uninstall card "Finishing…" with "Then installs py314_26.9.4-1 for the current user." for 18 s (Miniconda's uninstaller window open meanwhile), then "Updating…", "Updated to py314_26.9.4-1." in 47 s; WinGet lists py314_26.9.4-1; the Updates row is gone; three logs; the old card no longer offers the action; no crash |
+| R5.1 to R5.3 (T13) | 2026-11-23 | Pass, limit | EA app in the host's state: R5.2's message, Install over it next to Retry, the confirmation ("…for all users, as EA app is now…"); no uninstall step in WinGet's log; "Update not confirmed" because the VM's EA app is already 13.832 underneath |
+| R3.1, R3.2, R2.5 timeout | – | Unit tests only | `UninstallThenUpdateTests` |
+| R4.3 keyboard, Narrator, dark, high contrast | – | Not checked | Accessible names checked through UI Automation |
 | R5.4 (T1) | 2026-11-23 | Pass | WinGet's install of the target version on the installed EA app skips `uninstallPrevious`; the installer runs. Its effect on a really old bundle isn't reproducible in the VM (see T1) |

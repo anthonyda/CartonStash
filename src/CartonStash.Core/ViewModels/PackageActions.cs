@@ -166,7 +166,7 @@ public sealed class PackageActions(PackageOperationQueue queue, IPackageInstalle
         var asNow = scope is InstallScope.User or InstallScope.System ? ", as it is now" : "";
         return (
             $"Uninstall {name}, then update to {target}?",
-            $"{name} {operation.Package.InstalledVersion} will be uninstalled, then {target} installed{ScopeWords(scope)}{asNow}. "
+            $"{operation.Package.NameWith(operation.Package.InstalledVersion)} will be uninstalled, then {target} installed{ScopeWords(scope)}{asNow}. "
                 + $"Settings and data that {name} keeps may be lost. Apps that come as an MSIX package always lose them.",
             "Uninstall, then update");
     }

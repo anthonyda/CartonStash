@@ -1,6 +1,6 @@
 # 020 – Uninstall, then update: Requirements
 
-**Status:** Approved (2026-11-23), with the UI proposal; Q1, Q3 and Q6 answered by the maintainer, Q2, Q4 and Q5 as proposed. Q7 is measured in T1
+**Status:** Done (2026-11-23). Approved (2026-11-23), with the UI proposal; Q1, Q3 and Q6 answered by the maintainer, Q2, Q4 and Q5 as proposed. Q7 is measured in T1
 **Depends on:** 003 (queue, uninstall, results), 004 (updates), 009 (Activity card, logs), 013 (R1.2, R3.1), 014
 (R3.5 to R3.8: the uninstall-then-install chain this reuses), 017 (a follow-up button on a failed result)
 **Amends:** 013's out-of-scope lines "An **Uninstall and reinstall** action for R3.1" (deferred then as "a later
@@ -39,7 +39,7 @@ the install only if the uninstall succeeded, and **Install {previous version}** 
 
 | ID   | Story | Criterion |
 |------|-------|-----------|
-| R1.1 | US1   | If an update fails with a result that asks for an uninstall first (R1.2), then the result shall offer **Uninstall, then update** on its Activity card and on the package's row in Updates, in place of Retry (which stays hidden, 013 R3.1). |
+| R1.1 | US1   | If an update fails with a result that asks for an uninstall first (R1.2), then the result shall offer **Uninstall, then update** on its Activity card and on the package's row in Updates, in place of Retry (which stays hidden, 013 R3.1). Only the package's latest card offers it, and R5.1's button: once another operation for the package is queued, an older card's offer would describe a package that has changed. *(Added 2026-11-23 after T11: after the chain, the failed update's card still offered to uninstall.)* |
 | R1.2 | –     | A result "asks for an uninstall first" when WinGet's extended error is `0x8A150114`, whatever WinGet's status (013 R3.1; measured: Miniconda3). Further codes are added only from measured cases, as 017 R1.2 does. Nothing else is guessed (P1). |
 | R1.3 | US1   | 013 R3.1's message shall end by naming the action: "… uninstall it, then install it again. Uninstall, then update does both." |
 | R2.1 | US2   | When the user presses it, the app shall ask for confirmation naming the package, the installed version and the version the update would install, and saying that settings and data the program keeps may be lost (apps that come as an MSIX package always lose them), as 014 R3.5 does. It shall queue nothing unless the user confirms (P2). |

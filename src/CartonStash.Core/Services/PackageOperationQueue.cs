@@ -80,9 +80,13 @@ public sealed class PackageOperationQueue(IPackageInstaller installer, IOperatio
     /// <summary>Queues an operation, or returns the one already active for this package (R4.2).</summary>
     public PackageOperation Enqueue(OperationKind kind, PackageInfo package, bool acceptAgreements = false, OperationOptions? options = null)
     {
-        if (Find(package) is { IsActive: true } active)
+        if (Find(package) is { } previous)
         {
-            return active;
+            if (previous.IsActive)
+            {
+                return previous;
+            }
+            previous.IsSuperseded = true; // 020: its follow-ups no longer describe the package
         }
 
         var operation = new PackageOperation(kind, package, acceptAgreements, Cancel, Retry, o => LogRequested?.Invoke(this, o), RequestRestart, options,
@@ -455,7 +459,7 @@ public sealed class PackageOperationQueue(IPackageInstaller installer, IOperatio
         {
             (OperationKind.Uninstall, OperationResult.Failed or OperationResult.Cancelled) => outcome with
             {
-                Message = $"{outcome.Message} {name} {operation.Options.PreviousVersion ?? operation.Package.InstalledVersion} is still installed; "
+                Message = $"{outcome.Message} {operation.Package.NameWith(operation.Options.PreviousVersion ?? operation.Package.InstalledVersion)} is still installed; "
                     + "nothing was updated.",
             },
             (OperationKind.Install, OperationResult.Succeeded) => outcome with { Message = $"Updated to {operation.Version}." },

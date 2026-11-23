@@ -254,6 +254,15 @@ public sealed partial class PackageOperation : ObservableObject
     /// <summary>From the outcome: the update couldn't start the old uninstaller (020 R5.1). Set before <see cref="Result"/>.</summary>
     public bool OffersInstallOver { get; internal set; }
 
+    /// <summary>
+    /// 020: a newer operation for the same package was queued, so this card's Uninstall, then update and Install over it
+    /// would act on a package that has changed since (T11: after the chain, the old card still offered to uninstall).
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanUninstallThenUpdate), nameof(CanInstallOver))]
+    [NotifyCanExecuteChangedFor(nameof(UninstallThenUpdateCommand), nameof(InstallOverCommand))]
+    public partial bool IsSuperseded { get; internal set; }
+
     /// <summary>From the outcome: the scope asked for, and whether it's the installed one (014 R3.8).</summary>
     public InstallScope Scope { get; internal set; }
 
@@ -369,7 +378,7 @@ public sealed partial class PackageOperation : ObservableObject
 
     /// <summary>020 R1.1: the update was refused in place (0x8A150114); not on going back, which has 014's own button.</summary>
     public bool CanUninstallThenUpdate => Result is OperationResult.Failed && Kind == OperationKind.Upgrade && OffersUninstallFirst
-        && !Options.GoingBack && UpdateTarget is not null;
+        && !Options.GoingBack && UpdateTarget is not null && !IsSuperseded;
 
     /// <summary>"Uninstall, then update" (Q5: short, the row has little room).</summary>
     public string UninstallThenUpdateText => "Uninstall, then update";
@@ -379,7 +388,7 @@ public sealed partial class PackageOperation : ObservableObject
 
     /// <summary>020 R5.1: the update couldn't start the old uninstaller; not after a run that already installed over it.</summary>
     public bool CanInstallOver => Result is OperationResult.Failed && Kind == OperationKind.Upgrade && OffersInstallOver
-        && !Options.InstallOver && UpdateTarget is not null;
+        && !Options.InstallOver && UpdateTarget is not null && !IsSuperseded;
 
     public string InstallOverText => "Install over it";
 

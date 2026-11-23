@@ -48,6 +48,13 @@ public sealed record PackageInfo(
     public string Key => InstalledId ?? Id;
 
     /// <summary>
+    /// "Name version", unless the name already carries the version, as installed entries often do ("Miniconda3
+    /// py312_24.11.1-0 (Python 3.12.8 64-bit)"; 020 T11).
+    /// </summary>
+    public string NameWith(string? version) =>
+        string.IsNullOrWhiteSpace(version) || Name.Contains(version, StringComparison.OrdinalIgnoreCase) ? Name : $"{Name} {version}";
+
+    /// <summary>
     /// 003 R4.2 (BR-07): the same package for the queue and the rows. Two installed programs compare by installed entry
     /// ID (002 R6.5). When either side has none (a Search row), the WinGet ID and the source decide, so an update queued
     /// from Updates is seen from Search, and the same ID from two sources stays two packages.

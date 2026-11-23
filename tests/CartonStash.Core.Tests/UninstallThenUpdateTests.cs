@@ -191,6 +191,30 @@ public class UninstallThenUpdateTests
         Assert.False(install.CanUninstallThenUpdate);
     }
 
+    [Fact] // T11: the installed entry's name already carries its version
+    public void The_confirmation_does_not_repeat_a_version_the_name_carries()
+    {
+        var entry = Miniconda with { Name = "Miniconda3 py312_24.11.1-0 (Python 3.12.8 64-bit)" };
+        var (app, failed) = FailedUpdate(entry, Refused);
+        app.Dialogs.Answer = false;
+
+        failed.UninstallThenUpdateCommand.Execute(null);
+
+        Assert.StartsWith("Uninstall Miniconda3 py312_24.11.1-0 (Python 3.12.8 64-bit), then update to py314_26.9.4-1? | "
+            + "Miniconda3 py312_24.11.1-0 (Python 3.12.8 64-bit) will be uninstalled,", Assert.Single(app.Dialogs.Confirmations));
+    }
+
+    [Fact] // T11: once the chain ran, the old failed card no longer offers it
+    public void A_later_operation_takes_the_offer_off_the_old_card()
+    {
+        var (app, failed) = FailedUpdate(Miniconda, Refused);
+        failed.UninstallThenUpdateCommand.Execute(null);
+
+        Assert.True(failed.IsSuperseded);
+        Assert.False(failed.CanUninstallThenUpdate);
+        Assert.False(failed.UninstallThenUpdateCommand.CanExecute(null));
+    }
+
     // --- R4.1
 
     [Fact] // R4.1: a refused update queues nothing by itself
