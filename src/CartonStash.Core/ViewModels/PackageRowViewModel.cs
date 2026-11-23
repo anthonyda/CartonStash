@@ -92,7 +92,8 @@ public sealed partial class PackageRowViewModel : ObservableObject
     public string Name => Package.Name;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsBusy), nameof(ShowInstall), nameof(ShowUpdate), nameof(ShowRestart), nameof(ShowUninstall), nameof(ResultText), nameof(HasResult), nameof(ShowRetryAsAdmin))]
+    [NotifyPropertyChangedFor(nameof(IsBusy), nameof(ShowInstall), nameof(ShowUpdate), nameof(ShowRestart), nameof(ShowUninstall), nameof(ResultText), nameof(HasResult), nameof(ShowRetryAsAdmin),
+        nameof(ShowUninstallThenUpdate), nameof(ShowInstallOver))]
     public partial PackageOperation? Operation { get; set; }
 
     /// <summary>Badge color: WinGet's comparison, and amber only when WinGet also offers the update (R7.1, R7.2).</summary>
@@ -137,7 +138,7 @@ public sealed partial class PackageRowViewModel : ObservableObject
     public bool ShowInstall => _allowed.HasFlag(RowActions.Install) && !Package.IsInstalled && !IsBusy && !Succeeded(OperationKind.Install);
 
     public bool ShowUpdate => _allowed.HasFlag(RowActions.Update) && Package.HasUpdate && !IsBusy && !Succeeded(OperationKind.Upgrade)
-        && !IsRestartPending;
+        && !IsRestartPending && !ShowUninstallThenUpdate; // 020 R1.1: Update would be refused the same way
 
     /// <summary>App Installer updated, but the new version starts with CartonStash (004 R6.2). The Updates page re-notifies its rows when it changes.</summary>
     public bool IsRestartPending => _actions.Host.IsPending(Package);
@@ -166,6 +167,23 @@ public sealed partial class PackageRowViewModel : ObservableObject
 
     [RelayCommand]
     private void RetryAsAdmin() => Operation?.RetryAsAdminCommand.Execute(null);
+
+    /// <summary>020 R1.1: in place of Update, after the update was refused in place.</summary>
+    public bool ShowUninstallThenUpdate => Operation?.CanUninstallThenUpdate == true;
+
+    /// <summary>The button's accessible name (R4.3).</summary>
+    public string UninstallThenUpdateName => Operation?.UninstallThenUpdateName ?? "";
+
+    [RelayCommand]
+    private void UninstallThenUpdate() => Operation?.UninstallThenUpdateCommand.Execute(null);
+
+    /// <summary>020 R5.1: before Update, after the update couldn't start the old uninstaller.</summary>
+    public bool ShowInstallOver => Operation?.CanInstallOver == true;
+
+    public string InstallOverName => Operation?.InstallOverName ?? "";
+
+    [RelayCommand]
+    private void InstallOver() => Operation?.InstallOverCommand.Execute(null);
 
     [RelayCommand]
     private Task InstallAsync() => _actions.InstallAsync(Package);
@@ -217,6 +235,10 @@ public sealed partial class PackageRowViewModel : ObservableObject
         OnPropertyChanged(nameof(ResultText));
         OnPropertyChanged(nameof(HasResult));
         OnPropertyChanged(nameof(ShowRetryAsAdmin));
+        OnPropertyChanged(nameof(ShowUninstallThenUpdate));
+        OnPropertyChanged(nameof(UninstallThenUpdateName));
+        OnPropertyChanged(nameof(ShowInstallOver));
+        OnPropertyChanged(nameof(InstallOverName));
     }
 
     private void OnOperationPropertyChanged(object? sender, PropertyChangedEventArgs e)

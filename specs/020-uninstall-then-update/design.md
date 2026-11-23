@@ -30,11 +30,20 @@ So EA app's failure is WinGet's `uninstallPrevious`, which runs in WinGet's *upg
 
 **T1 (VM, 2026-11-23):** an *install* of the target version on the installed package (`InstallPackageAsync` with
 `PackageVersionId`, scope System, no `Force`) runs EA's new installer directly, with no uninstall step; the update
-(`UpgradePackageAsync`) fails with `0x800401F5` as on the host. `InstallOverSupported` is true. The VM's EA app is
+(`UpgradePackageAsync`) fails with `0x800401F5` as on the host. R5 is kept. The VM's EA app is
 the newest client underneath (EA's thin installer), so there the installer had nothing to do, and the result was `Ok`
 with WinGet still listing 13.813.1.6327: the app shows 013 R2.2's "not confirmed" warning in that case, which is
 honest. On the host the old bundle is real (`BundleVersion` 13.813.1.6327, its cached installer present); Burn
 upgrades a related bundle through that cached copy, so Install over it should update it there. Not measured.
+
+## Measured in T2 (VM, 2026-11-23)
+
+Miniconda3 py312_24.11.1-0 for the current user: `UpgradePackageAsync` gives `CatalogError`, exit 0, `0x8A150114`, as
+on the host. `UninstallPackageAsync` returns `Ok` after 3 s while `Un_A.exe` keeps working; an install of
+py314_26.9.4-1 started at once failed (exit 2, `0x8A150006`). Polled: the ARP entry and WinGet's installed list drop
+the package at +15 s, `Un_A.exe` exits at +17 s. Installing after that succeeded (py314_26.9.4-1, current user, no
+update left). Hence R2.5: `IPackageInstaller.WaitUntilUninstalledAsync`, which the queue calls in the uninstall's
+Finishing phase when the uninstall has a `ThenInstall` (also 014's chain).
 
 ## Components
 
@@ -44,9 +53,10 @@ upgrades a related bundle through that cached copy, so Install over it should up
 | Core/Models | `OperationOptions` | `AsUpdate`: an install that stands for an update (R3.3); `InstallOver`: an update run as an install of the target version (R5.3) | Changed |
 | Core/Models | `OperationFollowUp` | `UninstallThenUpdate`, `InstallOver` | Changed |
 | Core/Models | `PackageOperation` | `CanUninstallThenUpdate`, `CanInstallOver` and their commands, texts and accessible names (R1.1, R5.1, R4.3); `KindText` "Update" for `AsUpdate`; `ThenText` under the progress of a chained uninstall (UI 3) | Changed |
-| Core/Services | `WinGetPackageInstaller.MapInstallResult` | R1.2/R1.3: the 0x8A150114 arm sets `OffersUninstallFirst` and ends with "Uninstall, then update does both."; R5.1/R5.2: on an update, `AppNotFound`/`FileNotFound` with exit code 0 sets `OffersInstallOver` and the R5.2 message, only while `InstallOverSupported` is true (R5.4) | Changed |
-| Core/Services | `WinGetPackageInstaller.InstallAsync` | `InstallOver`: `byInstalling = true` with the target version's ID. `AsUpdate`: maps the result with `OperationKind.Upgrade` ("Updated to {version}.", 013 R2.1 check) | Changed |
-| Core/Services | `PackageOperationQueue` | Copies `OffersInstallOver`; `AfterUninstallOutcome` unchanged (R3.2 wording already fits); a failed chained uninstall adds R3.1's sentence | Changed |
+| Core/Services | `WinGetPackageInstaller.MapInstallResult` | R1.2/R1.3: the 0x8A150114 arm sets `OffersUninstallFirst` and ends with "Uninstall, then update does both."; R5.1/R5.2: on an update, `AppNotFound`/`FileNotFound` with exit code 0 sets `OffersInstallOver` and the R5.2 message, as T1 kept R5 (R5.4) | Changed |
+| Core/Services | `WinGetPackageInstaller.InstallAsync` | `InstallOver` (a new `RunAsync` argument, also carried by `ElevatedRequest`): `byInstalling = true` with the target version's ID; the operation stays an update, so 013 R2's check runs | Changed |
+| Core/Services | `IPackageInstaller.WaitUntilUninstalledAsync`, `WinGetPackageInstaller` | R2.5: polls WinGet's installed list (the row's own entry when it has one, fresh connection) every 2 s up to 5 min, then waits 5 s; false when still listed | New |
+| Core/Services | `PackageOperationQueue` | Copies `OffersInstallOver`; `AfterUninstallOutcome` unchanged (R3.2 wording already fits); a failed chained uninstall adds R3.1's sentence; a successful `AsUpdate` install reads "Updated to {version}." (R3.3) | Changed |
 | Core/ViewModels | `PackageActions.FollowUp` | Two new cases: confirmation, then queue (R2.1, R2.2, R5.3). `Completed` handler: `ThenInstall` on an uninstall of an update chain queues the install with `AsUpdate` | Changed |
 | Core/ViewModels | `PackageRowViewModel` | `ShowUninstallThenUpdate` (replaces Update, UI 1), `ShowInstallOver` (next to Update, UI 4) | Changed |
 | App/Controls | `OperationCard.xaml`, `PackageActionsView.xaml` | The two buttons, accent style, as Retry as administrator; `ThenText` caption | Changed |
@@ -145,7 +155,7 @@ Theme brushes only, so dark and high contrast follow the card's other buttons.
 | R2.4 | The chain's options have `Elevated = false`, also after an elevated failed update (unit) |
 | R3.1 | Failed and cancelled chained uninstall: no install queued, R3.1 sentence (unit) |
 | R3.2 | `AfterUninstallOutcome` with `AsUpdate`; `CanInstallPrevious` (unit, reuses 014's tests) |
-| R3.3 | `AsUpdate` install: KindText "Update", "Updated to {version}.", 013 R2 check runs (unit) |
+| R3.3 | `AsUpdate` install: KindText "Update", "Updated to {version}." (unit) |
 | R4.1 | Update all with a 0x8A150114 failure queues nothing more (unit) |
 | R4.2, R4.3 | Logs of both operations; buttons by Tab, Narrator names, dark and high contrast (VM, manual) |
 | R5.1, R5.2 | `MapInstallResult`: 0x800401F5 / 0x80070002 with exit 0 on an update → R5.2 message, `OffersInstallOver`; on an install or uninstall → 013 R1.2 unchanged (unit) |
@@ -156,7 +166,7 @@ Theme brushes only, so dark and high contrast follow the card's other buttons.
 ## Risks and alternatives considered
 
 - **T1 may show WinGet's install also runs `uninstallPrevious`** for EA app. Then R5 is dropped (R5.4), 013 R1.2 stays,
-  and `InstallOverSupported` stays false. Running EA's installer outside WinGet was rejected (P1: WinGet is the only
+  Running EA's installer outside WinGet was rejected (P1: WinGet is the only
   gateway, A2).
 - **One "Uninstall and reinstall" for both cases** was rejected: for EA app the uninstall is what fails.
 - **Offering the chain after any failed update** was rejected in the requirements (out of scope): an uninstall can
