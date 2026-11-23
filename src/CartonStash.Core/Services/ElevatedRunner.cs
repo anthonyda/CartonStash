@@ -14,7 +14,8 @@ public sealed record ElevatedRequest(
     string? LogPath,
     InstallScope? Scope,
     ScopeSource ScopeSource,
-    InstallScope InstallScopeSetting = InstallScope.Any);
+    InstallScope InstallScopeSetting = InstallScope.Any,
+    bool InstallOver = false);
 
 /// <summary>Runs one operation with administrator rights and returns its outcome (017 R1.4 to R1.6). Never throws.</summary>
 public interface IElevatedRunner

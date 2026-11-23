@@ -78,7 +78,7 @@ public sealed class ElevatedProcessRunner(ISettings settings, IOperationLogStore
                 var settings = new FixedSettings(new AppSettings { InstallScope = request.InstallScopeSetting });
                 var installer = new WinGetPackageInstaller(new CatalogConnection(settings), settings, new RunningPrograms());
                 outcome = Task.Run(() => installer.RunAsync(request.Kind, request.Package, request.AcceptAgreements, request.Version, request.LogPath,
-                    new Progress<OperationProgress>(), CancellationToken.None, request.Scope, request.ScopeSource)).GetAwaiter().GetResult();
+                    new Progress<OperationProgress>(), CancellationToken.None, request.Scope, request.ScopeSource, request.InstallOver)).GetAwaiter().GetResult();
             }
             catch (Exception ex)
             {

@@ -80,9 +80,13 @@ public sealed class PackageOperationQueue(IPackageInstaller installer, IOperatio
     /// <summary>Queues an operation, or returns the one already active for this package (R4.2).</summary>
     public PackageOperation Enqueue(OperationKind kind, PackageInfo package, bool acceptAgreements = false, OperationOptions? options = null)
     {
-        if (Find(package) is { IsActive: true } active)
+        if (Find(package) is { } previous)
         {
-            return active;
+            if (previous.IsActive)
+            {
+                return previous;
+            }
+            previous.IsSuperseded = true; // 020: its follow-ups no longer describe the package
         }
 
         var operation = new PackageOperation(kind, package, acceptAgreements, Cancel, Retry, o => LogRequested?.Invoke(this, o), RequestRestart, options,
@@ -246,12 +250,21 @@ public sealed class PackageOperationQueue(IPackageInstaller installer, IOperatio
                     operation.MayAskPermission = true;
                     operation.Phase = OperationPhase.Running;
                     outcome = await elevated.RunAsync(new ElevatedRequest(operation.Kind, operation.Package, operation.AcceptAgreements, operation.Version,
-                        operation.LogFilePath, scope, scopeSource), cancellation.Token);
+                        operation.LogFilePath, scope, scopeSource, InstallOver: operation.Options.InstallOver), cancellation.Token);
                 }
                 else
                 {
                     outcome = await installer.RunAsync(operation.Kind, operation.Package, operation.AcceptAgreements, operation.Version, operation.LogFilePath, progress, cancellation.Token,
-                        scope, scopeSource);
+                        scope, scopeSource, operation.Options.InstallOver);
+                }
+                if (operation.Kind == OperationKind.Uninstall && operation.Options.ThenInstall is { } next && outcome.Result == OperationResult.Succeeded)
+                {
+                    // 020 R2.5: some uninstallers return while a copy of them keeps working; install only once it's gone.
+                    operation.Phase = OperationPhase.Finishing;
+                    if (!await installer.WaitUntilUninstalledAsync(operation.Package, UninstalledTimeout, cancellation.Token))
+                    {
+                        outcome = StillListedOutcome(operation, outcome, next);
+                    }
                 }
             }
             catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
@@ -318,6 +331,7 @@ public sealed class PackageOperationQueue(IPackageInstaller installer, IOperatio
                 Message = ElevatedProtocol.DeclinedMessage,
                 OffersRetryAsAdmin = false, // R2.4: the user declined the rights
                 OffersUninstallFirst = false,
+                OffersInstallOver = false,
             }
             : outcome;
 
@@ -362,12 +376,13 @@ public sealed class PackageOperationQueue(IPackageInstaller installer, IOperatio
 
     private void ApplyOutcome(PackageOperation operation, OperationOutcome outcome)
     {
-        outcome = AfterUninstallOutcome(outcome, operation);
+        outcome = UpdateChainOutcome(AfterUninstallOutcome(outcome, operation), operation);
         operation.Percent = null;
         operation.Phase = OperationPhase.Done;
         operation.Retryable = outcome.Retryable; // before Result, which notifies CanRetry
         operation.OffersUninstallFirst = outcome.OffersUninstallFirst;
         operation.OffersRetryAsAdmin = outcome.OffersRetryAsAdmin;
+        operation.OffersInstallOver = outcome.OffersInstallOver;
         operation.Scope = outcome.Scope;
         operation.ScopeSource = outcome.ScopeSource;
         operation.Mode = outcome.Mode;
@@ -410,4 +425,47 @@ public sealed class PackageOperationQueue(IPackageInstaller installer, IOperatio
                     + $"and then that install didn't finish. {outcome.Message}",
             }
             : outcome;
+
+    /// <summary>020 R2.5: how long the install after a chained uninstall waits for the package to leave WinGet's list.</summary>
+    internal static readonly TimeSpan UninstalledTimeout = TimeSpan.FromMinutes(5);
+
+    /// <summary>
+    /// 020 R2.5: still listed after the wait, so nothing is installed. Failed, so the chain's install isn't queued; R3.1's
+    /// sentence follows for an update (<see cref="UpdateChainOutcome"/>), 014's chain names the version instead.
+    /// </summary>
+    internal static OperationOutcome StillListedOutcome(PackageOperation operation, OperationOutcome outcome, string next)
+    {
+        var message = $"The uninstaller finished, but Windows still lists {operation.Package.Name} {(int)UninstalledTimeout.TotalMinutes} minutes later.";
+        return outcome with
+        {
+            Result = OperationResult.Failed,
+            Retryable = false,
+            Message = operation.Options.AsUpdate ? message : $"{message} {next} wasn't installed.",
+        };
+    }
+
+    /// <summary>
+    /// 020: Uninstall, then update. A failed or cancelled uninstall says the old version stays (R3.1); the install after it
+    /// reads as an update when it succeeds (R3.3).
+    /// </summary>
+    internal static OperationOutcome UpdateChainOutcome(OperationOutcome outcome, PackageOperation operation)
+    {
+        if (!operation.Options.AsUpdate)
+        {
+            return outcome;
+        }
+        var name = operation.Package.Name;
+        return (operation.Kind, outcome.Result) switch
+        {
+            (OperationKind.Uninstall, OperationResult.Failed or OperationResult.Cancelled) => outcome with
+            {
+                Message = $"{outcome.Message} {operation.Package.NameWith(operation.Options.PreviousVersion ?? operation.Package.InstalledVersion)} is still installed; "
+                    + "nothing was updated.",
+            },
+            (OperationKind.Install, OperationResult.Succeeded) => outcome with { Message = $"Updated to {operation.Version}." },
+            (OperationKind.Install, OperationResult.SucceededRestartRequired) =>
+                outcome with { Message = $"Updated to {operation.Version}. Restart your PC to finish." },
+            _ => outcome,
+        };
+    }
 }

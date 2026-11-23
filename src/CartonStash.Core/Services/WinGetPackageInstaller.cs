@@ -42,7 +42,8 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
     }
 
     public async Task<OperationOutcome> RunAsync(OperationKind kind, PackageInfo package, bool acceptAgreements, string? version, string? logPath,
-        IProgress<OperationProgress> progress, CancellationToken cancellationToken, InstallScope? scope = null, ScopeSource scopeSource = ScopeSource.Installed)
+        IProgress<OperationProgress> progress, CancellationToken cancellationToken, InstallScope? scope = null, ScopeSource scopeSource = ScopeSource.Installed,
+        bool installOver = false)
     {
         // Re-find the package; COM objects never leave this class (A2).
         // BR-25: the lookup is the call that meets a WinGet server gone since the last operation; nothing has run yet.
@@ -62,7 +63,8 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
             var outcome = kind switch
             {
                 OperationKind.Uninstall => await UninstallAsync(found, package.Name, logPath, progress, cancellationToken),
-                _ => await InstallAsync(kind, found, installed, package, acceptAgreements, version, scope, scopeSource, logPath, progress, cancellationToken),
+                _ => await InstallAsync(kind, found, installed, package, acceptAgreements, version, scope, scopeSource, logPath, progress, cancellationToken,
+                    installOver && kind == OperationKind.Upgrade),
             };
             if (goingBack && outcome.Result == OperationResult.Succeeded)
             {
@@ -101,7 +103,8 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
     }
 
     private async Task<OperationOutcome> InstallAsync(OperationKind kind, CatalogPackage package, PackageVersionInfo? installed, PackageInfo info, bool acceptAgreements, string? version,
-        InstallScope? explicitScope, ScopeSource explicitSource, string? logPath, IProgress<OperationProgress> progress, CancellationToken cancellationToken)
+        InstallScope? explicitScope, ScopeSource explicitSource, string? logPath, IProgress<OperationProgress> progress, CancellationToken cancellationToken,
+        bool installOver = false)
     {
         var name = info.Name;
         // 014 R3.8, 015 R3.1: going back and updates ask for the scope the package is installed with; anything else uses
@@ -148,8 +151,7 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
         }
         // 015 R3.1: WinGet's upgrade keeps the scope it reads; when Windows Installer says otherwise, install the new
         // version in Windows Installer's scope (measured in T9: the upgrade found no installer, the install replaced it).
-        var byInstalling = scopeSource == ScopeSource.Installed
-            && UpdatesByInstalling(kind, msiContext, InstalledScopes.FromWinGetScope(InstalledScopes.WinGetScopeOf(installed)));
+        var byInstalling = RunsAsInstall(kind, installOver, scopeSource, msiContext, InstalledScopes.FromWinGetScope(InstalledScopes.WinGetScopeOf(installed)));
         if (byInstalling && options.PackageVersionId is null && TargetVersionId(package) is { } defaultId)
         {
             options.PackageVersionId = defaultId;
@@ -163,7 +165,8 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
         var extendedError = result.ExtendedErrorCode?.HResult ?? 0;
         var running = await RunningFilesAfterAsync(extendedError, package);
         var outcome = MapInstallResult(kind, result.Status, result.InstallerErrorCode, result.RebootRequired, settings.Current.InstallScope,
-            extendedError, name, running, goingBackTo: goingBack ? version : null, installedVersion: info.InstalledVersion, mode: mode)
+            extendedError, name, running, goingBackTo: goingBack ? version : null, installedVersion: info.InstalledVersion, mode: mode,
+            targetVersion: version ?? info.AvailableVersion, installingOver: installOver)
             with { Details = FormatDetails(result.Status.ToString(), result.InstallerErrorCode, result.ExtendedErrorCode), Scope = scope, ScopeSource = scopeSource, Mode = mode };
         // 015 R3.2: an update that kept the installed scope against a scope chosen in Settings says so.
         return kind == OperationKind.Upgrade && outcome.Result == OperationResult.Succeeded
@@ -176,6 +179,14 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
     /// 015 R3.1: an update runs as an install when Windows Installer knows the installed version's scope and WinGet reads
     /// it differently (T9: Pandoc per-user, which WinGet reads as Machine, so its upgrade found no per-user installer).
     /// </summary>
+    /// <summary>
+    /// An update WinGet runs as an install of the target version: 020 R5.3's Install over it (T1: that skips WinGet's
+    /// uninstallPrevious), or 015 R3.1's scope mismatch.
+    /// </summary>
+    internal static bool RunsAsInstall(OperationKind kind, bool installOver, ScopeSource scopeSource, InstallScope? msiContext, InstallScope? winGetScope) =>
+        kind == OperationKind.Upgrade && installOver
+        || scopeSource == ScopeSource.Installed && UpdatesByInstalling(kind, msiContext, winGetScope);
+
     internal static bool UpdatesByInstalling(OperationKind kind, InstallScope? msiContext, InstallScope? winGetScope) =>
         kind == OperationKind.Upgrade && msiContext is InstallScope.User or InstallScope.System && winGetScope is { } w && w != msiContext;
 
@@ -366,6 +377,67 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
         installed && msiContext == InstallScope.System && kind is OperationKind.Upgrade or OperationKind.Uninstall or OperationKind.Install
             ? OperationMode.DefaultForAllUsersMsi
             : OperationMode.Silent;
+
+    /// <summary>020 R2.5: how often the installed list is read, and the pause once the package is gone (T2: Un_A.exe exited 2 s later).</summary>
+    internal static readonly TimeSpan UninstalledPoll = TimeSpan.FromSeconds(2), UninstalledSettle = TimeSpan.FromSeconds(5);
+
+    public async Task<bool> WaitUntilUninstalledAsync(PackageInfo package, TimeSpan timeout, CancellationToken cancellationToken)
+    {
+        var end = DateTime.UtcNow + timeout;
+        while (await StillInstalledAsync(package, cancellationToken))
+        {
+            if (DateTime.UtcNow >= end)
+            {
+                return false;
+            }
+            await Task.Delay(UninstalledPoll, cancellationToken);
+        }
+        await Task.Delay(UninstalledSettle, cancellationToken);
+        return true;
+    }
+
+    /// <summary>
+    /// The row's own installed entry when it has one (002 R6.5), else any installed match for the ID, on a fresh connection
+    /// (the session's catalogs are snapshots, 014 T29). A read that fails counts as still installed: the wait goes on.
+    /// </summary>
+    private async Task<bool> StillInstalledAsync(PackageInfo package, CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (package.InstalledId is { } installedId)
+            {
+                try
+                {
+                    await connection.FindInstalledEntryAsync(installedId, cancellationToken, fresh: true);
+                    return true;
+                }
+                catch (WinGetException)
+                {
+                    return false; // "no longer installed"
+                }
+            }
+            var matches = await connection.FindAllByIdAsync(package.Id, null, localFirst: true, cancellationToken, fresh: true);
+            return await Task.Run(() =>
+            {
+                for (var i = 0; i < matches.Count; i++)
+                {
+                    if (matches[i].InstalledVersion is not null)
+                    {
+                        return true;
+                    }
+                }
+                return false;
+            }, cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception)
+        {
+            return true;
+        }
+    }
 
     private async Task<OperationOutcome> UninstallAsync(CatalogPackage package, string name, string? logPath, IProgress<OperationProgress> progress, CancellationToken cancellationToken)
     {
@@ -685,7 +757,19 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
     {
         var name = string.IsNullOrWhiteSpace(packageName) ? "This package" : packageName;
         return $"{name} can't be updated in place: its publisher asks for it to be uninstalled first. "
-            + "To get the new version, uninstall it, then install it again.";
+            + "To get the new version, uninstall it, then install it again. Uninstall, then update does both."; // 020 R1.3
+    }
+
+    /// <summary>
+    /// 020 R5.2: an update WinGet couldn't start because the installed version's uninstaller is missing (EA app, whose
+    /// manifest asks WinGet to uninstall the previous version first). An install of the new version skips that step (T1).
+    /// </summary>
+    internal static string InstallOverMessage(string packageName, string? version)
+    {
+        var name = string.IsNullOrWhiteSpace(packageName) ? "The package" : packageName;
+        var what = string.IsNullOrWhiteSpace(version) ? "the new version" : version;
+        return $"{name}'s update couldn't start: the uninstaller of the installed version is missing. "
+            + $"Install over it installs {what} without removing the installed one first.";
     }
 
     /// <summary>CO_E_APPNOTFOUND: WinGet couldn't start a program, seen for the EA app's missing uninstaller (013 R1.2).</summary>
@@ -737,14 +821,15 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
     /// <param name="goingBackTo">The chosen older version when this install goes back over a newer one (014 R3.3), else null.</param>
     internal static OperationOutcome MapInstallResult(OperationKind kind, InstallResultStatus status, uint installerErrorCode, bool rebootRequired,
         InstallScope scope, int extendedError = 0, string packageName = "", IReadOnlyList<string>? runningFiles = null,
-        Func<int, string?>? describe = null, string? goingBackTo = null, string? installedVersion = null, OperationMode mode = OperationMode.Silent)
+        Func<int, string?>? describe = null, string? goingBackTo = null, string? installedVersion = null, OperationMode mode = OperationMode.Silent,
+        string? targetVersion = null, bool installingOver = false)
     {
         var done = kind == OperationKind.Upgrade ? "Updated" : "Installed";
         return MarkDeclined(status == InstallResultStatus.InstallError, installerErrorCode, extendedError, status switch
         {
             // 013 R3.1: whatever the status (WinGet reports CatalogError), the code says the update isn't allowed in place.
             not InstallResultStatus.Ok when kind == OperationKind.Upgrade && extendedError == UpgradeNotSupported =>
-                Failed(UpgradeNotSupportedMessage(packageName)) with { Retryable = false },
+                Failed(UpgradeNotSupportedMessage(packageName)) with { Retryable = false, OffersUninstallFirst = true }, // 020 R1.1, R1.2
             InstallResultStatus.Ok when rebootRequired =>
                 new(OperationResult.SucceededRestartRequired, $"{done}. Restart your PC to finish."),
             InstallResultStatus.Ok => new(OperationResult.Succeeded, $"{done} successfully."),
@@ -761,6 +846,10 @@ public sealed class WinGetPackageInstaller(CatalogConnection connection, ISettin
                     with { OffersRetryAsAdmin = true },
             InstallResultStatus.InstallError when goingBackTo is not null =>
                 Failed(GoingBackFailedMessage(packageName, goingBackTo)) with { OffersUninstallFirst = true }, // R3.5
+            // 020 R5.1, R5.2: WinGet couldn't start the installed version's uninstaller; not after a run that already installed over it.
+            InstallResultStatus.InstallError when kind == OperationKind.Upgrade && !installingOver && installerErrorCode == 0
+                && extendedError is AppNotFound or FileNotFound =>
+                Failed(InstallOverMessage(packageName, targetVersion)) with { OffersInstallOver = true },
             InstallResultStatus.InstallError when installerErrorCode == 0 && extendedError != 0 =>
                 Failed(NoExitCodeMessage(kind, extendedError, packageName, describe ?? ErrorDescriptions.Describe)),
             InstallResultStatus.InstallError => Failed($"The installer failed with error code {FormatCode(installerErrorCode)}."),

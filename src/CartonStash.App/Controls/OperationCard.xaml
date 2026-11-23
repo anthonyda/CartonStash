@@ -112,6 +112,13 @@
                     Maximum="100"
                     Visibility="{x:Bind Operation.IsActive, Mode=OneWay}"
                     Value="{x:Bind Operation.ProgressValue, Mode=OneWay}" />
+                <!-- 020 UI 3: what follows a chained uninstall -->
+                <TextBlock
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                    Style="{StaticResource CaptionTextBlockStyle}"
+                    Text="{x:Bind Operation.ThenText, Mode=OneWay}"
+                    TextWrapping="Wrap"
+                    Visibility="{x:Bind Operation.ShowThenText, Mode=OneWay}" />
                 <!-- 003 R8.3: Windows' consent prompt can open behind the app -->
                 <TextBlock
                     Foreground="{ThemeResource TextFillColorSecondaryBrush}"
@@ -170,6 +177,19 @@
                     Content="Retry as administrator"
                     Style="{StaticResource AccentButtonStyle}"
                     Visibility="{x:Bind Operation.CanRetryAsAdmin, Mode=OneWay}" />
+                <!-- 020 R1.1, R5.1 -->
+                <Button
+                    AutomationProperties.Name="{x:Bind Operation.UninstallThenUpdateName, Mode=OneWay}"
+                    Command="{x:Bind Operation.UninstallThenUpdateCommand, Mode=OneWay}"
+                    Content="{x:Bind Operation.UninstallThenUpdateText, Mode=OneWay}"
+                    Style="{StaticResource AccentButtonStyle}"
+                    Visibility="{x:Bind Operation.CanUninstallThenUpdate, Mode=OneWay}" />
+                <Button
+                    AutomationProperties.Name="{x:Bind Operation.InstallOverName, Mode=OneWay}"
+                    Command="{x:Bind Operation.InstallOverCommand, Mode=OneWay}"
+                    Content="{x:Bind Operation.InstallOverText, Mode=OneWay}"
+                    Style="{StaticResource AccentButtonStyle}"
+                    Visibility="{x:Bind Operation.CanInstallOver, Mode=OneWay}" />
                 <Button
                     AutomationProperties.Name="{x:Bind ui:Ui.Format('Retry {0}', Operation.Title), Mode=OneWay}"
                     Command="{x:Bind Operation.RetryCommand, Mode=OneWay}"

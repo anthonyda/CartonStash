@@ -2,6 +2,13 @@
 
 What's new in each version of CartonStash. Get it from the [Microsoft Store](https://apps.microsoft.com/detail/9MT37M7DBZRK).
 
+## 1.7.0
+
+### New
+
+- **Uninstall, then update.** Some updates can't run over the installed version: WinGet refuses them and asks for an uninstall first (Miniconda3 does this). The failed update now offers **Uninstall, then update** on its Activity card and in place of Update on its row. After one confirmation, CartonStash uninstalls the program, waits until Windows no longer lists it, then installs the new version the way the old one was installed, for you or for all users. If the uninstall fails, nothing else happens; if the install fails, the card offers to put back the version you had.
+- **Install over it.** When an update can't start because the installed version's uninstaller is missing (the EA app does this), the failed update now offers **Install over it**, which installs the new version without uninstalling the old one first.
+
 ## 1.6.1
 
 ### Fixed

@@ -330,9 +330,9 @@ public class WinGetErrorMessageTests
         Assert.Equal("The uninstall failed: WinGet reported \"Access is denied.\" (0x80070005).", outcome.Message);
     }
 
-    [Theory] // 013 R1.2: a program WinGet needed wasn't found (the EA app's missing uninstaller, 2026-11-05 to 07)
-    [InlineData(OperationKind.Upgrade, unchecked((int)0x800401F5), "to update EA app: it wasn't found (0x800401F5)")]
+    [Theory] // 013 R1.2: a program WinGet needed wasn't found. An update now gets 020 R5.2's message (below).
     [InlineData(OperationKind.Install, unchecked((int)0x80070002), "to install EA app: it wasn't found (0x80070002)")]
+    [InlineData(OperationKind.Install, unchecked((int)0x800401F5), "to install EA app: it wasn't found (0x800401F5)")]
     public void A_missing_program_says_so(OperationKind kind, int extendedError, string expected)
     {
         var outcome = WinGetPackageInstaller.MapInstallResult(kind, InstallResultStatus.InstallError, 0, false, InstallScope.Any,
@@ -340,6 +340,30 @@ public class WinGetErrorMessageTests
 
         Assert.Contains("WinGet couldn't start a program needed " + expected, outcome.Message);
         Assert.Contains("Repairing or reinstalling EA app from its publisher may fix this.", outcome.Message);
+    }
+
+    [Theory] // 020 R5.1, R5.2: an update that couldn't start the installed version's uninstaller (EA app, T1)
+    [InlineData(unchecked((int)0x800401F5))]
+    [InlineData(unchecked((int)0x80070002))]
+    public void An_update_without_its_uninstaller_offers_install_over_it(int extendedError)
+    {
+        var outcome = WinGetPackageInstaller.MapInstallResult(OperationKind.Upgrade, InstallResultStatus.InstallError, 0, false, InstallScope.Any,
+            extendedError, "EA app", describe: Describe, targetVersion: "13.832.0.6345");
+
+        Assert.Equal("EA app's update couldn't start: the uninstaller of the installed version is missing. "
+            + "Install over it installs 13.832.0.6345 without removing the installed one first.", outcome.Message);
+        Assert.True(outcome.OffersInstallOver);
+        Assert.True(outcome.Retryable);
+    }
+
+    [Fact] // 020 R5.1: not after a run that already installed over it, which keeps 013 R1.2
+    public void Installing_over_it_again_keeps_the_013_message()
+    {
+        var outcome = WinGetPackageInstaller.MapInstallResult(OperationKind.Upgrade, InstallResultStatus.InstallError, 0, false, InstallScope.Any,
+            unchecked((int)0x800401F5), "EA app", describe: Describe, targetVersion: "13.832.0.6345", installingOver: true);
+
+        Assert.StartsWith("WinGet couldn't start a program needed to update EA app", outcome.Message);
+        Assert.False(outcome.OffersInstallOver);
     }
 
     [Fact] // 013 R1.2, for uninstalls
@@ -389,7 +413,8 @@ public class WinGetErrorMessageTests
         Assert.Equal(OperationResult.Failed, outcome.Result);
         Assert.False(outcome.Retryable);
         Assert.Equal("Miniconda3 can't be updated in place: its publisher asks for it to be uninstalled first. "
-            + "To get the new version, uninstall it, then install it again.", outcome.Message);
+            + "To get the new version, uninstall it, then install it again. Uninstall, then update does both.", outcome.Message); // 020 R1.3
+        Assert.True(outcome.OffersUninstallFirst); // 020 R1.1
         Assert.DoesNotContain("internet", outcome.Message);
     }
 

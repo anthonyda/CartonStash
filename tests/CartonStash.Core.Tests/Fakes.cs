@@ -173,9 +173,25 @@ internal sealed class ScriptedInstaller : IPackageInstaller
     /// <summary>Where each explicit scope came from (015 R1.5).</summary>
     public List<ScopeSource> ScopeSources { get; } = [];
 
-    public Task<OperationOutcome> RunAsync(OperationKind kind, PackageInfo package, bool acceptAgreements, string? version, string? logPath,
-        IProgress<OperationProgress> progress, CancellationToken cancellationToken, InstallScope? scope = null, ScopeSource scopeSource = ScopeSource.Installed)
+    /// <summary>Whether each operation was an update run as an install (020 R5.3).</summary>
+    public List<bool> InstallOvers { get; } = [];
+
+    /// <summary>020 R2.5: what the wait after a chained uninstall returns, and the packages it waited for.</summary>
+    public bool UninstalledInTime { get; set; } = true;
+
+    public List<string> WaitedFor { get; } = [];
+
+    public Task<bool> WaitUntilUninstalledAsync(PackageInfo package, TimeSpan timeout, CancellationToken cancellationToken)
     {
+        WaitedFor.Add(package.Id);
+        return Task.FromResult(UninstalledInTime);
+    }
+
+    public Task<OperationOutcome> RunAsync(OperationKind kind, PackageInfo package, bool acceptAgreements, string? version, string? logPath,
+        IProgress<OperationProgress> progress, CancellationToken cancellationToken, InstallScope? scope = null, ScopeSource scopeSource = ScopeSource.Installed,
+        bool installOver = false)
+    {
+        InstallOvers.Add(installOver);
         ScopeSources.Add(scopeSource);
         Calls.Add((kind, package.Id, acceptAgreements));
         Versions.Add(version);
