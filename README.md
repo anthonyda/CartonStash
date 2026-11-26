@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="src/CartonStash.App/Assets/Square150x150Logo.scale-200.png" width="96" alt="CartonStash logo: an open cardboard box with an up arrow" />
+  <img src="src/CartonStash.App/Assets/Square150x150Logo.scale-200.png" width="96" alt="CartonStash, a WinGet GUI for Windows: logo of an open cardboard box with an up arrow" />
 </p>
 
 <h1 align="center">CartonStash</h1>
@@ -92,6 +92,13 @@ the app needs.
 **Is CartonStash an official Microsoft app?**
 No. It's an independent project and is not affiliated with or endorsed by Microsoft. "WinGet" and "Windows" are
 Microsoft's names; CartonStash only uses WinGet's public API.
+
+**How do I update all my apps on Windows at once?**
+Open **Updates**: it lists every app WinGet can update, the same as `winget upgrade`. Press **Update all**, confirm, and
+the updates run one after another in the Activity pane. Exclude any app you want to leave alone.
+
+**Can I go back to an older version of an app?**
+Yes. Open the app's details, pick an older version under Available versions and press **Go back to this version**.
 
 **How is it different from `winget` in a terminal?**
 It does the same work through the same engine, with a visual list, filters, version colors, details and progress
